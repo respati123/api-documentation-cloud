@@ -1,6 +1,6 @@
 {
   "name": "api-documentation-cloud",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "scripts": {
     "cloud:dev": "cd web && bun run dev",
