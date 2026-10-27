@@ -24,9 +24,15 @@ Run these from this folder.
 
 Install dependencies once per app: `bun install --cwd web` and `bun install --cwd server`.
 
-## Versions
+## Release and deploy
 
-The release version lives in the root `package.json`. CI bumps it on every push to `main`. Do not bump it by hand.
+Three separate steps, in order:
+
+1. **Push or PR to `main`** runs checks only: typecheck, server tests, and the web build. No images are built.
+2. **Push a tag `vX.Y.Z`** (`git tag v0.1.5 && git push origin v0.1.5`) re-runs the checks at that tag, smoke-tests the API container, then builds and pushes the `api` and `web` images to GHCR tagged `vX.Y.Z`. The web app version shown in the UI comes from the tag.
+3. **Deploy** is manual: Actions → Cloud → Run workflow, enter the version (for example `0.1.5`), and type `deploy`. It refuses a version whose images are not in GHCR. Rollback is the same step with an older version.
+
+The tag is the release. Nothing deploys on its own.
 
 ## Comments
 
