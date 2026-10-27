@@ -1,27 +1,15 @@
 {
-  "name": "api-documentation-cloud-web",
+  "name": "api-documentation-cloud",
   "version": "0.1.2",
   "private": true,
-  "type": "module",
   "scripts": {
-    "cloud:dev": "vite --config vite.cloud.config.ts",
-    "cloud:build": "vite build --config vite.cloud.config.ts",
-    "cloud:typecheck": "tsc --noEmit -p tsconfig.cloud.json",
+    "cloud:dev": "cd web && bun run dev",
+    "cloud:build": "cd web && bun run build",
+    "cloud:typecheck": "cd web && bun run typecheck",
     "api:dev": "bun --cwd server --watch index.ts",
     "api:start": "bun --cwd server index.ts",
-    "api:typecheck": "tsc --noEmit -p server/tsconfig.json",
-    "api:test": "bun test server"
-  },
-  "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.4.3",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "typescript": "^5.9.3",
-    "vite": "^7.2.4"
+    "api:typecheck": "cd server && bun run typecheck",
+    "api:test": "bun test server",
+    "release:bump": "bun scripts/bump-version.ts"
   }
 }

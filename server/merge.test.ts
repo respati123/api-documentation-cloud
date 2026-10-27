@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mergeTreeSnapshots, type SyncTreeNode } from '../shared/merge'
+import { mergeTreeSnapshots, type SyncTreeNode } from './shared/merge'
 
 const base: SyncTreeNode[] = [{ id: 'folder', kind: 'folder', name: 'API', children: [
   { id: 'get', kind: 'request', name: 'Get item', method: 'GET', url: '/item', body: '' },
