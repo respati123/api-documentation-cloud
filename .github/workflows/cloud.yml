@@ -96,6 +96,8 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           platforms: linux/amd64
+          build-args: |
+            APP_VERSION=${{ needs.version.outputs.version }}
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/api-documentation-cloud-${{ matrix.name }}:v${{ needs.version.outputs.version }}
