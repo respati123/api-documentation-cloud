@@ -1,15 +1,17 @@
 name: Cloud
 
-# Push to main: check, bump the patch version, tag it, and push images to GHCR.
-# Deploy: manual only. Run it from the Actions tab, enter the version, and type "deploy".
+# Push or PR to main: check only (typecheck, test, build).
+# Push a tag v*.*.*: re-check at the tag, then build and push images to GHCR.
+# Deploy: manual only, from the Actions tab, by entering an existing version.
 on:
   push:
     branches: [main]
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
   pull_request:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to deploy, without the v prefix (for example 0.1.1)'
+        description: 'Version to deploy, without the v prefix (for example 0.1.4)'
         required: true
         type: string
       confirm:
@@ -17,9 +19,9 @@ on:
         required: true
         type: string
 
+# Minimal by default. Jobs widen their own scope when they need to.
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 concurrency:
   group: cloud-${{ github.ref }}
@@ -27,11 +29,11 @@ concurrency:
 
 jobs:
   check:
-    if: ${{ github.event_name != 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.4.2
       - run: bun install --cwd web --frozen-lockfile
@@ -41,65 +43,109 @@ jobs:
       - run: bun run api:test
       - run: bun run cloud:build
 
-  version:
-    needs: check
-    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip release]') }}
+  release-check:
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.bump.outputs.version }}
-      sha: ${{ steps.bump.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.4.2
-      - name: Bump patch version, commit, and tag
-        id: bump
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          VERSION=$(bun scripts/bump-version.ts)
-          git add package.json
-          git commit -m "Release v${VERSION} [skip release]"
-          git tag -a "v${VERSION}" -m "v${VERSION}"
-          git push origin HEAD:main "v${VERSION}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - run: bun install --cwd web --frozen-lockfile
+      - run: bun install --cwd server --frozen-lockfile
+      - run: bun run cloud:typecheck
+      - run: bun run api:typecheck
+      - run: bun run api:test
+      - run: bun run cloud:build
 
-  images:
-    needs: version
+  image-api:
+    needs: release-check
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - name: api
-            context: server
-            file: server/Dockerfile
-          - name: web
-            context: web
-            file: web/Dockerfile
+    permissions:
+      contents: read
+      packages: write
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: apidocs
+          POSTGRES_PASSWORD: smoke
+          POSTGRES_DB: apidocs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U apidocs -d apidocs"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/api-documentation-cloud-api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build the API image locally
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
-          ref: ${{ needs.version.outputs.sha }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+          context: server
+          file: server/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.ref_name }}
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
+      - name: Smoke test the API container
+        run: |
+          docker run -d --name api-smoke --network host \
+            -e DATABASE_URL=postgres://apidocs:smoke@127.0.0.1:5432/apidocs \
+            -e PUBLIC_WEB_URL=http://localhost:3000 \
+            -e PORT=3001 \
+            "${IMAGE}:${{ github.ref_name }}"
+          for i in $(seq 1 20); do
+            if docker exec api-smoke bun -e "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+              echo "API healthy"; docker rm -f api-smoke; exit 0
+            fi
+            sleep 3
+          done
+          echo "API did not become healthy"; docker logs api-smoke; docker rm -f api-smoke; exit 1
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Push the API image
+        run: |
+          docker push "${IMAGE}:${{ github.ref_name }}"
+          docker push "${IMAGE}:sha-${{ github.sha }}"
+
+  image-web:
+    needs: release-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/api-documentation-cloud-web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.file }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Derive the app version from the tag
+        id: ver
+        run: echo "app=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: web
+          file: web/Dockerfile
           platforms: linux/amd64
           push: true
+          build-args: |
+            APP_VERSION=${{ steps.ver.outputs.app }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/api-documentation-cloud-${{ matrix.name }}:v${{ needs.version.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/api-documentation-cloud-${{ matrix.name }}:sha-${{ needs.version.outputs.sha }}
+            ${{ env.IMAGE }}:${{ github.ref_name }}
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
 
   deploy:
     if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -111,15 +157,36 @@ jobs:
     env:
       SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
       VPS: ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}
-      IMAGE_TAG: v${{ inputs.version }}
+      OWNER: ${{ github.repository_owner }}
     steps:
-      - name: Check confirmation
+      - name: Validate inputs
+        env:
+          VERSION: ${{ inputs.version }}
+          CONFIRM: ${{ inputs.confirm }}
         run: |
-          if [ "${{ inputs.confirm }}" != "deploy" ]; then
-            echo "Type 'deploy' in the confirm field to deploy."
-            exit 1
+          if [ "$CONFIRM" != "deploy" ]; then
+            echo "Type 'deploy' in the confirm field to deploy."; exit 1
           fi
-      - uses: actions/checkout@v4
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "version must look like 0.1.4 (digits and dots only)."; exit 1
+          fi
+          echo "IMAGE_TAG=v${VERSION}" >> "$GITHUB_ENV"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify both images exist for this version
+        run: |
+          for name in api web; do
+            ref="ghcr.io/${OWNER}/api-documentation-cloud-${name}:${IMAGE_TAG}"
+            if ! docker manifest inspect "$ref" >/dev/null 2>&1; then
+              echo "Image not found in GHCR: $ref"
+              echo "Push the tag ${IMAGE_TAG} first, and wait for its build to finish."
+              exit 1
+            fi
+          done
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh

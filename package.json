@@ -9,7 +9,6 @@
     "api:dev": "bun --cwd server --watch index.ts",
     "api:start": "bun --cwd server index.ts",
     "api:typecheck": "cd server && bun run typecheck",
-    "api:test": "bun test server",
-    "release:bump": "bun scripts/bump-version.ts"
+    "api:test": "bun test server"
   }
 }
