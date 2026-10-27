@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiCall } from '../api'
-import type { ApiNode, CloudCommit, RequestNode } from '../types'
+import type { ApiNode, CloudCommit } from '../types'
 
 type SnapshotCommit = { id: string; parentIds: string[]; message: string; tree: ApiNode[]; createdAt: string }
 type Change = { id: string; label: string; kind: 'added' | 'modified' | 'deleted'; before: string; after: string }
