@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { CloudUser, CloudWorkspaceRef } from '../types'
+import { appVersion } from '../shared/config/app-version'
 
 type Route = { page: 'overview' | 'workspaces' | 'workspace'; workspaceId?: string; tab?: 'overview' | 'docs' | 'activity' | 'team' | 'settings' }
 type Props = {
@@ -42,6 +43,7 @@ export function CloudShell({ route, title, user, workspaces, apiOnline, mobileNa
         <span className="account-copy"><strong>{user.email.split('@')[0]}</strong><small>{user.email}</small></span>
         <button type="button" className="sign-out-button" onClick={onSignOut}>Sign out</button>
       </footer>
+      <p className="app-version" data-testid="cloud-app-version">Version {appVersion}</p>
     </aside>
     <div className="cloud-main">
       <header className="cloud-topbar">

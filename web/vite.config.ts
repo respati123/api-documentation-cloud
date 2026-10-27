@@ -1,10 +1,17 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const rootManifest = resolve('../package.json')
+const releaseVersion = process.env.APP_VERSION || (existsSync(rootManifest) ? JSON.parse(readFileSync(rootManifest, 'utf8')).version : 'dev')
+
 export default defineConfig({
   root: 'src',
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(releaseVersion)
+  },
   server: {
     host: '127.0.0.1',
     port: 5174,
