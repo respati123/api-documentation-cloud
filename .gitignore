@@ -7,5 +7,5 @@ dist/
 .env.*
 !*.env.example
 release/
-dist-cloud/
 postman-rea-evidence.json
+web/.agents/skills/impeccable/scripts/bin/

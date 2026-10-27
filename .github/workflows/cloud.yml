@@ -31,20 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            server/package-lock.json
       - uses: oven-sh/setup-bun@v2
-      - run: npm ci
-      - run: npm --prefix server ci
-      - run: npm run cloud:typecheck
-      - run: npm run api:typecheck
-      - run: npm run api:test
-      - run: npm run cloud:build
+        with:
+          bun-version: 1.4.2
+      - run: bun install --cwd web --frozen-lockfile
+      - run: bun install --cwd server --frozen-lockfile
+      - run: bun run cloud:typecheck
+      - run: bun run api:typecheck
+      - run: bun run api:test
+      - run: bun run cloud:build
 
   version:
     needs: check
@@ -57,17 +52,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
+          bun-version: 1.4.2
       - name: Bump patch version, commit, and tag
         id: bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          npm version patch --no-git-tag-version >/dev/null
-          VERSION=$(node -p "require('./package.json').version")
-          git add package.json package-lock.json
+          VERSION=$(bun scripts/bump-version.ts)
+          git add package.json
           git commit -m "Release v${VERSION} [skip release]"
           git tag -a "v${VERSION}" -m "v${VERSION}"
           git push origin HEAD:main "v${VERSION}"
@@ -85,8 +79,8 @@ jobs:
             context: server
             file: server/Dockerfile
           - name: web
-            context: .
-            file: Dockerfile.cloud-web
+            context: web
+            file: web/Dockerfile
     steps:
       - uses: actions/checkout@v4
         with:

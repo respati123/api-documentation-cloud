@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import type { SyncTreeNode } from '../shared/merge'
-import { buildStagedSnapshot, getWorkspaceChanges } from '../shared/workspace-changes'
+import type { SyncTreeNode } from './shared/merge'
+import { buildStagedSnapshot, getWorkspaceChanges } from './shared/workspace-changes'
 
 const base: SyncTreeNode[] = [{ id: 'folder', kind: 'folder', name: 'API', children: [
   { id: 'one', kind: 'request', name: 'One', method: 'GET', url: '/one', body: '' },
