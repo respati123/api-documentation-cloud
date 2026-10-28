@@ -64,9 +64,47 @@
     }
 }
 
-/* The portal is dark only. Values come from the palette in graphite.css so the
-   migrated views keep their current look. */
+/* Light is the default. The .dark class on <html> switches to the dark tokens below. */
 :root {
+    color-scheme: light;
+    --background: #f7f5ef;
+    --foreground: #17130c;
+    --card: #fffdf8;
+    --card-foreground: #17130c;
+    --popover: #fffdf8;
+    --popover-foreground: #17130c;
+    --primary: #8a5a0f;
+    --primary-foreground: #ffffff;
+    --secondary: #ebe6d8;
+    --secondary-foreground: #17130c;
+    --muted: #efebe0;
+    --muted-foreground: #5b5546;
+    --accent: #e6e0cd;
+    --accent-foreground: #17130c;
+    --destructive: #a8322a;
+    --success: #2b6e42;
+    --warning: #8a5a0f;
+    --border: #d8d1bf;
+    --input: #8a8270;
+    --ring: #8a5a0f;
+    --radius: 0.5rem;
+    --chart-1: #8a5a0f;
+    --chart-2: #2b6e42;
+    --chart-3: #5b5546;
+    --chart-4: #a8322a;
+    --chart-5: #8a8374;
+    --sidebar: #efeadc;
+    --sidebar-foreground: #17130c;
+    --sidebar-primary: #8a5a0f;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e2dccb;
+    --sidebar-accent-foreground: #17130c;
+    --sidebar-border: #d8d1bf;
+    --sidebar-ring: #8a5a0f;
+}
+
+/* Dark palette: matte near-black ground with ivory type and amber accent. */
+.dark {
     color-scheme: dark;
     --background: #0b0d0f;
     --foreground: #f2efe6;
@@ -82,13 +120,12 @@
     --muted-foreground: #9aa3a8;
     --accent: #232a30;
     --accent-foreground: #f2efe6;
-    --destructive: #c4493f;
+    --destructive: #e8756a;
     --success: #5fb97a;
     --warning: #f0b429;
     --border: #2a3035;
-    --input: #343c43;
+    --input: #69737c;
     --ring: #f0b429;
-    --radius: 0.5rem;
     --chart-1: #f0b429;
     --chart-2: #5fb97a;
     --chart-3: #d9d4c7;
