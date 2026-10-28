@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AuthUser } from '../models/auth.model'
+import type { CloudUser } from '@/shared/models/user.model'
 
 const tokenStorageKey = 'api-documentation-cloud-session'
 const userIdStorageKey = 'api-documentation-cloud-user-id'
@@ -8,7 +8,7 @@ interface AuthSessionState {
   token: string
   userId: string
   sessionExpired: boolean
-  saveSession: (token: string, user: AuthUser) => void
+  saveSession: (token: string, user: CloudUser) => void
   clearSession: (options?: { expired?: boolean }) => void
 }
 

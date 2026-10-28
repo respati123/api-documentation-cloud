@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import type { AuthUser } from '../models/auth.model'
+import type { CloudUser } from '@/shared/models/user.model'
 import { authService } from '../services/auth.service'
 import { useAuthSessionStore } from '../stores/auth-session.store'
 import { shouldEndSession } from '../utils/session-errors'
@@ -14,7 +14,7 @@ export type SessionStatus = 'anonymous' | 'checking' | 'authenticated'
 
 export function useAuthSessionViewModel(): {
   status: SessionStatus
-  user: AuthUser | undefined
+  user: CloudUser | undefined
   token: string
   signOut: () => Promise<void>
 } {

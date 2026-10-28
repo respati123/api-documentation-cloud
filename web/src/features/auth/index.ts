@@ -1,4 +1,4 @@
-export type { AuthUser } from './models/auth.model'
+export type { CloudUser } from '@/shared/models/user.model'
 export { AuthPage } from './pages/auth.page'
 export { useAuthSessionStore } from './stores/auth-session.store'
 export { isPasswordResetRoute } from './utils/password-reset-route'
