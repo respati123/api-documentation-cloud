@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { LoadMoreButton } from '@/shared/components/load-more-button'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
 import { Button } from '@/shared/components/ui/button'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/shared/components/ui/empty'
@@ -15,12 +16,25 @@ export interface WorkspaceListViewProps {
   status: WorkspaceListStatus
   workspaces: CloudWorkspaceRef[]
   errorMessage: string | null
+  hasMore: boolean
+  isLoadingMore: boolean
+  onLoadMore: () => void
   onOpen: (workspaceId: string) => void
   onCreate: () => void
   onRetry: () => void
 }
 
-export function WorkspaceListView({ status, workspaces, errorMessage, onOpen, onCreate, onRetry }: WorkspaceListViewProps) {
+export function WorkspaceListView({
+  status,
+  workspaces,
+  errorMessage,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+  onOpen,
+  onCreate,
+  onRetry,
+}: WorkspaceListViewProps) {
   const { t } = useTranslation(['workspaces', 'common'])
 
   if (status === 'loading') {
@@ -62,31 +76,34 @@ export function WorkspaceListView({ status, workspaces, errorMessage, onOpen, on
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-card">
-      <Table data-testid="workspaces-list-container">
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t(WORKSPACES_TEXT.list.columns.workspace)}</TableHead>
-            <TableHead>{t(WORKSPACES_TEXT.list.columns.role)}</TableHead>
-            <TableHead className="text-right">
-              <span className="sr-only">{t(WORKSPACES_TEXT.list.columns.action)}</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {workspaces.map((workspace) => (
-            <TableRow key={workspace.id}>
-              <TableCell className="truncate font-medium">{workspace.name}</TableCell>
-              <TableCell className="text-muted-foreground">{t(WORKSPACES_ROLE_TEXT[workspace.role])}</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="sm" data-testid={`workspaces-row-${workspace.id}`} onClick={() => onOpen(workspace.id)}>
-                  {t(WORKSPACES_TEXT.list.open)}
-                </Button>
-              </TableCell>
+    <div className="grid gap-2">
+      <div className="overflow-hidden rounded-md border border-border bg-card">
+        <Table data-testid="workspaces-list-container">
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t(WORKSPACES_TEXT.list.columns.workspace)}</TableHead>
+              <TableHead>{t(WORKSPACES_TEXT.list.columns.role)}</TableHead>
+              <TableHead className="text-right">
+                <span className="sr-only">{t(WORKSPACES_TEXT.list.columns.action)}</span>
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {workspaces.map((workspace) => (
+              <TableRow key={workspace.id}>
+                <TableCell className="truncate font-medium">{workspace.name}</TableCell>
+                <TableCell className="text-muted-foreground">{t(WORKSPACES_ROLE_TEXT[workspace.role])}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="sm" data-testid={`workspaces-row-${workspace.id}`} onClick={() => onOpen(workspace.id)}>
+                    {t(WORKSPACES_TEXT.list.open)}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <LoadMoreButton hasMore={hasMore} isLoading={isLoadingMore} onLoadMore={onLoadMore} testId="workspaces-load-more-button" />
     </div>
   )
 }

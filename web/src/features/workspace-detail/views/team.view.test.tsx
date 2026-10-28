@@ -1,5 +1,5 @@
 import '@/shared/i18n'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { TeamView, type TeamViewProps } from './team.view'
 
@@ -12,6 +12,12 @@ const baseProps: TeamViewProps = {
   invites: [],
   invitesLoading: false,
   invitesError: null,
+  invitesHasMore: false,
+  invitesLoadingMore: false,
+  onLoadMoreInvites: vi.fn(),
+  membersHasMore: false,
+  membersLoadingMore: false,
+  onLoadMoreMembers: vi.fn(),
   lastInviteLink: '',
   onInvite: vi.fn(),
   onCancelInvite: vi.fn(),
@@ -42,5 +48,13 @@ describe('TeamView', () => {
     render(<TeamView {...baseProps} />)
 
     expect(screen.getByText('No pending invitations')).toBeInTheDocument()
+  })
+
+  test('loads the next page of members when more exist', () => {
+    const onLoadMoreMembers = vi.fn()
+    render(<TeamView {...baseProps} membersHasMore onLoadMoreMembers={onLoadMoreMembers} />)
+
+    fireEvent.click(screen.getByTestId('team-members-load-more'))
+    expect(onLoadMoreMembers).toHaveBeenCalledTimes(1)
   })
 })

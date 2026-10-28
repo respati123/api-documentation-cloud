@@ -9,7 +9,7 @@ export function useWorkspacesPageViewModel() {
   const { t } = useTranslation(['workspaces', 'common'])
   const token = useAuthSessionStore((state) => state.token)
   const query = useWorkspacesQuery(token)
-  const workspaces = query.data ?? []
+  const workspaces = query.workspaces
 
   const status: WorkspaceListStatus = query.isPending ? 'loading' : query.isError ? 'error' : workspaces.length === 0 ? 'empty' : 'ready'
 
@@ -18,6 +18,9 @@ export function useWorkspacesPageViewModel() {
     workspaces,
     ownedCount: workspaces.filter((workspace) => workspace.role === 'owner').length,
     errorMessage: query.error ? (query.error instanceof ApiError ? query.error.message : t(COMMON_TEXT.error.unexpected)) : null,
+    hasMore: query.hasMore,
+    isLoadingMore: query.isLoadingMore,
+    loadMore: query.loadMore,
     retry: () => {
       void query.refetch()
     },

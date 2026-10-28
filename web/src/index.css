@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Keeps dark: utilities inert. Without this, Tailwind follows the OS color scheme. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -64,46 +65,44 @@
     }
 }
 
-/* The portal is dark only. Values come from the palette in graphite.css so the
-   migrated views keep their current look. */
+/* One light palette. The portal has no dark theme. */
 :root {
-    color-scheme: dark;
-    --background: #0b0d0f;
-    --foreground: #f2efe6;
-    --card: #13171a;
-    --card-foreground: #f2efe6;
-    --popover: #13171a;
-    --popover-foreground: #f2efe6;
-    --primary: #f0b429;
-    --primary-foreground: #15110a;
-    --secondary: #1c2226;
-    --secondary-foreground: #f2efe6;
-    --muted: #171c20;
-    --muted-foreground: #9aa3a8;
-    --accent: #232a30;
-    --accent-foreground: #f2efe6;
-    --destructive: #c4493f;
-    --success: #5fb97a;
-    --warning: #f0b429;
-    --border: #2a3035;
-    --input: #343c43;
-    --ring: #f0b429;
+    color-scheme: light;
+    --background: #f7f5ef;
+    --foreground: #17130c;
+    --card: #fffdf8;
+    --card-foreground: #17130c;
+    --popover: #fffdf8;
+    --popover-foreground: #17130c;
+    --primary: #8a5a0f;
+    --primary-foreground: #ffffff;
+    --secondary: #ebe6d8;
+    --secondary-foreground: #17130c;
+    --muted: #efebe0;
+    --muted-foreground: #5b5546;
+    --accent: #e6e0cd;
+    --accent-foreground: #17130c;
+    --destructive: #a8322a;
+    --success: #2b6e42;
+    --warning: #8a5a0f;
+    --border: #d8d1bf;
+    --input: #8a8270;
+    --ring: #8a5a0f;
     --radius: 0.5rem;
-    --chart-1: #f0b429;
-    --chart-2: #5fb97a;
-    --chart-3: #d9d4c7;
-    --chart-4: #c4493f;
-    --chart-5: #9aa3a8;
-    --sidebar: #080a0c;
-    --sidebar-foreground: #f2efe6;
-    --sidebar-primary: #f0b429;
-    --sidebar-primary-foreground: #15110a;
-    --sidebar-accent: #1c2226;
-    --sidebar-accent-foreground: #f2efe6;
-    --sidebar-border: #2a3035;
-    --sidebar-ring: #f0b429;
+    --chart-1: #8a5a0f;
+    --chart-2: #2b6e42;
+    --chart-3: #5b5546;
+    --chart-4: #a8322a;
+    --chart-5: #8a8374;
+    --sidebar: #efeadc;
+    --sidebar-foreground: #17130c;
+    --sidebar-primary: #8a5a0f;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e2dccb;
+    --sidebar-accent-foreground: #17130c;
+    --sidebar-border: #d8d1bf;
+    --sidebar-ring: #8a5a0f;
 }
-
 @layer base {
   * {
     @apply border-border outline-ring/50;

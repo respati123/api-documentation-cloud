@@ -46,6 +46,9 @@ export default function App() {
         mobileNavOpen={shell.mobileNavOpen}
         onMobileNavOpenChange={shell.setMobileNavOpen}
         onNavigate={shell.navigate}
+        hasMoreWorkspaces={shell.hasMoreWorkspaces}
+        isLoadingMoreWorkspaces={shell.isLoadingMoreWorkspaces}
+        onLoadMoreWorkspaces={shell.loadMoreWorkspaces}
         onCreateWorkspace={shell.openCreateWorkspace}
         onSignOut={() => void shell.signOut()}
       >

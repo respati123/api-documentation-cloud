@@ -1,5 +1,8 @@
 {
-  "header": { "subtitle": "Shared collection, API reference, and change history.", "invite": "Invite teammate" },
+  "header": {
+    "subtitle": "Shared collection, API reference, and change history.",
+    "invite": "Invite teammate"
+  },
   "tabs": {
     "label": "Workspace sections",
     "overview": "Overview",
@@ -49,5 +52,11 @@
     "joined": "You joined {{name}}.",
     "failed": "Could not accept this invitation.",
     "signInPrompt": "Sign in with the invited email address to join this workspace."
+  },
+  "live": {
+    "connecting": "Connecting…",
+    "live": "Live",
+    "offline": "Reconnecting…",
+    "updated": "{{actor}} pushed a new version."
   }
 }

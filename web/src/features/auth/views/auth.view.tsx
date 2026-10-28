@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -42,9 +43,12 @@ export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMess
 
       <section className="flex flex-col justify-center px-6 py-10 sm:px-10">
         <div className="mx-auto grid w-full max-w-sm gap-8">
-          <div className="flex items-center gap-3 lg:hidden">
-            <ProductMark />
-            <span className="text-sm font-semibold">{t(AUTH_TEXT.brand.name)}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 lg:hidden">
+              <ProductMark />
+              <span className="text-sm font-semibold">{t(AUTH_TEXT.brand.name)}</span>
+            </div>
+            <LanguageSwitcher />
           </div>
 
           <header className="grid gap-2">

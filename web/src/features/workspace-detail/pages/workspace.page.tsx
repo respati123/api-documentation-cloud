@@ -22,7 +22,18 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
   const { t } = useTranslation()
   const vm = useWorkspacePageViewModel(workspaceId, tab, navigate)
 
-  if (vm.workspacesLoading) return <LoadingState label={t(WORKSPACE_TEXT.state.loading)} testId="workspace-loading-state" />
+  if (vm.detailStatus === 'loading') return <LoadingState label={t(WORKSPACE_TEXT.state.loading)} testId="workspace-loading-state" />
+  if (!vm.workspace && vm.detailStatus === 'error') {
+    return (
+      <ErrorState
+        title={t(WORKSPACE_TEXT.state.errorTitle)}
+        message={vm.detailError ?? ''}
+        retryLabel={t(WORKSPACE_TEXT.state.retry)}
+        onRetry={vm.refetchDetail}
+        testId="workspace-view-error"
+      />
+    )
+  }
   if (!vm.workspace) {
     return (
       <EmptyState
@@ -45,6 +56,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
       activeTab={vm.activeTab}
       tabs={vm.visibleTabs}
       memberCount={vm.members.length}
+      liveStatus={vm.liveStatus}
       onTabChange={vm.selectTab}
       onInvite={vm.inviteDialog.open}
     >
@@ -91,6 +103,9 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
           {vm.activeTab === 'activity' && (
             <ActivityView
               commits={vm.commits}
+              commitsHasMore={vm.commitsHasMore}
+              commitsLoadingMore={vm.commitsLoadingMore}
+              onLoadMoreCommits={vm.loadMoreCommits}
               canRestore={workspace.role !== 'viewer'}
               selectedCommit={vm.activity.selectedCommit}
               latestCommitId={vm.activity.latestCommitId}
@@ -113,6 +128,12 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
               invites={vm.invites}
               invitesLoading={vm.invitesLoading}
               invitesError={vm.invitesError}
+              invitesHasMore={vm.invitesHasMore}
+              invitesLoadingMore={vm.invitesLoadingMore}
+              onLoadMoreInvites={vm.loadMoreInvites}
+              membersHasMore={vm.membersHasMore}
+              membersLoadingMore={vm.membersLoadingMore}
+              onLoadMoreMembers={vm.loadMoreMembers}
               lastInviteLink={vm.inviteDialog.lastInviteLink}
               onInvite={vm.inviteDialog.open}
               onCancelInvite={vm.actions.cancelInvite.mutate}

@@ -1,5 +1,8 @@
 {
-  "header": { "subtitle": "Koleksi bersama, referensi API, dan riwayat perubahan.", "invite": "Undang anggota tim" },
+  "header": {
+    "subtitle": "Koleksi bersama, referensi API, dan riwayat perubahan.",
+    "invite": "Undang anggota tim"
+  },
   "tabs": {
     "label": "Bagian workspace",
     "overview": "Ringkasan",
@@ -49,5 +52,11 @@
     "joined": "Kamu bergabung ke {{name}}.",
     "failed": "Undangan ini tidak bisa diterima.",
     "signInPrompt": "Masuk dengan alamat email yang diundang untuk bergabung ke workspace ini."
+  },
+  "live": {
+    "connecting": "Menghubungkan…",
+    "live": "Langsung",
+    "offline": "Menghubungkan ulang…",
+    "updated": "{{actor}} mendorong versi baru."
   }
 }

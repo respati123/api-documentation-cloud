@@ -1,6 +1,8 @@
 import { Layers, LayoutGrid, LogOut, Menu, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '@/shared/components/language-switcher'
+import { LoadMoreButton } from '@/shared/components/load-more-button'
 import { SplitFlap } from '@/shared/components/split-flap'
 import { Badge } from '@/shared/components/ui/badge'
 import {
@@ -29,6 +31,9 @@ export interface AppShellViewProps {
   mobileNavOpen: boolean
   onMobileNavOpenChange: (open: boolean) => void
   onNavigate: (route: AppRoute, replace?: boolean) => void
+  hasMoreWorkspaces: boolean
+  isLoadingMoreWorkspaces: boolean
+  onLoadMoreWorkspaces: () => void
   onCreateWorkspace: () => void
   onSignOut: () => void
   children: ReactNode
@@ -42,6 +47,9 @@ export function AppShellView({
   mobileNavOpen,
   onMobileNavOpenChange,
   onNavigate,
+  hasMoreWorkspaces,
+  isLoadingMoreWorkspaces,
+  onLoadMoreWorkspaces,
   onCreateWorkspace,
   onSignOut,
   children,
@@ -60,6 +68,9 @@ export function AppShellView({
         onMobileNavOpenChange(false)
         onNavigate(next)
       }}
+      hasMoreWorkspaces={hasMoreWorkspaces}
+      isLoadingMoreWorkspaces={isLoadingMoreWorkspaces}
+      onLoadMoreWorkspaces={onLoadMoreWorkspaces}
       onCreateWorkspace={onCreateWorkspace}
       onSignOut={onSignOut}
     />
@@ -123,6 +134,7 @@ export function AppShellView({
               )}
             </BreadcrumbList>
           </Breadcrumb>
+          <LanguageSwitcher />
           <Badge
             variant="outline"
             role="status"
@@ -149,6 +161,9 @@ function ShellNavigation({
   workspaces,
   selectedWorkspaceId,
   onNavigate,
+  hasMoreWorkspaces,
+  isLoadingMoreWorkspaces,
+  onLoadMoreWorkspaces,
   onCreateWorkspace,
   onSignOut,
 }: {
@@ -157,6 +172,9 @@ function ShellNavigation({
   workspaces: CloudWorkspaceRef[]
   selectedWorkspaceId: string | undefined
   onNavigate: (route: AppRoute) => void
+  hasMoreWorkspaces: boolean
+  isLoadingMoreWorkspaces: boolean
+  onLoadMoreWorkspaces: () => void
   onCreateWorkspace: () => void
   onSignOut: () => void
 }) {
@@ -245,6 +263,12 @@ function ShellNavigation({
           ) : (
             <p className="px-2 text-xs text-muted-foreground">{t(SHELL_TEXT.nav.emptyWorkspaces)}</p>
           )}
+          <LoadMoreButton
+            hasMore={hasMoreWorkspaces}
+            isLoading={isLoadingMoreWorkspaces}
+            onLoadMore={onLoadMoreWorkspaces}
+            testId="cloud-nav-load-more"
+          />
         </div>
       </ScrollArea>
       <Separator />
