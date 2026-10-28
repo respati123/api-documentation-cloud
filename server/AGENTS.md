@@ -8,6 +8,8 @@ This folder is the API: Bun, PostgreSQL, and a single HTTP surface used by the w
 server/
 ├── src/
 │   ├── index.ts              bootstrap only: load config, run migrations, start the server
+│   ├── app.ts                builds the Bun handlers and the request log wrapper
+│   ├── router.ts             order of the route modules
 │   ├── config.ts             env read and validated with zod at startup
 │   ├── routes/               route tables, one file per area (workspaces, auth, sync, ...)
 │   ├── services/             business rules, permissions, transactions
@@ -20,7 +22,7 @@ server/
 └── Dockerfile
 ```
 
-Until the migration to this layout is done, the code lives in `index.ts` and `*.ts` files beside it. New code follows the target layout.
+The split is done for `index.ts`, `app.ts`, `router.ts`, `routes/`, `services/`, `lib/`, and `models/`. Route modules still hold some SQL inline. Move it to `repositories/` when you touch a route. New code follows the target layout.
 
 ## Commands
 
