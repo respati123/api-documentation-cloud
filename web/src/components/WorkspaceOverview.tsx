@@ -1,4 +1,5 @@
-import type { CloudCommit, CloudMember, CloudWorkspaceRef, ApiNode, WorkspaceSnapshot } from '../types'
+import type { CloudCommit, CloudMember, ApiNode, WorkspaceSnapshot } from '../types'
+import type { CloudWorkspaceRef } from '@/shared/models/workspace.model'
 
 type Props = { workspace: CloudWorkspaceRef; snapshot: WorkspaceSnapshot; counts: { requests: number; folders: number }; members: CloudMember[]; commits: CloudCommit[]; onTab: (tab: 'overview' | 'docs' | 'activity' | 'team') => void }
 

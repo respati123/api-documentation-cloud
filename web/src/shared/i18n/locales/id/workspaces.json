@@ -1,0 +1,33 @@
+{
+  "create": {
+    "title": "Buat workspace",
+    "description": "Ruang bersama untuk koleksi, kontrak, dan akses tim.",
+    "nameLabel": "Nama workspace",
+    "namePlaceholder": "contoh: Payments API",
+    "cancel": "Batal",
+    "submit": "Buat workspace",
+    "busy": "Sedang membuat…"
+  },
+  "list": {
+    "title": "Workspace",
+    "subtitle": "Koleksi yang dibagikan ke akun kamu.",
+    "emptyTitle": "Belum ada workspace",
+    "emptyDetail": "Buat workspace atau minta rekan tim mengundang kamu.",
+    "create": "Workspace baru",
+    "open": "Buka"
+  },
+  "overview": {
+    "title": "Ringkasan",
+    "subtitle": "Workspace API bersama, kontrak endpoint, dan akses tim."
+  },
+  "summary": {
+    "total": "Workspace",
+    "owned": "Milik kamu",
+    "shared": "Dibagikan ke kamu"
+  },
+  "roles": {
+    "owner": "Owner",
+    "editor": "Editor",
+    "viewer": "Viewer"
+  }
+}

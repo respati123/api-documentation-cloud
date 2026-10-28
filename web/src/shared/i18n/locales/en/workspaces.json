@@ -1,0 +1,33 @@
+{
+  "create": {
+    "title": "Create workspace",
+    "description": "A shared space for collections, contracts, and team access.",
+    "nameLabel": "Workspace name",
+    "namePlaceholder": "e.g. Payments API",
+    "cancel": "Cancel",
+    "submit": "Create workspace",
+    "busy": "Creating…"
+  },
+  "list": {
+    "title": "Workspaces",
+    "subtitle": "Collections shared with your account.",
+    "emptyTitle": "No workspaces to show",
+    "emptyDetail": "Create a workspace or ask a teammate to invite you.",
+    "create": "New workspace",
+    "open": "Open"
+  },
+  "overview": {
+    "title": "Overview",
+    "subtitle": "Shared API workspaces, endpoint contracts, and team access."
+  },
+  "summary": {
+    "total": "Workspaces",
+    "owned": "Owned by you",
+    "shared": "Shared with you"
+  },
+  "roles": {
+    "owner": "Owner",
+    "editor": "Editor",
+    "viewer": "Viewer"
+  }
+}

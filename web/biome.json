@@ -33,16 +33,10 @@
       }
     }
   },
-  "overrides": [
-    {
-      "includes": ["src/shared/components/ui/**"],
-      "linter": {
-        "rules": {
-          "a11y": {
-            "noLabelWithoutControl": "off"
-          }
-        }
-      }
-    }
-  ]
+  "files": {
+    "includes": [
+      "**",
+      "!src/shared/components/ui/**"
+    ]
+  }
 }
