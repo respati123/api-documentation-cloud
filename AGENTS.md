@@ -17,6 +17,12 @@ Nothing in `web/` may import from `server/`, and nothing in `server/` may import
 - Do not write library API calls from memory. If the docs and your memory disagree, the docs win.
 - If the Context7 MCP tools are not available in the session, use the official documentation through WebFetch or WebSearch, and say in your reply that Context7 was not available.
 
+## Commits and pull requests
+
+- Do not add a "Generated with Claude Code" footer or any similar tool-generated line to commit messages or pull request descriptions.
+- A pull request description explains what changed, how it was checked, and anything the reviewer should know. It ends with the last real section, not with a footer.
+- Attribution lines that the user asked for explicitly are the only extra lines allowed in a commit or pull request.
+
 ## Commands
 
 Run these from this folder.
