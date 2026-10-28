@@ -10,10 +10,5 @@ export const currentUserResponseSchema = z.object({
   user: userSchema,
 })
 
-export const okResponseSchema = z.object({
-  ok: z.literal(true),
-})
-
-export type CloudUser = z.infer<typeof userSchema>
 export type AuthSession = z.infer<typeof authSessionSchema>
 export type AuthMode = 'login' | 'register' | 'forgot' | 'reset'

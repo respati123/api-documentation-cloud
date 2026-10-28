@@ -8,6 +8,8 @@ Read this when you add or change a response, an error, input validation, CORS, o
 - Do not wrap success payloads in `data` or any other envelope.
 - Keys are camelCase. Database columns are mapped in the repository, never exposed raw.
 - Status codes: `200` read or update, `201` created, `204` no body.
+- Build every success response with the helpers in `src/lib/http.ts`: `ok(payload)`, `created(payload)`, `noContent()`. Do not call `Response.json` in a route.
+- Mutations that return nothing (delete, logout, password reset, forgot password) answer `204`. A mutation that changes a resource returns the changed resource.
 
 ## Error responses
 
