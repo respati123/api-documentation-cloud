@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { LoadMoreButton } from '@/shared/components/load-more-button'
 import { EmptyState, LoadingState } from '@/shared/components/state-views'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
 import {
@@ -24,6 +25,9 @@ import type { SnapshotChange } from '../utils/snapshot-diff'
 
 export interface ActivityViewProps {
   commits: CloudCommit[]
+  commitsHasMore: boolean
+  commitsLoadingMore: boolean
+  onLoadMoreCommits: () => void
   canRestore: boolean
   selectedCommit: CloudCommit | null
   latestCommitId: string
@@ -38,6 +42,9 @@ export interface ActivityViewProps {
 
 export function ActivityView({
   commits,
+  commitsHasMore,
+  commitsLoadingMore,
+  onLoadMoreCommits,
   canRestore,
   selectedCommit,
   latestCommitId,
@@ -88,6 +95,12 @@ export function ActivityView({
                 </li>
               ))}
             </ul>
+            <LoadMoreButton
+              hasMore={commitsHasMore}
+              isLoading={commitsLoadingMore}
+              onLoadMore={onLoadMoreCommits}
+              testId="activity-load-more"
+            />
           </ScrollArea>
         </CardContent>
       </Card>

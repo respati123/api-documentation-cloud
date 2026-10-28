@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { WORKSPACES_ROLE_TEXT } from '@/features/workspaces'
 import { CopyButton } from '@/shared/components/copy-button'
+import { LoadMoreButton } from '@/shared/components/load-more-button'
 import { EmptyState, LoadingState } from '@/shared/components/state-views'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
 import {
@@ -32,6 +33,12 @@ export interface TeamViewProps {
   invites: CloudInvite[]
   invitesLoading: boolean
   invitesError: string | null
+  invitesHasMore: boolean
+  invitesLoadingMore: boolean
+  onLoadMoreInvites: () => void
+  membersHasMore: boolean
+  membersLoadingMore: boolean
+  onLoadMoreMembers: () => void
   lastInviteLink: string
   onInvite: () => void
   onCancelInvite: (inviteId: string) => void
@@ -49,6 +56,12 @@ export function TeamView({
   invites,
   invitesLoading,
   invitesError,
+  invitesHasMore,
+  invitesLoadingMore,
+  onLoadMoreInvites,
+  membersHasMore,
+  membersLoadingMore,
+  onLoadMoreMembers,
   lastInviteLink,
   onInvite,
   onCancelInvite,
@@ -147,6 +160,12 @@ export function TeamView({
               </TableBody>
             </Table>
           )}
+          <LoadMoreButton
+            hasMore={membersHasMore}
+            isLoading={membersLoadingMore}
+            onLoadMore={onLoadMoreMembers}
+            testId="team-members-load-more"
+          />
         </CardContent>
       </Card>
 
@@ -206,6 +225,12 @@ export function TeamView({
             ) : (
               <EmptyState title={t(TEAM_TEXT.pending.empty)} detail={t(TEAM_TEXT.pending.emptyDetail)} />
             )}
+            <LoadMoreButton
+              hasMore={invitesHasMore}
+              isLoading={invitesLoadingMore}
+              onLoadMore={onLoadMoreInvites}
+              testId="team-invites-load-more"
+            />
           </CardContent>
         </Card>
       )}

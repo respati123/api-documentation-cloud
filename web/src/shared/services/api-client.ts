@@ -24,9 +24,24 @@ interface ApiCallOptions {
   body?: unknown
 }
 
+export interface ApiPage<T> {
+  data: T
+  nextCursor: string | null
+}
+
 // Callers that use a schema should pass the result through zod before using it.
 // Legacy callers still rely on the generic parameter until they are migrated.
 export async function apiCall<T = unknown>(path: string, options: ApiCallOptions = {}): Promise<T> {
+  return unwrapData<T>(await send(path, options))
+}
+
+// For list endpoints. The response meta carries the cursor for the next page, or null on the last page.
+export async function apiPage<T = unknown>(path: string, options: ApiCallOptions = {}): Promise<ApiPage<T>> {
+  const result = await send(path, options)
+  return { data: unwrapData<T>(result), nextCursor: readNextCursor(result) }
+}
+
+async function send(path: string, options: ApiCallOptions): Promise<unknown> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method ?? 'GET',
     headers: {
@@ -39,7 +54,7 @@ export async function apiCall<T = unknown>(path: string, options: ApiCallOptions
   const result: unknown = await response.json().catch(() => ({}))
   if (!response.ok)
     throw new ApiError(readErrorMessage(result) ?? `Request failed (${response.status}).`, response.status, readErrorBody(result))
-  return unwrapData<T>(result)
+  return result
 }
 
 export async function checkApiHealth(): Promise<boolean> {
@@ -69,4 +84,11 @@ function readErrorBody(value: unknown): { code?: string; requestId?: string; det
 function unwrapData<T>(value: unknown): T {
   if (typeof value === 'object' && value !== null && 'data' in value) return value.data as T
   return value as T
+}
+
+function readNextCursor(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null || !('meta' in value)) return null
+  const meta = value.meta
+  if (typeof meta !== 'object' || meta === null || !('nextCursor' in meta)) return null
+  return typeof meta.nextCursor === 'string' ? meta.nextCursor : null
 }

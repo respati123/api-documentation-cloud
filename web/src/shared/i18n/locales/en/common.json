@@ -11,5 +11,9 @@
     "label": "Language",
     "id": "Bahasa Indonesia",
     "en": "English"
+  },
+  "pagination": {
+    "loadMore": "Load more",
+    "loading": "Loading…"
   }
 }
