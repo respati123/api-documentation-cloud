@@ -3,6 +3,7 @@ import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
 import type { AuthUser } from '@/models/workspace'
 import type { RateLimiter } from '@/middleware/rate-limit'
+import { deleteSession, findSessionUser, insertSession } from '@/repositories/sessions.repository'
 
 export const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000
 
@@ -24,14 +25,20 @@ export function bearerToken(request: Request): string | undefined {
 
 export async function createSession(db: SQL, userId: string): Promise<string> {
   const token = randomBytes(32).toString('base64url')
-  await db`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (${tokenHash(token)}, ${userId}, ${new Date(Date.now() + sessionLifetimeMs)})`
+  await insertSession(db, { tokenHash: tokenHash(token), userId, expiresAt: new Date(Date.now() + sessionLifetimeMs) })
   return token
 }
 
 export async function currentUser(db: SQL, request: Request): Promise<AuthUser> {
   const bearer = bearerToken(request)
   if (!bearer) throw new AppError('AUTH_REQUIRED')
-  const [user] = await db`SELECT u.id, u.email FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ${tokenHash(bearer)} AND s.expires_at > now()`
+  const user = await findSessionUser(db, tokenHash(bearer))
   if (!user) throw new AppError('SESSION_EXPIRED')
-  return user as AuthUser
+  return user
+}
+
+// Ends the session of the bearer token. A request without a token is not an error.
+export async function endSession(db: SQL, request: Request): Promise<void> {
+  const bearer = bearerToken(request)
+  if (bearer) await deleteSession(db, tokenHash(bearer))
 }

@@ -1,5 +1,6 @@
 import type { AppContext } from '@/context'
 import type { AuthUser, WorkspaceChangeReason } from '@/models/workspace'
+import { listMemberIds } from '@/repositories/memberships.repository'
 
 export function isAllowedSyncOrigin(origin: string | null): boolean {
   if (!origin || origin === 'null' || origin === 'file://') return true
@@ -11,8 +12,7 @@ export function isAllowedSyncOrigin(origin: string | null): boolean {
 
 // Sends one event to every open socket of a current member of the workspace.
 export async function sendToMembers(ctx: AppContext, workspaceId: string, event: string) {
-  const members = await ctx.db`SELECT user_id AS "userId" FROM memberships WHERE workspace_id = ${workspaceId}`
-  const memberIds = new Set(members.map((member: { userId: unknown }) => String(member.userId)))
+  const memberIds = new Set(await listMemberIds(ctx.db, workspaceId))
   for (const socket of ctx.syncSockets) {
     if (!memberIds.has(socket.data.userId)) continue
     try { socket.send(event) }

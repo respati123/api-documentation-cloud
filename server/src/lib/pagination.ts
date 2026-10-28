@@ -50,3 +50,15 @@ export function cursorText(cursor: CursorKeys | null, key: string): string | nul
   if (typeof value !== 'string') throw new AppError('PAGINATION_INVALID')
   return value
 }
+
+// Returns the named keys of a cursor, or null when there is no cursor. A cursor missing one of them is refused.
+export function cursorValues<const K extends string>(cursor: CursorKeys | null, keys: readonly K[]): Record<K, string> | null {
+  if (cursor === null) return null
+  const values = {} as Record<K, string>
+  for (const key of keys) {
+    const value = cursor[key]
+    if (typeof value !== 'string') throw new AppError('PAGINATION_INVALID')
+    values[key] = value
+  }
+  return values
+}
