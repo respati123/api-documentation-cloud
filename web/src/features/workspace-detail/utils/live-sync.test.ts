@@ -16,6 +16,20 @@ describe('parseSyncEvent', () => {
     expect(parseSyncEvent(JSON.stringify(event))).toEqual(event)
   })
 
+  test('reads a change to the team, invitations, settings, or the workspace itself', () => {
+    for (const reason of ['members', 'invites', 'settings', 'deleted'] as const) {
+      expect(parseSyncEvent(JSON.stringify({ type: 'workspace.changed', workspaceId: 'ws-1', reason }))).toEqual({
+        type: 'workspace.changed',
+        workspaceId: 'ws-1',
+        reason,
+      })
+    }
+  })
+
+  test('refuses a change with an unknown reason', () => {
+    expect(parseSyncEvent(JSON.stringify({ type: 'workspace.changed', workspaceId: 'ws-1', reason: 'other' }))).toBeNull()
+  })
+
   test('ignores other event types', () => {
     expect(parseSyncEvent(JSON.stringify({ ...event, type: 'ping' }))).toBeNull()
   })
