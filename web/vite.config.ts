@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
@@ -30,5 +31,10 @@ export default defineConfig({
   build: {
     outDir: resolve('dist'),
     emptyOutDir: true
+  },
+  test: {
+    environment: 'jsdom',
+    include: ['**/*.test.{ts,tsx}'],
+    setupFiles: ['./test-setup.ts'],
   }
 })

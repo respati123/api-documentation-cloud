@@ -1,0 +1,10 @@
+{
+  "error": {
+    "title": "Terjadi kesalahan",
+    "detail": "Tampilan ini mengalami error yang tidak terduga. Coba lagi, atau kembali ke workspace kamu.",
+    "retry": "Coba lagi",
+    "back": "Kembali ke workspace",
+    "unexpected": "Terjadi sesuatu yang tidak terduga. Coba lagi.",
+    "invalidResponse": "Server mengirim respons yang tidak sesuai."
+  }
+}
