@@ -37,5 +37,9 @@ export const id = {
   INVITE_ROLE_INVALID: 'Peran undangan harus editor atau viewer.',
   INVITE_EMAIL_INVALID: 'Masukkan alamat email undangan yang valid.',
   EMAIL_INVALID: 'Masukkan alamat email yang valid.',
+  WEBSOCKET_ORIGIN_NOT_ALLOWED: 'Origin ini tidak bisa membuka koneksi sinkronisasi.',
+  WEBSOCKET_TICKET_INVALID: 'Tiket koneksi sinkronisasi tidak ada atau sudah kedaluwarsa.',
+  WEBSOCKET_UNAVAILABLE: 'Tidak bisa membuka koneksi notifikasi sinkronisasi.',
+  SYNC_REMOTE_ADVANCED: 'Versi cloud sudah berubah sejak tarikan terakhir. Tarik dan gabungkan dulu sebelum push lagi.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>

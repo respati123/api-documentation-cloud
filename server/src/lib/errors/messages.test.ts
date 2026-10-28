@@ -20,3 +20,14 @@ describe('error messages', () => {
     expect(typeof invite === 'function' && invite({ email: 'a@b.test' })).toContain('a@b.test')
   })
 })
+
+describe('sync and websocket error codes', () => {
+  test.each([
+    ['WEBSOCKET_ORIGIN_NOT_ALLOWED', 403],
+    ['WEBSOCKET_TICKET_INVALID', 401],
+    ['WEBSOCKET_UNAVAILABLE', 400],
+    ['SYNC_REMOTE_ADVANCED', 409],
+  ] as const)('%s uses status %i', (code, status) => {
+    expect(errorDefinitions[code].status).toBe(status)
+  })
+})
