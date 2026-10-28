@@ -1,13 +1,4 @@
-export type WorkspaceRole = 'owner' | 'editor' | 'viewer'
-
-export type CloudWorkspaceRef = {
-  id: string
-  name: string
-  role: WorkspaceRole
-  headCommitId: string | null
-  createdAt: string
-  updatedAt: string | null
-}
+import type { CloudWorkspaceRef, WorkspaceRole } from '@/shared/models/workspace.model'
 
 export type RequestNode = {
   id: string
@@ -43,4 +34,3 @@ export type WorkspaceSnapshot = CloudWorkspaceRef & {
 export type CloudCommit = { id: string; parentIds: string[]; message: string; createdAt: string; authorEmail: string }
 export type CloudMember = { id: string; email: string; role: WorkspaceRole; joinedAt: string }
 export type CloudInvite = { id: string; email: string; role: 'editor' | 'viewer'; expiresAt: string; createdAt: string; createdByEmail: string }
-export type CloudUser = { id: string; email: string }

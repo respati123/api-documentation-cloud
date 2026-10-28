@@ -1,4 +1,5 @@
-import type { CloudInvite, CloudMember, CloudWorkspaceRef } from '../types'
+import type { CloudInvite, CloudMember } from '../types'
+import type { CloudWorkspaceRef } from '@/shared/models/workspace.model'
 
 type Props = {
   workspace: CloudWorkspaceRef

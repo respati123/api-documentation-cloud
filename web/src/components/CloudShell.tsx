@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import type { CloudUser, CloudWorkspaceRef } from '../types'
+import type { CloudUser } from '@/shared/models/user.model'
+import type { CloudWorkspaceRef } from '@/shared/models/workspace.model'
 import { appVersion } from '../shared/config/app-version'
 
 type Route = { page: 'overview' | 'workspaces' | 'workspace'; workspaceId?: string; tab?: 'overview' | 'docs' | 'activity' | 'team' | 'settings' }
