@@ -1,3 +1,9 @@
+export const LIVE_STATUS_TEXT = {
+  connecting: 'workspace:live.connecting',
+  live: 'workspace:live.live',
+  offline: 'workspace:live.offline',
+} as const
+
 export const WORKSPACE_TEXT = {
   header: {
     subtitle: 'workspace:header.subtitle',
@@ -40,6 +46,12 @@ export const WORKSPACE_TEXT = {
     created: 'workspace:overview.created',
     workspaceId: 'workspace:overview.workspaceId',
     manageTeam: 'workspace:overview.manageTeam',
+  },
+  live: {
+    connecting: 'workspace:live.connecting',
+    live: 'workspace:live.live',
+    offline: 'workspace:live.offline',
+    updated: 'workspace:live.updated',
   },
   invite: {
     accepting: 'workspace:invite.accepting',

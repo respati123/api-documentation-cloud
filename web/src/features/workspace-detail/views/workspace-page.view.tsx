@@ -7,19 +7,30 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 import type { CloudWorkspaceRef } from '@/shared/models/workspace.model'
-import { WORKSPACE_TEXT } from '../constants/workspace-detail-text.constants'
+import { LIVE_STATUS_TEXT, WORKSPACE_TEXT } from '../constants/workspace-detail-text.constants'
+import type { LiveStatus } from '../viewmodels/use-workspace-live-sync.viewmodel'
 
 export interface WorkspacePageViewProps {
   workspace: CloudWorkspaceRef
   activeTab: WorkspaceTab
   tabs: readonly WorkspaceTab[]
   memberCount: number
+  liveStatus: LiveStatus
   onTabChange: (tab: WorkspaceTab) => void
   onInvite: () => void
   children: ReactNode
 }
 
-export function WorkspacePageView({ workspace, activeTab, tabs, memberCount, onTabChange, onInvite, children }: WorkspacePageViewProps) {
+export function WorkspacePageView({
+  workspace,
+  activeTab,
+  tabs,
+  memberCount,
+  liveStatus,
+  onTabChange,
+  onInvite,
+  children,
+}: WorkspacePageViewProps) {
   const { t } = useTranslation('workspace')
   return (
     <div data-testid="workspace-page" className="grid gap-6">
@@ -29,6 +40,13 @@ export function WorkspacePageView({ workspace, activeTab, tabs, memberCount, onT
             <h1 className="text-2xl font-semibold tracking-tight">{workspace.name}</h1>
             <Badge variant="secondary" data-testid="workspace-role-badge">
               {t(WORKSPACES_ROLE_TEXT[workspace.role])}
+            </Badge>
+            <Badge variant="outline" data-testid="workspace-live-status" data-state={liveStatus} className="gap-2">
+              <span
+                aria-hidden="true"
+                className={liveStatus === 'live' ? 'size-2 rounded-full bg-success' : 'size-2 rounded-full bg-warning'}
+              />
+              {t(LIVE_STATUS_TEXT[liveStatus])}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">{t(WORKSPACE_TEXT.header.subtitle)}</p>

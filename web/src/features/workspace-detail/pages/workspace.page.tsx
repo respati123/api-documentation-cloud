@@ -24,7 +24,15 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
 
   if (vm.detailStatus === 'loading') return <LoadingState label={t(WORKSPACE_TEXT.state.loading)} testId="workspace-loading-state" />
   if (!vm.workspace && vm.detailStatus === 'error') {
-    return <ErrorState title={t(WORKSPACE_TEXT.state.errorTitle)} message={vm.detailError ?? ''} retryLabel={t(WORKSPACE_TEXT.state.retry)} onRetry={vm.refetchDetail} testId="workspace-view-error" />
+    return (
+      <ErrorState
+        title={t(WORKSPACE_TEXT.state.errorTitle)}
+        message={vm.detailError ?? ''}
+        retryLabel={t(WORKSPACE_TEXT.state.retry)}
+        onRetry={vm.refetchDetail}
+        testId="workspace-view-error"
+      />
+    )
   }
   if (!vm.workspace) {
     return (
@@ -48,6 +56,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
       activeTab={vm.activeTab}
       tabs={vm.visibleTabs}
       memberCount={vm.members.length}
+      liveStatus={vm.liveStatus}
       onTabChange={vm.selectTab}
       onInvite={vm.inviteDialog.open}
     >
