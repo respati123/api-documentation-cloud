@@ -5,13 +5,14 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 const rootManifest = resolve('../package.json')
 const releaseVersion = process.env.APP_VERSION || (existsSync(rootManifest) ? JSON.parse(readFileSync(rootManifest, 'utf8')).version : 'dev')
 
 export default defineConfig({
   root: 'src',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), ...(process.env.ANALYZE ? [visualizer({ filename: process.env.ANALYZE, template: 'raw-data', gzipSize: true })] : [])],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
