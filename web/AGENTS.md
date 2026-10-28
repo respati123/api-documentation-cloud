@@ -46,6 +46,7 @@ Run the typecheck and build before you hand off any change in `src/`.
 - **Loading uses skeletons that match the final layout.** Scroll areas hide their scrollbar when there is nothing to scroll.
 - **MVVM with feature folders.** Features import from each other only through `@/features/<name>`.
 - **Every interactive element has a `data-testid`**, format `[feature]-[component]-[element]`.
+- **Types have one owner.** Feature-only types live in `features/<name>/models`. A type used by two or more features lives in `shared/models`, and features import it from there. See `references/architecture.md`.
 - **No `any`.** Validate every API response with a `zod` schema in the service, and infer the type from it.
 - **Biome is the only linter and formatter.** Run `bun run cloud:lint` (added during the refactor) before you hand off.
 - **File, folder, and identifier names are English**, even when the UI text is Indonesian. See `references/code-quality.md`.

@@ -87,6 +87,25 @@ features/team/
 └── pages/team.page.tsx
 ```
 
+## Where types go
+
+Every type has exactly one owner. Pick the location by who uses it:
+
+| Kind of type | Location | Example |
+|---|---|---|
+| Domain type used by two or more features | `shared/models/<name>.model.ts` | `workspace.model.ts` (`WorkspaceRole`, `CloudWorkspaceRef`), `api-tree.model.ts` (`ApiNode`, `RequestNode`), `commit.model.ts` (`CloudCommit`), `user.model.ts` (`CloudUser`) |
+| Response or input used by one feature | `features/<name>/models/<name>.model.ts` | `auth.model.ts` (`AuthSession`, `AuthMode`) |
+| Props of a view | Exported from the view file, next to the component | `AuthViewProps` in `auth.view.tsx` |
+| Zod schema and the type inferred from it | The same model file as the type | `authSessionSchema` and `AuthSession` |
+
+Rules:
+
+- **One definition per type.** If two files describe the same shape (for example `CloudUser` and `AuthUser`), keep one and import it everywhere.
+- **Feature code imports shared domain types from `@/shared/models/...`.** It never imports a model file from another feature.
+- **A type moves to `shared/models` when a second feature needs it.** Move it in the same change that adds the second use.
+- **No types defined inline inside components**, except the props interface of that component.
+- **The legacy `src/types.ts` is split by owner during migration.** Each part moves to `shared/models` (domain) or to the feature that owns it, and the file is deleted when empty.
+
 ## Naming
 
 - Files are kebab-case with the layer suffix: `team.view.tsx`, `use-team.viewmodel.ts`, `team.service.ts`.
