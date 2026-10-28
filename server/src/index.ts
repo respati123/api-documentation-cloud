@@ -2,6 +2,7 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto'
 import { SQL } from 'bun'
 import nodemailer from 'nodemailer'
 import { loadConfig } from '@/config'
+import { runMigrations } from '@/migrate'
 import { created, noContent, ok } from '@/lib/http'
 import { AppError } from '@/lib/errors/app-error'
 import { cursorText, decodeCursor, encodeCursor, pageOf, readLimit } from '@/lib/pagination'
@@ -608,8 +609,8 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
 }
 
 async function initialize() {
-  const schema = await Bun.file(new URL('../schema.sql', import.meta.url)).text()
-  for (const statement of schema.split(';').map((part) => part.trim()).filter(Boolean)) await db.unsafe(statement)
+  const applied = await runMigrations(db, new URL('../migrations/', import.meta.url), logger)
+  if (applied > 0) logger.info('migrations applied', { count: applied })
   Bun.serve({
     port: config.port,
     websocket: {

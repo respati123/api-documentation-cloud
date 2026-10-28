@@ -17,7 +17,7 @@ Read this when you write SQL, change the schema, add a transaction, or add a lis
 - The runner applies pending migrations at startup, in order. Each migration runs in its own transaction.
 - A table `schema_migrations(version, name, checksum, applied_at)` records what ran. The runner stops with an error if an applied file's checksum changed.
 - Migrations are written to be safe on a live database: add columns as nullable or with a default, build indexes concurrently when the table is large, and do data changes in a separate migration from schema changes.
-- `schema.sql` is replaced by the numbered migrations. Until that is done, `schema.sql` stays idempotent and is only used for the first run.
+- The first migration, `0001_initial.sql`, holds the schema the app shipped with. It stays idempotent, so it is safe to run on a database that already has the tables.
 
 ## Transactions
 

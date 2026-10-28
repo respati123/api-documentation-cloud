@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
 RUN bun install --production --frozen-lockfile
 COPY src ./src
-COPY schema.sql ./
+COPY migrations ./migrations
 
 ENV PORT=3001
 EXPOSE 3001
