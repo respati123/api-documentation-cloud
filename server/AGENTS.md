@@ -22,7 +22,7 @@ server/
 └── Dockerfile
 ```
 
-The split is done for `index.ts`, `app.ts`, `router.ts`, `routes/`, `services/`, `lib/`, and `models/`. Route modules still hold some SQL inline. Move it to `repositories/` when you touch a route. New code follows the target layout.
+The split is done for every folder above. Application SQL lives in `repositories/` (the migration runner in `migrate.ts` is the exception), and transactions live in `services/`. `testing/` holds the shared database helpers for the repository tests.
 
 ## Commands
 

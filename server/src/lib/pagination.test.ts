@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { AppError } from './errors/app-error'
-import { cursorText, DEFAULT_PAGE_LIMIT, decodeCursor, encodeCursor, pageOf, readLimit } from './pagination'
+import { cursorText, cursorValues, DEFAULT_PAGE_LIMIT, decodeCursor, encodeCursor, pageOf, readLimit } from './pagination'
 
 const url = (query: string) => new URL(`https://api.test/api/workspaces${query}`)
 
@@ -62,5 +62,19 @@ describe('cursorText', () => {
 
   test('refuses a cursor from another list that lacks the key', () => {
     expect(() => cursorText({ i: 'y' }, 't')).toThrow(AppError)
+  })
+})
+
+describe('cursorValues', () => {
+  test('returns null when there is no cursor', () => {
+    expect(cursorValues(null, ['t', 'i'])).toBeNull()
+  })
+
+  test('returns the named keys of a cursor', () => {
+    expect(cursorValues({ r: '1', t: 'at', i: 'id' }, ['r', 't', 'i'])).toEqual({ r: '1', t: 'at', i: 'id' })
+  })
+
+  test('refuses a cursor from another list that lacks one of the keys', () => {
+    expect(() => cursorValues({ t: 'at' }, ['t', 'i'])).toThrow(AppError)
   })
 })
