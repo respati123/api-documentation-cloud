@@ -9,6 +9,10 @@
     "api:dev": "bun --cwd server --watch index.ts",
     "api:start": "bun --cwd server index.ts",
     "api:typecheck": "cd server && bun run typecheck",
-    "api:test": "bun test server"
+    "api:test": "bun test server",
+    "cloud:test": "cd web && bun run test",
+    "cloud:i18n-check": "cd web && bun run i18n-check",
+    "cloud:lint": "cd web && bun run lint",
+    "cloud:format": "cd web && bun run format"
   }
 }

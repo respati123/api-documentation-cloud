@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { apiCall } from '../api'
+import { apiCall } from '@/shared/services/api-client'
 import type { ApiNode, CloudCommit } from '../types'
 
 type SnapshotCommit = { id: string; parentIds: string[]; message: string; tree: ApiNode[]; createdAt: string }

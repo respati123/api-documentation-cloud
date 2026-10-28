@@ -1,0 +1,10 @@
+{
+  "error": {
+    "title": "Something went wrong",
+    "detail": "This view hit an unexpected error. Try again, or go back to your workspaces.",
+    "retry": "Try again",
+    "back": "Back to workspaces",
+    "unexpected": "Something unexpected happened. Try again.",
+    "invalidResponse": "The server sent an unexpected response."
+  }
+}

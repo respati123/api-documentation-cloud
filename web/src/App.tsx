@@ -1,7 +1,7 @@
 import { FormEvent, ReactNode, CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { apiCall, checkApiHealth } from './api'
+import { apiCall, checkApiHealth } from '@/shared/services/api-client'
 import { ActivityView } from './components/ActivityView'
-import { AuthScreen, type AuthMode } from './components/AuthScreen'
+import { AuthPage, isPasswordResetRoute, useAuthSessionStore, useAuthSessionViewModel } from '@/features/auth'
 import { CloudShell } from './components/CloudShell'
 import { DesktopLoginApprove } from './components/DesktopLoginApprove'
 import { isDesktopLoopbackRedirect } from './desktop-redirect'
@@ -9,14 +9,13 @@ import { EndpointDocumentation } from './components/EndpointDocumentation'
 import { TeamView } from './components/TeamView'
 import { WorkspaceOverview } from './components/WorkspaceOverview'
 import { WorkspaceSettings } from './components/WorkspaceSettings'
-import type { ApiNode, CloudCommit, CloudInvite, CloudMember, CloudUser, CloudWorkspaceRef, RequestNode, WorkspaceRole, WorkspaceSnapshot } from './types'
+import type { ApiNode, CloudCommit, CloudInvite, CloudMember, CloudWorkspaceRef, RequestNode, WorkspaceRole, WorkspaceSnapshot } from './types'
 
 type WorkspaceTab = 'overview' | 'docs' | 'activity' | 'team' | 'settings'
 type Route = { page: 'overview' | 'workspaces' | 'workspace'; workspaceId?: string; tab?: WorkspaceTab }
 type Notice = { kind: 'success' | 'error' | 'info'; message: string }
 type WorkspaceDetails = { snapshot: WorkspaceSnapshot; commits: CloudCommit[]; members: CloudMember[] }
 
-const sessionKey = 'api-documentation-cloud-session'
 
 function readRoute(): Route {
   const parts = window.location.pathname.split('/').filter(Boolean)
@@ -70,15 +69,9 @@ function findRequest(nodes: ApiNode[], id: string): RequestNode | null {
 }
 
 export default function App() {
-  const [token, setToken] = useState(() => sessionStorage.getItem(sessionKey) || '')
-  const [user, setUser] = useState<CloudUser | null>(null)
-  const [authChecking, setAuthChecking] = useState(() => Boolean(sessionStorage.getItem(sessionKey)))
-  const [authBusy, setAuthBusy] = useState(false)
-  const [authError, setAuthError] = useState('')
-  const [resetPage, setResetPage] = useState(() => window.location.pathname === '/reset-password')
-  const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('token') || '')
-  const [authMode, setAuthMode] = useState<AuthMode>(() => (resetPage ? 'reset' : 'login'))
-  const [authNotice, setAuthNotice] = useState('')
+  const session = useAuthSessionViewModel()
+  const token = session.token
+  const user = session.user
   const [workspaces, setWorkspaces] = useState<CloudWorkspaceRef[]>([])
   const [workspacesLoading, setWorkspacesLoading] = useState(false)
   const [workspacesError, setWorkspacesError] = useState('')
@@ -126,26 +119,6 @@ export default function App() {
     const onPopState = () => setRoute(readRoute())
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
-  }, [])
-
-  useEffect(() => {
-    if (!token) {
-      setAuthChecking(false)
-      return
-    }
-    let active = true
-    apiCall<{ user: CloudUser }>('/api/me', { token })
-      .then(({ user: currentUser }) => { if (active) { setUser(currentUser); sessionStorage.setItem('api-documentation-cloud-user-id', currentUser.id) } })
-      .catch(() => {
-        if (!active) return
-        sessionStorage.removeItem(sessionKey)
-        setToken('')
-        setUser(null)
-        sessionStorage.removeItem('api-documentation-cloud-user-id')
-        setAuthError('Your session expired. Sign in again to continue.')
-      })
-      .finally(() => { if (active) setAuthChecking(false) })
-    return () => { active = false }
   }, [])
 
   useEffect(() => {
@@ -266,43 +239,6 @@ export default function App() {
   }, [activeTree, firstVisibleRequest, selectedRequestId])
   const selectedRequest = useMemo(() => findRequest(visibleEndpoints, selectedRequestId) ?? firstVisibleRequest, [visibleEndpoints, selectedRequestId, firstVisibleRequest])
 
-  async function handleAuthSubmit(event: FormEvent<HTMLFormElement>, email: string, password: string) {
-    event.preventDefault()
-    setAuthBusy(true)
-    setAuthError('')
-    try {
-      if (authMode === 'forgot') {
-        await apiCall('/api/auth/forgot-password', { method: 'POST', body: { email } })
-        setAuthNotice('If an account exists for that email, a reset link is on its way. Check your inbox.')
-        return
-      }
-      if (authMode === 'reset') {
-        await apiCall('/api/auth/reset-password', { method: 'POST', body: { token: resetToken, password } })
-        sessionStorage.removeItem(sessionKey)
-        sessionStorage.removeItem('api-documentation-cloud-user-id')
-        setToken('')
-        setUser(null)
-        setResetToken('')
-        setResetPage(false)
-        window.history.replaceState({}, '', '/')
-        setAuthMode('login')
-        setAuthNotice('Your password was updated. Sign in with your new password.')
-        return
-      }
-      const result = await apiCall<{ token: string; user: CloudUser }>(`/api/auth/${authMode}`, { method: 'POST', body: { email, password } })
-      sessionStorage.setItem(sessionKey, result.token)
-      setToken(result.token)
-      setUser(result.user)
-      sessionStorage.setItem('api-documentation-cloud-user-id', result.user.id)
-      setAuthChecking(false)
-      setApiOnline(await checkApiHealth())
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Could not sign in.')
-    } finally {
-      setAuthBusy(false)
-    }
-  }
-
   async function approveDesktopLogin() {
     if (!token || !desktopLoginState) return
     if (!isDesktopLoopbackRedirect(desktopLoginRedirect)) {
@@ -331,11 +267,7 @@ export default function App() {
   }
 
   async function signOut() {
-    if (token) await apiCall('/api/auth/logout', { token, method: 'POST' }).catch(() => undefined)
-    sessionStorage.removeItem(sessionKey)
-    setToken('')
-    setUser(null)
-    sessionStorage.removeItem('api-documentation-cloud-user-id')
+    await session.signOut()
     setWorkspaces([])
     setDetails(null)
     navigate({ page: 'overview' }, true)
@@ -399,12 +331,6 @@ export default function App() {
     } catch (error) {
       setInvitesError(error instanceof Error ? error.message : 'Could not cancel invitation.')
     }
-  }
-
-  function changeAuthMode(mode: AuthMode) {
-    setAuthMode(mode)
-    setAuthError('')
-    setAuthNotice('')
   }
 
   async function changeMemberRole(member: CloudMember, role: 'editor' | 'viewer') {
@@ -486,8 +412,12 @@ export default function App() {
     }
   }
 
-  if (authChecking) return <div className="cloud-gate" role="status">Checking your session…</div>
-  if (!token || !user || resetPage) return <AuthScreen mode={authMode} setMode={changeAuthMode} busy={authBusy} error={authError} notice={authNotice} inviteMessage={pendingInviteToken ? inviteFeedback || 'Sign in with the invited email address to join this workspace.' : desktopLoginState ? 'Sign in to approve the desktop app.' : ''} onSubmit={handleAuthSubmit} />
+  if (session.status === 'checking') return <div className="cloud-gate" role="status">Checking your session…</div>
+  if (session.status !== 'authenticated' || isPasswordResetRoute()) {
+    const inviteMessage = pendingInviteToken ? inviteFeedback || 'Sign in with the invited email address to join this workspace.' : desktopLoginState ? 'Sign in to approve the desktop app.' : null
+    return <AuthPage inviteMessage={inviteMessage} />
+  }
+  if (!user) return null
   if (desktopLoginState) return <DesktopLoginApprove email={user.email} busy={desktopLoginBusy} done={desktopLoginDone} error={desktopLoginError} onApprove={() => void approveDesktopLogin()} onCancel={cancelDesktopLogin} />
 
   const title = route.page === 'workspace' ? activeWorkspace?.name || activeSnapshot?.name || 'Workspace' : route.page === 'workspaces' ? 'Workspaces' : 'Overview'
@@ -690,8 +620,8 @@ function formatDate(value: string | null | undefined): string {
 }
 
 function errorMessage(error: unknown, fallback: string): string { return error instanceof Error ? error.message : fallback }
-function getSessionToken(): string { return sessionStorage.getItem(sessionKey) || '' }
-function userId(): string { return sessionStorage.getItem('api-documentation-cloud-user-id') || '' }
+function getSessionToken(): string { return useAuthSessionStore.getState().token }
+function userId(): string { return useAuthSessionStore.getState().userId }
 
 function ModalDialog({ className, labelId, onClose, children }: { className: string; labelId: string; onClose: () => void; children: ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null)
