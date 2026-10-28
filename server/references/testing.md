@@ -56,4 +56,5 @@ Route tests are the main safety net. Each protected route needs at least:
 2. All tests pass, including the route tests for the change.
 3. Typecheck passes.
 4. The migration (if any) applies on a fresh database and on one that already has the previous migrations.
-5. The new `.env` variables (if any) are in `.env.example`.
+5. Every new error code has a message in `id` and `en`, and a test checks the message for each language.
+6. The new `.env` variables (if any) are in `.env.example`.

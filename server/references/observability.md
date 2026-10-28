@@ -37,7 +37,9 @@ One line per request, written when the response is sent:
 Every error that reaches the error handler is logged with:
 
 - `msg: "request failed"`, or a more specific message from the code that threw.
-- `error`: `name`, `message`, `code` (if any), `stack`, and `cause` as a chain. Limit the chain depth to 5.
+- `code`: the error code from `codes.ts`. This is the field to search by.
+- `locale`: the language the client received (`id` or `en`).
+- `error`: `name`, `message` (English), `stack`, and `cause` as a chain. Limit the chain depth to 5.
 - The request context fields above.
 
 Expected errors (validation, not found, forbidden) are logged at `warn` without a stack. Unexpected errors are logged at `error` with the stack.

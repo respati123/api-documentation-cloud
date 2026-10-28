@@ -65,6 +65,25 @@ Every response sets:
 
 Responses that contain a session or a token also set `Cache-Control: no-store`. This covers login, register, `/api/me`, and desktop login exchange.
 
-## Message language
+## Error codes and messages
 
-Messages are English, because the portal shows them unchanged today. Keep them stable. If the portal is later localized, map `code` to a translation and keep the server text as the fallback.
+- **Codes** are constants in `src/lib/errors/codes.ts`, one object, `as const`. Example: `WORKSPACE_NOT_FOUND`, `ROLE_NOT_ALLOWED`, `RATE_LIMITED`. A shipped code is never renamed or reused.
+- **Messages** are in two files: `src/lib/errors/messages/en.ts` and `src/lib/errors/messages/id.ts`. Each file is typed with `satisfies Record<ErrorCode, ErrorMessage>`. A missing code is a typecheck error, so no code can ship without both languages.
+- **Parameters** are functions: `(params) => string`. Never build a message by joining strings at the throw site.
+- **Throw by code.** Services throw `new AppError(ErrorCode.WORKSPACE_NOT_FOUND)`. The throw site never writes message text.
+
+## Language negotiation
+
+- The language comes from the `Accept-Language` header. `src/lib/locale.ts` parses it with quality values and picks the first supported language: `id` or `en`.
+- When the header is missing or no language matches, the default is `en`.
+- Every error response sets `Content-Language` to the language it used, and `Vary: Accept-Language` so caches never mix languages.
+- The `error` field carries the message in that language. `code` is the same in every language.
+- Clients send `Accept-Language` from the language the user picked. The web portal and the desktop app both do this.
+- Log lines are always English. The `locale` field records what the client received.
+
+## Adding a code
+
+1. Add the code to `codes.ts`.
+2. Add its message to `en.ts` and `id.ts`.
+3. Write the test that expects the code, the status, and the message in the requested language first (TDD).
+4. Run typecheck. If a language is missing, it fails here.
