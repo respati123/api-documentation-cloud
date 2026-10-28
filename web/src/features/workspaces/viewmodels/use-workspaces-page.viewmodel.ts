@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
+import { COMMON_TEXT } from '@/shared/constants/common-text.constants'
 import { ApiError } from '@/shared/services/api-client'
 import type { WorkspaceListStatus } from '../models/workspaces.model'
 import { useWorkspacesQuery } from './use-workspaces.viewmodel'
@@ -16,7 +17,7 @@ export function useWorkspacesPageViewModel() {
     status,
     workspaces,
     ownedCount: workspaces.filter((workspace) => workspace.role === 'owner').length,
-    errorMessage: query.error ? (query.error instanceof ApiError ? query.error.message : t('common:error.unexpected')) : null,
+    errorMessage: query.error ? (query.error instanceof ApiError ? query.error.message : t(COMMON_TEXT.error.unexpected)) : null,
     retry: () => {
       void query.refetch()
     },

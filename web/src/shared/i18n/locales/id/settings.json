@@ -1,0 +1,18 @@
+{
+  "general": {
+    "title": "Umum",
+    "detail": "Nama yang terlihat oleh semua orang yang punya akses.",
+    "nameLabel": "Nama workspace",
+    "save": "Simpan nama",
+    "renamed": "Nama workspace diperbarui.",
+    "renameFailed": "Nama workspace tidak bisa diubah."
+  },
+  "danger": {
+    "title": "Hapus workspace",
+    "detail": "Anggota kehilangan akses, dan seluruh riwayat commit dihapus. Tindakan ini tidak bisa dibatalkan.",
+    "confirmLabel": "Ketik {{name}} untuk konfirmasi",
+    "delete": "Hapus workspace",
+    "deleted": "{{name}} sudah dihapus.",
+    "deleteFailed": "Workspace ini tidak bisa dihapus."
+  }
+}

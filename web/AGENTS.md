@@ -34,8 +34,11 @@ Run the typecheck and build before you hand off any change in `src/`.
 
 ## Core rules
 
+- **MANDATORY: use Context7 for library docs.** Before you write or change code that calls React, Vite, Tailwind, shadcn/ui, TanStack Query, zod, i18next, or any other library, resolve the library ID with the Context7 MCP tools and query the docs for the exact API. Do not write library calls from memory. If Context7 is not available, use the official docs and say so in your reply. See `cloud/AGENTS.md`.
 - **UI work uses the impeccable skill**, installed at `.agents/skills/impeccable/`. Read `references/ui-design.md` before any UI edit.
-- **Components come from shadcn/ui only, and styling is Tailwind only.** No `.css` files except the single global entry `src/index.css`. Use Tailwind utilities and theme tokens.
+- **MANDATORY: every UI element in a view is a shadcn/ui component.** Views and pages never contain raw `button`, `input`, `select`, `textarea`, `label`, `table`, `hr`, or `a` elements. Use the **shadcn** skill (`.agents/skills/shadcn/SKILL.md`) and add missing components with `npx shadcn@latest add <name> -y`. A custom element is allowed only when no shadcn component fits. See `references/ui-design.md`.
+- **Styling is Tailwind only.** No `.css` files except the single global entry `src/index.css`. Use Tailwind utilities and theme tokens.
+- **MANDATORY: no text literals in views or viewmodels.** A view calls `t(CONSTANT)`, where the constant is an `as const` object in `features/<name>/constants/`. Constants hold locale keys, and the words live in `id` and `en` locale files. Literal or template keys such as `t('list.create')` are not allowed. `src/app/ui-rules.test.ts` enforces this. See `references/i18n.md`.
 - **All imports are absolute, with the `@/` alias** (`@/` points to `src/`). No `../` or `./` imports.
 - **Pages have no logic. Views only render.** All process logic (fetching, handlers, state, derived values) lives in the ViewModel.
 - **No redundant API calls.** Fetch through TanStack Query in a ViewModel. Never fetch in `useEffect`, and never fetch the same data twice.

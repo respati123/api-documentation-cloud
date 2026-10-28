@@ -12,12 +12,25 @@ Use the **impeccable** skill for all UI work. It is installed in this folder at 
 4. When the change is finished, run the detector on the changed files:
    `./.agents/skills/impeccable/scripts/impeccable detect --json <changed files>`
 
-## Components: shadcn/ui only
+## Required skill: shadcn
 
-- Every UI component comes from shadcn/ui: `Button`, `Input`, `Select`, `Dialog`, `Card`, `Table`, `Skeleton`, `ScrollArea`, `Tabs`, `Sonner` for toasts, and so on.
-- Add components with the shadcn CLI. The generated files go in `src/shared/components/ui/`. Do not hand-edit them. If a component needs a different look, wrap it in an atom or molecule.
-- Do not build a custom component when shadcn has one. Compose shadcn components instead.
+Use the **shadcn** skill for every component change. It is installed at `.agents/skills/shadcn/SKILL.md`.
+
+1. Read `.agents/skills/shadcn/SKILL.md` and its `rules/` files that match the change (`composition.md`, `forms.md`, `styling.md`, `icons.md`).
+2. Check what is installed with `npx shadcn@latest info --json` before adding anything.
+3. Fetch the component docs with `npx shadcn@latest docs <component>` before writing code that uses it.
+
+## Components: shadcn/ui only (mandatory)
+
+This rule is mandatory. Every interactive or structural UI element in a view uses a shadcn component.
+
+- Views in `features/**/views` and `features/**/pages` never contain raw `button`, `input`, `select`, `textarea`, `label`, `table`, `hr`, or `a` elements. Use `Button`, `Input`, `Select`, `Textarea`, `Label`, `Table`, `Separator`, or the shadcn link pattern (`Button` with `variant="link"`).
+- Callouts, errors, and notices use `Alert`. Empty states use `Empty`. Stat tiles and panels use `Card`. Status labels use `Badge`. Loading placeholders use `Skeleton`. Dividers use `Separator`.
+- Components are added only with the shadcn CLI: `npx shadcn@latest add <component> -y`. The generated files go in `src/shared/components/ui/`. Do not hand-edit them. If a component needs a different look, wrap it in an atom or molecule.
+- Import the generated `cn` helper through `@/shared/utils/cn`. The CLI writes `from "cn"` by default, so fix it after every `add`.
+- Before writing a custom element, search for a shadcn component. A custom element is allowed only when no shadcn component fits, such as a decorative mark. Say so in the code review.
 - Do not add a third-party UI library next to shadcn.
+- `src/app/ui-rules.test.ts` enforces the raw-element rule for views and pages. Run `bun run test` before handoff.
 
 ## Tailwind CSS
 
@@ -34,7 +47,7 @@ shadcn/ui is built on Tailwind CSS. Tailwind is required, and it is the only sty
 - Tailwind utilities are the only way to style components.
 - No inline `style={{}}` for layout or color. Use utility classes. Inline style is allowed only for values computed at runtime, such as a dynamic width.
 - Colors come from the theme tokens (`bg-background`, `text-muted-foreground`, `border-border`, and so on). No hex values in components.
-- The current `graphite.css` and `styles.css` are removed during the migration. Each migrated view must not depend on them.
+- `graphite.css` and `styles.css` are removed. Views never depend on a legacy stylesheet.
 
 ## Theme
 

@@ -46,6 +46,7 @@ Install dependencies with `bun install` in this folder. The lockfile is `bun.loc
 
 ## Core rules
 
+- **MANDATORY: use Context7 for library docs.** Before you write or change code that calls Bun, zod, a PostgreSQL driver, nodemailer, or any other library, resolve the library ID with the Context7 MCP tools and query the docs for the exact API. Do not write library calls from memory. If Context7 is not available, use the official docs and say so in your reply. See `cloud/AGENTS.md`.
 - **TDD is required.** Write a failing test first, then the code that makes it pass, then refactor. See `references/testing.md`.
 - **Absolute imports only**, with the `@/` alias (`@/` points to `src/`). No `../` or `./` imports.
 - **Layers stay separate.** Routes call services. Services call repositories. Repositories run SQL. Nothing skips a layer.

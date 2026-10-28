@@ -1,0 +1,65 @@
+{
+  "people": {
+    "title": "People with access",
+    "detail": "Workspace members and their permissions.",
+    "invite": "Invite teammate",
+    "loading": "Loading members…",
+    "empty": "No members found."
+  },
+  "columns": { "member": "Member", "role": "Role", "joined": "Joined", "actions": "Actions" },
+  "you": "You",
+  "roleSelect": "Role for {{email}}",
+  "roleEditor": "Editor",
+  "roleViewer": "Viewer",
+  "actions": { "remove": "Remove", "leave": "Leave workspace" },
+  "pending": {
+    "title": "Pending invitations",
+    "detail": "Invitations expire seven days after they are sent.",
+    "loading": "Loading invitations…",
+    "empty": "No pending invitations",
+    "emptyDetail": "Invite a teammate to give them access to this workspace.",
+    "cancel": "Cancel",
+    "sent": "{{role}} · sent {{date}}",
+    "expires": "Expires {{date}}"
+  },
+  "latestLink": {
+    "title": "Latest invitation link",
+    "detail": "Use this link if the email could not be delivered.",
+    "copy": "Copy link"
+  },
+  "permissions": "Owners manage access. Editors can update workspace content and push commits. Viewers can browse and pull.",
+  "confirm": {
+    "leave": "Leave {{name}}? You will need a new invitation to rejoin.",
+    "remove": "Remove {{email}} from {{name}}?",
+    "leaveAction": "Leave",
+    "removeAction": "Remove"
+  },
+  "toast": {
+    "left": "You left {{name}}.",
+    "removed": "{{email}} was removed.",
+    "roleChanged": "{{email}} is now {{role}}.",
+    "roleFailed": "Could not change this role.",
+    "memberFailed": "Could not update this member.",
+    "cancelled": "Invitation cancelled.",
+    "cancelFailed": "Could not cancel invitation.",
+    "invitesFailed": "Could not load invitations."
+  },
+  "invite": {
+    "title": "Invite a teammate",
+    "detail": "They must create or sign in with the invited email address.",
+    "email": "Email address",
+    "emailPlaceholder": "name@company.com",
+    "role": "Workspace role",
+    "editorOption": "Editor · can edit and push",
+    "viewerOption": "Viewer · can read and pull",
+    "cancel": "Cancel",
+    "send": "Send invitation",
+    "sending": "Sending…",
+    "close": "Close dialog",
+    "sent": "Invitation sent to {{email}}.",
+    "created": "Invitation created for {{email}}; email delivery is unavailable. Copy its link from Team.",
+    "failed": "Could not send invitation.",
+    "copied": "Invitation link copied.",
+    "clipboardUnavailable": "Clipboard access is unavailable in this browser."
+  }
+}

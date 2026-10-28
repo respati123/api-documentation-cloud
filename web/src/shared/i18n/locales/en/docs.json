@@ -1,0 +1,82 @@
+{
+  "search": {
+    "label": "Search endpoints",
+    "placeholder": "Find an endpoint"
+  },
+  "tree": {
+    "title": "API endpoints",
+    "empty": "No collections in this workspace yet.",
+    "noMatches": "No endpoints match this search."
+  },
+  "empty": {
+    "title": "Select an endpoint",
+    "detail": "Choose a request from the collection to read its contract."
+  },
+  "endpoint": {
+    "deprecated": "Deprecated",
+    "copyUrl": "Copy URL",
+    "copied": "Copied",
+    "copyLabel": "Copy endpoint URL",
+    "noUrl": "No URL configured",
+    "noDescription": "No endpoint description has been added.",
+    "authentication": "Authentication",
+    "body": "Body",
+    "responses": "Responses",
+    "responsesCount": "{{count}} documented",
+    "sectionsLabel": "Endpoint reference sections",
+    "tabRequest": "Request",
+    "tabResponses": "Responses"
+  },
+  "auth": {
+    "none": "None",
+    "bearer": "Bearer token",
+    "basic": "Basic auth",
+    "apiKey": "API key · {{location}}",
+    "noneNote": "No authentication is configured for this endpoint.",
+    "hiddenNote": "Credential values are hidden in the browser reference."
+  },
+  "contract": {
+    "pathParams": "Path parameters",
+    "queryParams": "Query parameters",
+    "headers": "Headers",
+    "requestBody": "Request body",
+    "none": "None documented yet.",
+    "name": "Name",
+    "example": "Example",
+    "description": "Description",
+    "notSet": "Not set",
+    "noDescription": "No description",
+    "noBody": "This request has no body.",
+    "noFields": "No body fields documented.",
+    "file": "File",
+    "fileUpload": "File upload · {{type}}",
+    "graphqlQuery": "GraphQL query",
+    "variables": "Variables",
+    "exampleLabel": "{{name}} example",
+    "noExample": "No example provided."
+  },
+  "body": {
+    "formData": "Form data",
+    "urlencoded": "Form URL encoded",
+    "graphql": "GraphQL",
+    "json": "JSON",
+    "xml": "XML",
+    "yaml": "YAML",
+    "edn": "EDN",
+    "text": "Plain text",
+    "other": "Other",
+    "file": "File",
+    "none": "No body"
+  },
+  "responses": {
+    "emptyTitle": "No response contract documented",
+    "emptyDetail": "Add status codes, descriptions, schemas, and examples in the desktop app.",
+    "status": "Status",
+    "description": "Response",
+    "noBody": "No response body documented.",
+    "bodyTitle": "Response body",
+    "schema": "Schema",
+    "example": "Example",
+    "noSchemaExample": "No schema or example provided."
+  }
+}

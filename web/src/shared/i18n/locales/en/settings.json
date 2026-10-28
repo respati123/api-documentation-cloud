@@ -1,0 +1,18 @@
+{
+  "general": {
+    "title": "General",
+    "detail": "The name shown to everyone with access.",
+    "nameLabel": "Workspace name",
+    "save": "Save name",
+    "renamed": "Workspace name updated.",
+    "renameFailed": "Could not rename this workspace."
+  },
+  "danger": {
+    "title": "Delete workspace",
+    "detail": "Members lose access, and the full commit history is removed. This cannot be undone.",
+    "confirmLabel": "Type {{name}} to confirm",
+    "delete": "Delete workspace",
+    "deleted": "{{name}} was deleted.",
+    "deleteFailed": "Could not delete this workspace."
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "empty": {
+    "title": "No cloud commits yet",
+    "detail": "Push a commit from the desktop app to start a shared workspace history."
+  },
+  "history": {
+    "title": "Commit history",
+    "count_one": "{{count}} commit in this workspace",
+    "count_other": "{{count}} commits in this workspace"
+  },
+  "actions": {
+    "restore": "Restore this version",
+    "latest": "This is already the latest version",
+    "restored": "Version restored as the latest change.",
+    "restoreFailed": "Could not restore this version.",
+    "confirmTitle": "Restore this version?",
+    "confirmDetail": "It becomes the latest version for everyone in this workspace.",
+    "confirm": "Restore",
+    "cancel": "Cancel"
+  },
+  "detail": {
+    "loading": "Loading commit diff…",
+    "errorTitle": "Commit details could not be loaded",
+    "errorFallback": "Could not load this commit.",
+    "noChangesTitle": "No item changes",
+    "noChangesDetail": "This commit contains no collection changes.",
+    "changedItems": "Changed items",
+    "previous": "Previous",
+    "previousNone": "No earlier version",
+    "beforeCommit": "Before commit",
+    "committed": "Committed",
+    "removed": "Removed",
+    "afterCommit": "After commit",
+    "empty": "(empty)"
+  },
+  "kind": { "added": "Added", "modified": "Modified", "deleted": "Deleted" }
+}

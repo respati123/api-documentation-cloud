@@ -1,3 +1,4 @@
+export { WORKSPACES_ROLE_TEXT, WORKSPACES_TEXT } from './constants/workspaces-text.constants'
 export { CreateWorkspaceDialog } from './pages/create-workspace-dialog.page'
 export { WorkspacesPage } from './pages/workspaces.page'
 export { useCreateWorkspaceStore } from './stores/create-workspace.store'

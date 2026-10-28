@@ -1,0 +1,82 @@
+{
+  "search": {
+    "label": "Cari endpoint",
+    "placeholder": "Cari endpoint"
+  },
+  "tree": {
+    "title": "Endpoint API",
+    "empty": "Belum ada koleksi di workspace ini.",
+    "noMatches": "Tidak ada endpoint yang cocok dengan pencarian ini."
+  },
+  "empty": {
+    "title": "Pilih endpoint",
+    "detail": "Pilih request dari koleksi untuk membaca kontraknya."
+  },
+  "endpoint": {
+    "deprecated": "Usang",
+    "copyUrl": "Salin URL",
+    "copied": "Tersalin",
+    "copyLabel": "Salin URL endpoint",
+    "noUrl": "URL belum diatur",
+    "noDescription": "Belum ada deskripsi endpoint.",
+    "authentication": "Autentikasi",
+    "body": "Body",
+    "responses": "Respons",
+    "responsesCount": "{{count}} terdokumentasi",
+    "sectionsLabel": "Bagian referensi endpoint",
+    "tabRequest": "Request",
+    "tabResponses": "Respons"
+  },
+  "auth": {
+    "none": "Tidak ada",
+    "bearer": "Bearer token",
+    "basic": "Basic auth",
+    "apiKey": "API key · {{location}}",
+    "noneNote": "Endpoint ini tidak memakai autentikasi.",
+    "hiddenNote": "Nilai kredensial disembunyikan di referensi browser."
+  },
+  "contract": {
+    "pathParams": "Path parameter",
+    "queryParams": "Query parameter",
+    "headers": "Header",
+    "requestBody": "Body request",
+    "none": "Belum ada yang didokumentasikan.",
+    "name": "Nama",
+    "example": "Contoh",
+    "description": "Deskripsi",
+    "notSet": "Belum diatur",
+    "noDescription": "Tidak ada deskripsi",
+    "noBody": "Request ini tidak punya body.",
+    "noFields": "Belum ada field body yang didokumentasikan.",
+    "file": "File",
+    "fileUpload": "Unggah file · {{type}}",
+    "graphqlQuery": "Query GraphQL",
+    "variables": "Variabel",
+    "exampleLabel": "Contoh {{name}}",
+    "noExample": "Belum ada contoh."
+  },
+  "body": {
+    "formData": "Form data",
+    "urlencoded": "Form URL encoded",
+    "graphql": "GraphQL",
+    "json": "JSON",
+    "xml": "XML",
+    "yaml": "YAML",
+    "edn": "EDN",
+    "text": "Teks biasa",
+    "other": "Lainnya",
+    "file": "File",
+    "none": "Tanpa body"
+  },
+  "responses": {
+    "emptyTitle": "Belum ada kontrak respons yang didokumentasikan",
+    "emptyDetail": "Tambahkan kode status, deskripsi, skema, dan contoh di aplikasi desktop.",
+    "status": "Status",
+    "description": "Respons",
+    "noBody": "Belum ada body respons yang didokumentasikan.",
+    "bodyTitle": "Body respons",
+    "schema": "Skema",
+    "example": "Contoh",
+    "noSchemaExample": "Belum ada skema atau contoh."
+  }
+}

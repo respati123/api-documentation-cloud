@@ -1,0 +1,65 @@
+{
+  "people": {
+    "title": "Orang dengan akses",
+    "detail": "Anggota workspace dan izin mereka.",
+    "invite": "Undang anggota tim",
+    "loading": "Memuat anggota…",
+    "empty": "Tidak ada anggota."
+  },
+  "columns": { "member": "Anggota", "role": "Peran", "joined": "Bergabung", "actions": "Aksi" },
+  "you": "Kamu",
+  "roleSelect": "Peran untuk {{email}}",
+  "roleEditor": "Editor",
+  "roleViewer": "Viewer",
+  "actions": { "remove": "Hapus", "leave": "Keluar dari workspace" },
+  "pending": {
+    "title": "Undangan tertunda",
+    "detail": "Undangan kedaluwarsa tujuh hari setelah dikirim.",
+    "loading": "Memuat undangan…",
+    "empty": "Tidak ada undangan tertunda",
+    "emptyDetail": "Undang anggota tim agar mereka bisa mengakses workspace ini.",
+    "cancel": "Batalkan",
+    "sent": "{{role}} · dikirim {{date}}",
+    "expires": "Kedaluwarsa {{date}}"
+  },
+  "latestLink": {
+    "title": "Tautan undangan terbaru",
+    "detail": "Gunakan tautan ini jika email tidak bisa dikirim.",
+    "copy": "Salin tautan"
+  },
+  "permissions": "Owner mengelola akses. Editor bisa mengubah isi workspace dan mendorong commit. Viewer hanya bisa melihat dan menarik perubahan.",
+  "confirm": {
+    "leave": "Keluar dari {{name}}? Kamu butuh undangan baru untuk bergabung lagi.",
+    "remove": "Hapus {{email}} dari {{name}}?",
+    "leaveAction": "Keluar",
+    "removeAction": "Hapus"
+  },
+  "toast": {
+    "left": "Kamu sudah keluar dari {{name}}.",
+    "removed": "{{email}} sudah dihapus.",
+    "roleChanged": "{{email}} sekarang menjadi {{role}}.",
+    "roleFailed": "Peran ini tidak bisa diubah.",
+    "memberFailed": "Anggota ini tidak bisa diperbarui.",
+    "cancelled": "Undangan dibatalkan.",
+    "cancelFailed": "Undangan tidak bisa dibatalkan.",
+    "invitesFailed": "Undangan tidak bisa dimuat."
+  },
+  "invite": {
+    "title": "Undang anggota tim",
+    "detail": "Mereka harus membuat akun atau masuk dengan alamat email yang diundang.",
+    "email": "Alamat email",
+    "emailPlaceholder": "nama@perusahaan.com",
+    "role": "Peran workspace",
+    "editorOption": "Editor · bisa mengedit dan mendorong",
+    "viewerOption": "Viewer · bisa membaca dan menarik",
+    "cancel": "Batal",
+    "send": "Kirim undangan",
+    "sending": "Mengirim…",
+    "close": "Tutup dialog",
+    "sent": "Undangan dikirim ke {{email}}.",
+    "created": "Undangan dibuat untuk {{email}}; email tidak bisa dikirim. Salin tautannya dari Tim.",
+    "failed": "Undangan tidak bisa dikirim.",
+    "copied": "Tautan undangan disalin.",
+    "clipboardUnavailable": "Akses clipboard tidak tersedia di browser ini."
+  }
+}

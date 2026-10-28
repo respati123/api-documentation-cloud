@@ -46,13 +46,19 @@ describe('apiCall errors', () => {
 
 describe('apiCall response envelope', () => {
   test('returns the data field of a success envelope', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'OK', requestId: 'req-1', data: { workspaces: [] } })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ code: 'OK', requestId: 'req-1', data: { workspaces: [] } })),
+    )
 
     await expect(apiCall('/api/workspaces')).resolves.toEqual({ workspaces: [] })
   })
 
   test('returns undefined data for an empty 204 response', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 204 })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 204 })),
+    )
 
     await expect(apiCall('/api/auth/logout', { method: 'POST' })).resolves.toEqual({})
   })

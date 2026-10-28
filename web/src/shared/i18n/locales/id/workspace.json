@@ -1,0 +1,53 @@
+{
+  "header": { "subtitle": "Koleksi bersama, referensi API, dan riwayat perubahan.", "invite": "Undang anggota tim" },
+  "tabs": {
+    "label": "Bagian workspace",
+    "overview": "Ringkasan",
+    "docs": "Dokumentasi API",
+    "activity": "Aktivitas",
+    "team": "Tim",
+    "settings": "Pengaturan"
+  },
+  "state": {
+    "loading": "Memuat workspace…",
+    "loadingView": "Memuat tampilan…",
+    "errorTitle": "Tampilan ini tidak bisa dimuat",
+    "retry": "Coba lagi",
+    "unavailableTitle": "Data workspace tidak tersedia",
+    "unavailableDetail": "Muat ulang tampilan ini atau periksa akses kamu.",
+    "unavailableMessage": "Workspace ini tidak lagi tersedia untuk akun kamu.",
+    "loadFailed": "Workspace ini tidak bisa dimuat."
+  },
+  "overview": {
+    "endpoints": "Endpoint",
+    "collections": "Koleksi",
+    "members": "Anggota tim",
+    "latestChange": "Perubahan terakhir",
+    "latestVersion": "Versi terbaru",
+    "notAvailable": "Tidak tersedia",
+    "dateUnavailable": "Tanggal tidak tersedia",
+    "collectionsTitle": "Koleksi",
+    "collectionsDetail": "Folder dan request di workspace ini.",
+    "browseDocs": "Buka dokumentasi API",
+    "emptyCollectionsTitle": "Belum ada koleksi API",
+    "emptyCollectionsDetail": "Terbitkan koleksi dari aplikasi desktop agar dokumentasinya tampil di sini.",
+    "endpointCount_other": "{{count}} endpoint",
+    "endpointCount_one": "{{count}} endpoint",
+    "noUrl": "Tanpa URL",
+    "recentTitle": "Perubahan terbaru",
+    "recentDetail": "Commit yang didorong ke workspace cloud.",
+    "viewHistory": "Lihat riwayat",
+    "emptyCommitsTitle": "Belum ada commit",
+    "emptyCommitsDetail": "Perubahan yang didorong dari aplikasi desktop akan muncul di sini.",
+    "syncNote": "Tampilan browser ini menunjukkan versi terbaru yang didorong ke cloud. Ubah dan sinkronkan draft lokal dari aplikasi desktop.",
+    "created": "Dibuat {{date}}",
+    "workspaceId": "ID workspace",
+    "manageTeam": "Kelola tim"
+  },
+  "invite": {
+    "accepting": "Menerima undangan workspace kamu…",
+    "joined": "Kamu bergabung ke {{name}}.",
+    "failed": "Undangan ini tidak bisa diterima.",
+    "signInPrompt": "Masuk dengan alamat email yang diundang untuk bergabung ke workspace ini."
+  }
+}

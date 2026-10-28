@@ -6,7 +6,8 @@
     "namePlaceholder": "contoh: Payments API",
     "cancel": "Batal",
     "submit": "Buat workspace",
-    "busy": "Sedang membuat…"
+    "busy": "Sedang membuat…",
+    "ready": "{{name}} sudah siap di cloud."
   },
   "list": {
     "title": "Workspace",
@@ -14,7 +15,12 @@
     "emptyTitle": "Belum ada workspace",
     "emptyDetail": "Buat workspace atau minta rekan tim mengundang kamu.",
     "create": "Workspace baru",
-    "open": "Buka"
+    "open": "Buka",
+    "columns": {
+      "workspace": "Workspace",
+      "role": "Peran kamu",
+      "action": "Aksi"
+    }
   },
   "overview": {
     "title": "Ringkasan",

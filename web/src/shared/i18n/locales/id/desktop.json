@@ -1,0 +1,18 @@
+{
+  "brand": {
+    "name": "API Documentation",
+    "heading": "Setujui masuk ini.",
+    "copy": "Aplikasi desktop menunggu kamu memastikan bahwa ini benar-benar kamu sebelum terhubung ke workspace cloud.",
+    "foot": "Aplikasi desktop dan portal browser · satu workspace cloud bersama"
+  },
+  "title": "Masuk ke aplikasi desktop?",
+  "subtitle": "Masuk sebagai {{email}}. Dengan menyetujui, aplikasi desktop di komputer ini bisa mengakses workspace kamu.",
+  "approve": "Setujui masuk",
+  "approving": "Menyetujui…",
+  "cancel": "Bukan saya — batal",
+  "done": "Disetujui. Kembali ke aplikasi desktop, aplikasi akan masuk otomatis. Kamu bisa menutup tab ini.",
+  "notDesktop": "Tautan masuk ini bukan dari aplikasi desktop. Mulai masuk lagi dari aplikasi desktop.",
+  "failed": "Masuk ini tidak bisa disetujui.",
+  "signInPrompt": "Masuk untuk menyetujui aplikasi desktop.",
+  "loading": "Memuat…"
+}
