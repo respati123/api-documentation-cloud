@@ -1,6 +1,7 @@
 import * as z from 'zod/mini'
 import {
   type ApiNode,
+  apiNodeSchema,
   type CloudCommit,
   type CloudInvite,
   type CloudMember,
@@ -21,26 +22,26 @@ const snapshotSchema = z.looseObject({
   headCommitId: z.nullable(z.string()),
   createdAt: z.string(),
   updatedAt: z.optional(z.nullable(z.string())),
-  tree: z.array(z.looseObject({ id: z.string(), kind: z.enum(['request', 'folder']), name: z.string() })),
+  tree: z.array(apiNodeSchema),
 })
 
 const pullResponseSchema = z.object({ workspace: z.nullable(snapshotSchema) })
 const historyResponseSchema = z.object({ commits: z.array(cloudCommitSchema) })
 const commitResponseSchema = z.object({
-  commit: z.object({ tree: z.array(z.looseObject({ id: z.string(), kind: z.enum(['request', 'folder']), name: z.string() })) }),
+  commit: z.object({ tree: z.array(apiNodeSchema) }),
 })
 const membersResponseSchema = z.object({ members: z.array(cloudMemberSchema) })
 const invitesResponseSchema = z.object({ invites: z.array(cloudInviteSchema) })
 const createInviteResponseSchema = z.object({ token: z.string(), email: z.string(), emailSent: z.boolean() })
 const renameResponseSchema = z.object({ workspace: z.object({ id: z.string(), name: z.string() }) })
 
-// The snapshot tree is checked at the top level only. Request fields come from the desktop snapshot and are typed, not re-validated.
-export type SnapshotResult = Omit<WorkspaceSnapshot, 'tree'> & { tree: ApiNode[] }
-
+// The snapshot tree is validated node by node with apiNodeSchema, so a malformed desktop snapshot fails here.
 export const workspaceDetailService = {
   pull: async (token: string, workspaceId: string): Promise<WorkspaceSnapshot | null> => {
     const result = z.parse(pullResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/pull`, { token }))
-    return result.workspace as WorkspaceSnapshot | null
+    const workspace = result.workspace
+    if (!workspace) return null
+    return { ...workspace, updatedAt: workspace.updatedAt ?? null }
   },
 
   historyPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudCommit>> => {
@@ -49,8 +50,7 @@ export const workspaceDetailService = {
   },
 
   commitTree: async (token: string, workspaceId: string, commitId: string): Promise<ApiNode[]> =>
-    z.parse(commitResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/history/${commitId}`, { token })).commit
-      .tree as ApiNode[],
+    z.parse(commitResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/history/${commitId}`, { token })).commit.tree,
 
   membersPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudMember>> => {
     const page = await apiPage(`/api/workspaces/${workspaceId}/members${pageQuery(cursor)}`, { token })
