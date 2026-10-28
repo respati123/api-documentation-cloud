@@ -28,6 +28,7 @@ export const en = {
   WORKSPACE_DELETE_CONFIRMATION_MISMATCH: 'Type the workspace name exactly to delete it.',
   DESKTOP_CODE_INVALID: 'This sign-in link expired or was already used. Sign in again from the desktop app.',
   DESKTOP_CODE_REQUIRED: 'A sign-in code is required.',
+  PAGINATION_INVALID: 'The limit or cursor is invalid. Use a limit from 1 to 100 and the cursor from the last page.',
   RESET_TOKEN_INVALID: 'This reset link is invalid or has expired. Request a new one.',
   BODY_NOT_OBJECT: 'Request body must be a JSON object.',
   PUSH_COMMITS_COUNT_INVALID: 'Provide 1–100 commits to push.',

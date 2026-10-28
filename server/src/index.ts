@@ -4,6 +4,7 @@ import nodemailer from 'nodemailer'
 import { loadConfig } from '@/config'
 import { created, noContent, ok } from '@/lib/http'
 import { AppError } from '@/lib/errors/app-error'
+import { cursorText, decodeCursor, encodeCursor, pageOf, readLimit } from '@/lib/pagination'
 import { negotiateLocale } from '@/lib/locale'
 import { createLogger } from '@/lib/logger'
 import { routeLabel } from '@/lib/route-label'
@@ -363,8 +364,13 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   }
 
   if (method === 'GET' && path === '/api/workspaces') {
-    const rows = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE m.user_id = ${user.id} ORDER BY c.created_at DESC NULLS LAST, w.created_at DESC`
-    return ok({ workspaces: rows })
+    const limit = readLimit(url)
+    const cursor = decodeCursor(url.searchParams.get('cursor'))
+    const cursorAt = cursorText(cursor, 't')
+    const cursorId = cursorText(cursor, 'i')
+    const rows: Array<{ id: string; name: string; role: string; headCommitId: string | null; createdAt: Date; updatedAt: Date | null; sortAt: string }> = await db`SELECT * FROM (SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt", COALESCE(c.created_at, w.created_at)::text AS "sortAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE m.user_id = ${user.id}) q WHERE ${cursorAt}::text IS NULL OR (q."sortAt"::timestamptz, q.id) < (${cursorAt}::timestamptz, ${cursorId}::text) ORDER BY q."sortAt"::timestamptz DESC, q.id DESC LIMIT ${limit + 1}`
+    const page = pageOf(rows, limit, (row) => encodeCursor({ t: row.sortAt, i: row.id }))
+    return ok({ workspaces: page.items.map(({ sortAt: _sortAt, ...workspace }) => workspace) }, { nextCursor: page.nextCursor })
   }
 
   if (method === 'POST' && path === '/api/workspaces') {
@@ -445,14 +451,25 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
 
   if (method === 'GET' && action === 'members') {
     await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
-    const members = await db`SELECT u.id, u.email, m.role, m.created_at AS "joinedAt" FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${workspaceId} ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END, m.created_at`
-    return ok({ members })
+    const limit = readLimit(url)
+    const cursor = decodeCursor(url.searchParams.get('cursor'))
+    const cursorRank = cursorText(cursor, 'r')
+    const cursorAt = cursorText(cursor, 't')
+    const cursorId = cursorText(cursor, 'i')
+    const rows: Array<{ id: string; email: string; role: string; joinedAt: Date; rank: number; sortAt: string }> = await db`SELECT * FROM (SELECT u.id, u.email, m.role, m.created_at AS "joinedAt", CASE m.role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END AS rank, m.created_at::text AS "sortAt" FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${workspaceId}) q WHERE ${cursorRank}::text IS NULL OR (q.rank, q."sortAt"::timestamptz, q.id) > (${cursorRank}::int, ${cursorAt}::timestamptz, ${cursorId}::text) ORDER BY q.rank, q."sortAt"::timestamptz, q.id LIMIT ${limit + 1}`
+    const page = pageOf(rows, limit, (row) => encodeCursor({ r: String(row.rank), t: row.sortAt, i: row.id }))
+    return ok({ members: page.items.map(({ rank: _rank, sortAt: _sortAt, ...member }) => member) }, { nextCursor: page.nextCursor })
   }
 
   if (method === 'GET' && action === 'invites') {
     await requireRole(workspaceId, user.id, ['owner'])
-    const invites = await db`SELECT i.id, i.email, i.role, i.expires_at AS "expiresAt", i.created_at AS "createdAt", u.email AS "createdByEmail" FROM invites i JOIN users u ON u.id = i.created_by WHERE i.workspace_id = ${workspaceId} AND i.used_at IS NULL AND i.expires_at > now() ORDER BY i.created_at DESC`
-    return ok({ invites })
+    const limit = readLimit(url)
+    const cursor = decodeCursor(url.searchParams.get('cursor'))
+    const cursorAt = cursorText(cursor, 't')
+    const cursorId = cursorText(cursor, 'i')
+    const rows: Array<{ id: string; email: string; role: string; expiresAt: Date; createdAt: Date; createdByEmail: string; sortAt: string }> = await db`SELECT * FROM (SELECT i.id, i.email, i.role, i.expires_at AS "expiresAt", i.created_at AS "createdAt", u.email AS "createdByEmail", i.created_at::text AS "sortAt" FROM invites i JOIN users u ON u.id = i.created_by WHERE i.workspace_id = ${workspaceId} AND i.used_at IS NULL AND i.expires_at > now()) q WHERE ${cursorAt}::text IS NULL OR (q."sortAt"::timestamptz, q.id) < (${cursorAt}::timestamptz, ${cursorId}::text) ORDER BY q."sortAt"::timestamptz DESC, q.id DESC LIMIT ${limit + 1}`
+    const page = pageOf(rows, limit, (row) => encodeCursor({ t: row.sortAt, i: row.id }))
+    return ok({ invites: page.items.map(({ sortAt: _sortAt, ...invite }) => invite) }, { nextCursor: page.nextCursor })
   }
 
   if (method === 'POST' && action === 'invites') {
@@ -498,15 +515,20 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
 
   if (method === 'GET' && action === 'sync/history') {
     await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
-    const rows = await db`SELECT c.id, c.parent_ids AS "parentIds", c.message, c.created_at AS "createdAt", u.email AS "authorEmail" FROM commits c JOIN users u ON u.id = c.author_id WHERE c.workspace_id = ${workspaceId} ORDER BY c.created_at DESC LIMIT 500`
-    const commits = rows.map((row: { id: unknown; parentIds: unknown; message: unknown; createdAt: string | Date; authorEmail: unknown }) => ({
+    const limit = readLimit(url)
+    const cursor = decodeCursor(url.searchParams.get('cursor'))
+    const cursorAt = cursorText(cursor, 't')
+    const cursorId = cursorText(cursor, 'i')
+    const rows: Array<{ id: unknown; parentIds: unknown; message: unknown; createdAt: string | Date; authorEmail: unknown; sortAt: string }> = await db`SELECT * FROM (SELECT c.id, c.parent_ids AS "parentIds", c.message, c.created_at AS "createdAt", u.email AS "authorEmail", c.created_at::text AS "sortAt" FROM commits c JOIN users u ON u.id = c.author_id WHERE c.workspace_id = ${workspaceId}) q WHERE ${cursorAt}::text IS NULL OR (q."sortAt"::timestamptz, q.id::text) < (${cursorAt}::timestamptz, ${cursorId}::text) ORDER BY q."sortAt"::timestamptz DESC, q.id DESC LIMIT ${limit + 1}`
+    const page = pageOf(rows, limit, (row) => encodeCursor({ t: row.sortAt, i: String(row.id) }))
+    const commits = page.items.map((row) => ({
       id: String(row.id),
       parentIds: parseJson<string[]>(row.parentIds, []),
       message: String(row.message),
       createdAt: row.createdAt,
       authorEmail: String(row.authorEmail)
     }))
-    return ok({ commits })
+    return ok({ commits }, { nextCursor: page.nextCursor })
   }
 
   const historyCommitMatch = action.match(/^sync\/history\/([\w-]+)$/)
