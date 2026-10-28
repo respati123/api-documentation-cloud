@@ -350,7 +350,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     for (const [key, value] of syncSocketTickets) if (value.expiresAt <= now) syncSocketTickets.delete(key)
     const ticket = randomBytes(32).toString('base64url')
     syncSocketTickets.set(tokenHash(ticket), { userId: user.id, expiresAt: now + 30_000 })
-    return ok({ ticket, expiresInSeconds: 30 })
+    return created({ ticket, expiresInSeconds: 30 })
   }
 
   if (method === 'POST' && path === '/api/desktop-login/approve') {
@@ -358,7 +358,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     for (const [key, value] of desktopLoginCodes) if (value.expiresAt <= now) desktopLoginCodes.delete(key)
     const code = randomBytes(32).toString('base64url')
     desktopLoginCodes.set(tokenHash(code), { userId: user.id, expiresAt: now + 2 * 60_000 })
-    return ok({ code, expiresInSeconds: 120 })
+    return created({ code, expiresInSeconds: 120 })
   }
 
   if (method === 'GET' && path === '/api/workspaces') {
@@ -391,7 +391,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       return { ...workspace, role: invite.role, ...snapshot }
     })
     if (!result) throw new AppError('INVITE_INVALID')
-    return ok({ workspace: result })
+    return created({ workspace: result })
   }
 
   const workspaceMatch = path.match(/^\/api\/workspaces\/([\w-]+)(?:\/(.*))?$/)
@@ -404,8 +404,9 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const body = await bodyOf(request)
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     if (!name || name.length > 100) throw new AppError('WORKSPACE_NAME_INVALID')
-    const [workspace] = await db`UPDATE workspaces SET name = ${name} WHERE id = ${workspaceId} RETURNING id, name`
-    return ok({ workspace: { id: workspace.id, name: workspace.name } })
+    await db`UPDATE workspaces SET name = ${name} WHERE id = ${workspaceId}`
+    const [workspace] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE w.id = ${workspaceId} AND m.user_id = ${user.id}`
+    return ok({ workspace })
   }
 
   if (method === 'DELETE' && action === '') {
@@ -488,7 +489,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   if (method === 'GET' && action === 'sync/pull') {
     await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
     const [workspace] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", c.parent_ids AS "parentIds", c.message, c.snapshot, c.created_at AS "createdAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE w.id = ${workspaceId} AND m.user_id = ${user.id}`
-    if (!workspace) return ok({ workspace: null })
+    if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
     const snapshot = parseSnapshot(parseJson<unknown>(workspace.snapshot, []))
     const { snapshot: _snapshot, ...workspaceData } = workspace
     return ok({ workspace: { ...workspaceData, parentIds: parseJson<string[]>(workspace.parentIds, []), ...snapshot } })
@@ -540,7 +541,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       return { headId: restoredId, message }
     })
     await broadcastWorkspaceUpdate(workspaceId, result.headId, result.message, user, 1)
-    return ok({ headCommitId: result.headId })
+    return created({ headCommitId: result.headId })
   }
 
   if (method === 'POST' && action === 'sync/push') {
@@ -577,7 +578,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       const lastCommit = commits[commits.length - 1]
       await broadcastWorkspaceUpdate(workspaceId, result.headId, typeof lastCommit.message === 'string' ? lastCommit.message : 'Workspace updated', user, commits.length)
     }
-    return ok({ headCommitId: result.headId })
+    return created({ headCommitId: result.headId })
   }
 
   throw new AppError('ROUTE_NOT_FOUND')

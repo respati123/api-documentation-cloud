@@ -8,7 +8,9 @@ export interface ResponseHeaderOptions {
   sensitive: boolean
 }
 
-const sensitivePrefixes = ['/api/auth/', '/api/desktop-login/', '/api/me']
+const sensitivePrefixes = ['/api/auth/', '/api/desktop-login/']
+const sensitivePaths = new Set(['/api/me', '/api/sync/events-ticket'])
+const sensitiveInvitePath = /^\/api\/workspaces\/[^/]+\/invites$/
 
 export function withResponseHeaders(response: Response, options: ResponseHeaderOptions): Response {
   const headers = new Headers(response.headers)
@@ -24,5 +26,5 @@ export function withResponseHeaders(response: Response, options: ResponseHeaderO
 }
 
 export function isSensitivePath(path: string): boolean {
-  return sensitivePrefixes.some((prefix) => path === prefix.replace(/\/$/, '') || path.startsWith(prefix))
+  return sensitivePaths.has(path) || sensitivePrefixes.some((prefix) => path.startsWith(prefix)) || sensitiveInvitePath.test(path)
 }

@@ -40,7 +40,13 @@ describe('isSensitivePath', () => {
     expect(isSensitivePath('/api/desktop-login/exchange')).toBe(true)
   })
 
-  test('does not flag workspace routes', () => {
+  test('flags the sync ticket and invitation creation, which return secrets', () => {
+    expect(isSensitivePath('/api/sync/events-ticket')).toBe(true)
+    expect(isSensitivePath('/api/workspaces/w-1/invites')).toBe(true)
+  })
+
+  test('does not flag other workspace routes', () => {
     expect(isSensitivePath('/api/workspaces/w-1')).toBe(false)
+    expect(isSensitivePath('/api/workspaces/w-1/sync/pull')).toBe(false)
   })
 })

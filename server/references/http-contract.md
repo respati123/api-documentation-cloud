@@ -11,6 +11,19 @@ Read this when you add or change a response, an error, input validation, CORS, o
 - Build every success response with the helpers in `src/lib/http.ts`: `ok(payload)`, `created(payload)`, `noContent()`. Do not call `Response.json` in a route.
 - Mutations that return nothing (delete, logout, password reset, forgot password) answer `204`. A mutation that changes a resource returns the changed resource.
 
+### Status policy per endpoint kind
+
+| Kind of request | Status | Examples |
+|---|---|---|
+| Read | `200` with the payload | `GET /api/me`, `GET /api/workspaces/:id/sync/pull` |
+| Creates a resource or a record that others can refer to | `201` with the new id or resource | register, create workspace, create invite, accept invite, push commits, restore a version, sync ticket, desktop approve code |
+| Issues a session from credentials or a code | `200` with the token and user | login, desktop exchange |
+| Changes a resource | `200` with the changed resource | rename workspace, change member role |
+| Removes or confirms without a payload | `204`, no body | delete workspace, delete member, delete invite, logout, forgot password, reset password |
+| Resource does not exist or is not visible | error `404` with a code | pull of an unknown workspace |
+
+Responses that carry a secret (token, ticket, invite link) also set `Cache-Control: no-store`. The list lives in `src/middleware/response-headers.ts`.
+
 ## Error responses
 
 Every error has this shape:
