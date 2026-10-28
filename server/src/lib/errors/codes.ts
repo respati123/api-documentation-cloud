@@ -27,6 +27,7 @@ export const errorDefinitions = {
   DESKTOP_CODE_REQUIRED: { status: 400 },
   RESET_TOKEN_INVALID: { status: 400 },
   BODY_NOT_OBJECT: { status: 400 },
+  PAGINATION_INVALID: { status: 400 },
   PUSH_COMMITS_COUNT_INVALID: { status: 400 },
   PUSH_COMMIT_INVALID: { status: 400 },
   MEMBER_ROLE_INVALID: { status: 400 },

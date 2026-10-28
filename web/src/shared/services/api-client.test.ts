@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import i18next from '@/shared/i18n'
-import { ApiError, apiCall } from './api-client'
+import { ApiError, apiCall, apiPage } from './api-client'
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -61,5 +61,28 @@ describe('apiCall response envelope', () => {
     )
 
     await expect(apiCall('/api/auth/logout', { method: 'POST' })).resolves.toEqual({})
+  })
+})
+
+describe('apiPage', () => {
+  test('returns the page data and the next cursor from meta', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ code: 'OK', requestId: 'req-2', data: { members: [{ id: 'u1' }] }, meta: { nextCursor: 'abc' } })),
+    )
+
+    await expect(apiPage<{ members: unknown[] }>('/api/workspaces/w1/members?limit=1')).resolves.toEqual({
+      data: { members: [{ id: 'u1' }] },
+      nextCursor: 'abc',
+    })
+  })
+
+  test('returns no cursor on the last page', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ code: 'OK', requestId: 'req-3', data: { members: [] }, meta: { nextCursor: null } })),
+    )
+
+    await expect(apiPage('/api/workspaces/w1/members')).resolves.toEqual({ data: { members: [] }, nextCursor: null })
   })
 })

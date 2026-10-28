@@ -9,8 +9,10 @@ import {
   cloudMemberSchema,
   type WorkspaceSnapshot,
 } from '@/shared/models/cloud-workspace.model'
+import type { Page } from '@/shared/models/page.model'
 import { workspaceRoleSchema } from '@/shared/models/workspace.model'
-import { apiCall } from '@/shared/services/api-client'
+import { apiCall, apiPage } from '@/shared/services/api-client'
+import { pageQuery } from '@/shared/utils/page-query'
 
 const snapshotSchema = z.looseObject({
   id: z.string(),
@@ -36,32 +38,29 @@ const renameResponseSchema = z.object({ workspace: z.object({ id: z.string(), na
 export type SnapshotResult = Omit<WorkspaceSnapshot, 'tree'> & { tree: ApiNode[] }
 
 export const workspaceDetailService = {
-  detail: async (token: string, workspaceId: string) => {
-    const [snapshot, commits, members] = await Promise.all([
-      workspaceDetailService.pull(token, workspaceId),
-      workspaceDetailService.history(token, workspaceId),
-      workspaceDetailService.members(token, workspaceId),
-    ])
-    return { snapshot, commits, members }
-  },
-
   pull: async (token: string, workspaceId: string): Promise<WorkspaceSnapshot | null> => {
     const result = z.parse(pullResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/pull`, { token }))
     return result.workspace as WorkspaceSnapshot | null
   },
 
-  history: async (token: string, workspaceId: string): Promise<CloudCommit[]> =>
-    z.parse(historyResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/history`, { token })).commits,
+  historyPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudCommit>> => {
+    const page = await apiPage(`/api/workspaces/${workspaceId}/sync/history${pageQuery(cursor)}`, { token })
+    return { items: z.parse(historyResponseSchema, page.data).commits, nextCursor: page.nextCursor }
+  },
 
   commitTree: async (token: string, workspaceId: string, commitId: string): Promise<ApiNode[]> =>
     z.parse(commitResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/history/${commitId}`, { token })).commit
       .tree as ApiNode[],
 
-  members: async (token: string, workspaceId: string): Promise<CloudMember[]> =>
-    z.parse(membersResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/members`, { token })).members,
+  membersPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudMember>> => {
+    const page = await apiPage(`/api/workspaces/${workspaceId}/members${pageQuery(cursor)}`, { token })
+    return { items: z.parse(membersResponseSchema, page.data).members, nextCursor: page.nextCursor }
+  },
 
-  invites: async (token: string, workspaceId: string): Promise<CloudInvite[]> =>
-    z.parse(invitesResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/invites`, { token })).invites,
+  invitesPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudInvite>> => {
+    const page = await apiPage(`/api/workspaces/${workspaceId}/invites${pageQuery(cursor)}`, { token })
+    return { items: z.parse(invitesResponseSchema, page.data).invites, nextCursor: page.nextCursor }
+  },
 
   createInvite: async (token: string, workspaceId: string, email: string, role: 'editor' | 'viewer') =>
     z.parse(

@@ -53,6 +53,9 @@ export function WorkspacesPage({ variant, onOpenWorkspace }: WorkspacesPageProps
         status={vm.status}
         workspaces={vm.workspaces}
         errorMessage={vm.errorMessage}
+        hasMore={vm.hasMore}
+        isLoadingMore={vm.isLoadingMore}
+        onLoadMore={vm.loadMore}
         onOpen={onOpenWorkspace}
         onCreate={openCreate}
         onRetry={vm.retry}

@@ -28,6 +28,7 @@ export const id = {
   WORKSPACE_DELETE_CONFIRMATION_MISMATCH: 'Ketik nama workspace persis untuk menghapusnya.',
   DESKTOP_CODE_INVALID: 'Link masuk ini sudah kedaluwarsa atau sudah dipakai. Masuk lagi dari aplikasi desktop.',
   DESKTOP_CODE_REQUIRED: 'Kode masuk wajib diisi.',
+  PAGINATION_INVALID: 'Limit atau cursor tidak valid. Gunakan limit 1 sampai 100 dan cursor dari halaman terakhir.',
   RESET_TOKEN_INVALID: 'Link reset ini tidak valid atau sudah kedaluwarsa. Minta link baru.',
   BODY_NOT_OBJECT: 'Body request harus berupa objek JSON.',
   PUSH_COMMITS_COUNT_INVALID: 'Kirim 1–100 commit untuk di-push.',

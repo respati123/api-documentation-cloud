@@ -7,6 +7,9 @@ const baseProps: WorkspaceListViewProps = {
   status: 'ready',
   workspaces: [{ id: 'ws-1', name: 'Payments API', role: 'owner', headCommitId: null, createdAt: '2026-10-28T00:00:00Z', updatedAt: null }],
   errorMessage: null,
+  hasMore: false,
+  isLoadingMore: false,
+  onLoadMore: vi.fn(),
   onOpen: vi.fn(),
   onCreate: vi.fn(),
   onRetry: vi.fn(),
@@ -47,5 +50,19 @@ describe('WorkspaceListView', () => {
 
     fireEvent.click(screen.getByTestId('workspaces-row-ws-1'))
     expect(onOpen).toHaveBeenCalledWith('ws-1')
+  })
+
+  test('offers the next page when more workspaces exist', () => {
+    const onLoadMore = vi.fn()
+    render(<WorkspaceListView {...baseProps} hasMore onLoadMore={onLoadMore} />)
+
+    fireEvent.click(screen.getByTestId('workspaces-load-more-button'))
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+  })
+
+  test('hides the load-more button on the last page', () => {
+    render(<WorkspaceListView {...baseProps} hasMore={false} />)
+
+    expect(screen.queryByTestId('workspaces-load-more-button')).not.toBeInTheDocument()
   })
 })
