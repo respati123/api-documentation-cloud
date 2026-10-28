@@ -20,11 +20,14 @@ export const AUTH_TEXT = {
   hint: 'hint',
   forgot: 'forgot',
   localNote: 'localNote',
-  model: {
-    workspace: 'model.workspace',
-    collection: 'model.collection',
-    request: 'model.request',
-    contract: 'model.contract',
+  preview: {
+    title: 'preview.title',
+    createCharge: 'preview.createCharge',
+    listCharges: 'preview.listCharges',
+    refund: 'preview.refund',
+    synced: 'preview.synced',
+    pending: 'preview.pending',
+    footer: 'preview.footer',
   },
   notice: {
     resetSent: 'auth:notice.resetSent',
@@ -67,4 +70,9 @@ export const AUTH_SWITCH_TEXT: Partial<Record<AuthMode, { prompt: string; target
   forgot: { prompt: 'switch.remembered', target: 'login', label: 'switch.backToSignIn' },
 }
 
-export const AUTH_PREVIEW_METHOD = 'GET'
+// Sample rows for the brand panel. Paths and methods are data, so they are not translated.
+export const AUTH_PREVIEW_ROWS = [
+  { method: 'POST', path: '/v1/charges', name: AUTH_TEXT.preview.createCharge, status: AUTH_TEXT.preview.synced },
+  { method: 'GET', path: '/v1/charges', name: AUTH_TEXT.preview.listCharges, status: AUTH_TEXT.preview.synced },
+  { method: 'POST', path: '/v1/refunds', name: AUTH_TEXT.preview.refund, status: AUTH_TEXT.preview.pending },
+] as const
