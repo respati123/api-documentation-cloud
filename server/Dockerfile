@@ -1,12 +1,13 @@
 FROM oven/bun:1-slim
 
 WORKDIR /app
-COPY package.json bun.lock ./
+COPY package.json bun.lock tsconfig.json ./
 RUN bun install --production --frozen-lockfile
-COPY index.ts rate-limit.ts schema.sql ./
+COPY src ./src
+COPY schema.sql ./
 
 ENV PORT=3001
 EXPOSE 3001
 
 USER bun
-CMD ["bun", "run", "index.ts"]
+CMD ["bun", "run", "src/index.ts"]

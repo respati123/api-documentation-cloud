@@ -1,3 +1,5 @@
+import i18next from '@/shared/i18n'
+
 const apiBaseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 
 export class ApiError extends Error {
@@ -23,6 +25,7 @@ export async function apiCall<T = unknown>(path: string, options: ApiCallOptions
     method: options.method ?? 'GET',
     headers: {
       ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      'Accept-Language': i18next.resolvedLanguage ?? i18next.language,
       ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
     },
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
