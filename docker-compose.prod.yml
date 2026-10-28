@@ -29,6 +29,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: "${SMTP_FROM:-API Documentation <no-reply@example.test>}"
       PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:?set PUBLIC_WEB_URL in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
     depends_on:
       postgres:
         condition: service_healthy
