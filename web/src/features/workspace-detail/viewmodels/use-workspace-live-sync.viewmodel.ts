@@ -48,7 +48,9 @@ export function useWorkspaceLiveSync(workspaceId: string): LiveStatus {
           const event = parseSyncEvent(String(message.data))
           if (!event || event.workspaceId !== workspaceId) return
           void queryClient.invalidateQueries({ queryKey: workspaceDetailKeys.all })
-          showNotice({ kind: 'info', message: t(WORKSPACE_TEXT.live.updated, { actor: event.actorEmail }) })
+          if (event.type === 'workspace.updated') {
+            showNotice({ kind: 'info', message: t(WORKSPACE_TEXT.live.updated, { actor: event.actorEmail }) })
+          }
         }
         next.onclose = () => scheduleReconnect()
         next.onerror = () => next.close()

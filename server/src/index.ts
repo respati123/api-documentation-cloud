@@ -201,10 +201,19 @@ async function createSession(userId: string): Promise<string> {
   return token
 }
 
-async function broadcastWorkspaceUpdate(workspaceId: string, headId: string, message: string, actor: AuthUser, commitCount: number) {
+// Sends one event to every open socket of a current member of the workspace.
+async function sendToMembers(workspaceId: string, event: string) {
   const members = await db`SELECT user_id AS "userId" FROM memberships WHERE workspace_id = ${workspaceId}`
   const memberIds = new Set(members.map((member: { userId: unknown }) => String(member.userId)))
-  const event = JSON.stringify({
+  for (const socket of syncSockets) {
+    if (!memberIds.has(socket.data.userId)) continue
+    try { socket.send(event) }
+    catch { syncSockets.delete(socket) }
+  }
+}
+
+async function broadcastWorkspaceUpdate(workspaceId: string, headId: string, message: string, actor: AuthUser, commitCount: number) {
+  await sendToMembers(workspaceId, JSON.stringify({
     type: 'workspace.updated',
     workspaceId,
     headCommitId: headId,
@@ -212,12 +221,14 @@ async function broadcastWorkspaceUpdate(workspaceId: string, headId: string, mes
     actorId: actor.id,
     actorEmail: actor.email,
     commitCount
-  })
-  for (const socket of syncSockets) {
-    if (!memberIds.has(socket.data.userId)) continue
-    try { socket.send(event) }
-    catch { syncSockets.delete(socket) }
-  }
+  }))
+}
+
+// Tells open pages that something changed, so they reload that part. The reason says which part.
+type WorkspaceChangeReason = 'members' | 'invites' | 'settings' | 'deleted'
+
+async function broadcastWorkspaceChange(workspaceId: string, reason: WorkspaceChangeReason) {
+  await sendToMembers(workspaceId, JSON.stringify({ type: 'workspace.changed', workspaceId, reason }))
 }
 
 async function createWorkspace(user: AuthUser, name: string, snapshot: TreeNode[], variables: WorkspaceVariables) {
@@ -399,6 +410,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       return { ...workspace, role: invite.role, ...snapshot }
     })
     if (!result) throw new AppError('INVITE_INVALID')
+    await broadcastWorkspaceChange(result.id, 'members')
     return created({ workspace: result })
   }
 
@@ -413,6 +425,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     if (!name || name.length > 100) throw new AppError('WORKSPACE_NAME_INVALID')
     await db`UPDATE workspaces SET name = ${name} WHERE id = ${workspaceId}`
+    await broadcastWorkspaceChange(workspaceId, 'settings')
     const [workspace] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE w.id = ${workspaceId} AND m.user_id = ${user.id}`
     return ok({ workspace })
   }
@@ -422,6 +435,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const body = await bodyOf(request)
     const [workspace] = await db`SELECT name FROM workspaces WHERE id = ${workspaceId}`
     if (typeof body.confirmName !== 'string' || body.confirmName.trim() !== workspace.name) throw new AppError('WORKSPACE_DELETE_CONFIRMATION_MISMATCH')
+    await broadcastWorkspaceChange(workspaceId, 'deleted')
     await db`DELETE FROM workspaces WHERE id = ${workspaceId}`
     return noContent()
   }
@@ -436,6 +450,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     if (!target) throw new AppError('MEMBER_NOT_FOUND')
     if (target.role === 'owner') throw new AppError('OWNER_ROLE_IMMUTABLE')
     await db`UPDATE memberships SET role = ${role} WHERE workspace_id = ${workspaceId} AND user_id = ${memberMatch[1]}`
+    await broadcastWorkspaceChange(workspaceId, 'members')
     return ok({ member: { userId: memberMatch[1], role } })
   }
 
@@ -446,6 +461,8 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const [target] = await db`SELECT role FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${targetId}`
     if (!target) throw new AppError('MEMBER_NOT_FOUND')
     if (target.role === 'owner') throw new AppError('OWNER_CANNOT_LEAVE')
+    // Sent before the delete, so the removed member's open page also hears about it.
+    await broadcastWorkspaceChange(workspaceId, 'members')
     await db`DELETE FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${targetId}`
     return noContent()
   }
@@ -489,6 +506,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const rawToken = randomBytes(32).toString('base64url')
     const id = randomUUID()
     await db`INSERT INTO invites (id, workspace_id, email, token_hash, role, expires_at, created_by) VALUES (${id}, ${workspaceId}, ${email}, ${tokenHash(rawToken)}, ${role}, ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)}, ${user.id})`
+    await broadcastWorkspaceChange(workspaceId, 'invites')
     const inviteUrl = `${config.publicWebUrl}/invite?token=${encodeURIComponent(rawToken)}`
     let emailSent = false
     if (config.smtp.host) {
@@ -502,6 +520,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   if (method === 'DELETE' && inviteMatch) {
     await requireRole(workspaceId, user.id, ['owner'])
     await db`DELETE FROM invites WHERE id = ${inviteMatch[1]} AND workspace_id = ${workspaceId}`
+    await broadcastWorkspaceChange(workspaceId, 'invites')
     return noContent()
   }
 

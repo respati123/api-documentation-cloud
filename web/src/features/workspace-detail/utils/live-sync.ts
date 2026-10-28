@@ -10,17 +10,27 @@ const workspaceUpdatedSchema = z.object({
   commitCount: z.number(),
 })
 
-export type WorkspaceUpdatedEvent = z.infer<typeof workspaceUpdatedSchema>
+const workspaceChangedSchema = z.object({
+  type: z.literal('workspace.changed'),
+  workspaceId: z.string(),
+  reason: z.enum(['members', 'invites', 'settings', 'deleted']),
+})
 
-// Returns the event when the data is a workspace update, and null for anything else.
-export function parseSyncEvent(raw: string): WorkspaceUpdatedEvent | null {
+const syncEventSchema = z.union([workspaceUpdatedSchema, workspaceChangedSchema])
+
+export type WorkspaceUpdatedEvent = z.infer<typeof workspaceUpdatedSchema>
+export type WorkspaceChangedEvent = z.infer<typeof workspaceChangedSchema>
+export type SyncEvent = WorkspaceUpdatedEvent | WorkspaceChangedEvent
+
+// Returns the event when the data is a known workspace event, and null for anything else.
+export function parseSyncEvent(raw: string): SyncEvent | null {
   let value: unknown
   try {
     value = JSON.parse(raw)
   } catch {
     return null
   }
-  const result = z.safeParse(workspaceUpdatedSchema, value)
+  const result = z.safeParse(syncEventSchema, value)
   return result.success ? result.data : null
 }
 
