@@ -7,6 +7,7 @@ import { useWorkspaceActionsViewModel } from './use-workspace-actions.viewmodel'
 import { useWorkspaceActivityViewModel } from './use-workspace-activity.viewmodel'
 import { useWorkspaceDetailViewModel } from './use-workspace-detail.viewmodel'
 import { useWorkspaceInvitesList } from './use-workspace-lists.viewmodel'
+import { useWorkspaceLiveSync } from './use-workspace-live-sync.viewmodel'
 
 export function useWorkspacePageViewModel(workspaceId: string, tab: WorkspaceTab, navigate: (route: AppRoute, replace?: boolean) => void) {
   const { t } = useTranslation()
@@ -18,6 +19,7 @@ export function useWorkspacePageViewModel(workspaceId: string, tab: WorkspaceTab
   const actions = useWorkspaceActionsViewModel(workspaceId, () => navigate({ page: 'workspaces' }))
   const inviteDialog = useInviteDialogViewModel(workspaceId)
   const activity = useWorkspaceActivityViewModel(workspaceId, detail.commits, activeTab === 'activity')
+  const liveStatus = useWorkspaceLiveSync(workspaceId)
 
   return {
     ...detail,
@@ -33,5 +35,6 @@ export function useWorkspacePageViewModel(workspaceId: string, tab: WorkspaceTab
     actions,
     inviteDialog,
     activity,
+    liveStatus,
   }
 }
