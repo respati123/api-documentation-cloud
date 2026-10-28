@@ -29,6 +29,9 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: "${SMTP_FROM:-API Documentation <no-reply@example.test>}"
       PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_VERSION: ${APP_VERSION:-dev}
     ports:
       - "127.0.0.1:${API_PORT:-3001}:3001"
     depends_on:
@@ -48,7 +51,7 @@ services:
     expose:
       - "1025"
     ports:
-      - "127.0.0.1:8026:8025"
+      - "127.0.0.1:${MAILPIT_WEB_PORT:-8026}:8025"
 
   web:
     build:

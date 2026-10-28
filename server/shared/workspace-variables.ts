@@ -75,7 +75,7 @@ export function activeVariableValues(value: WorkspaceVariables, environmentId: s
 }
 
 export function resolveRequestVariables<T extends SyncRequest>(request: T, values: Record<string, string>): T {
-  const replace = (value: string) => value.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (match, rawName: string) => {
+  const replace = (value: string) => value.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_match, rawName: string) => {
     const name = rawName.trim()
     if (!Object.prototype.hasOwnProperty.call(values, name)) throw new Error(`Variable "{{${name}}}" is not defined in the global scope or active environment.`)
     return values[name]
