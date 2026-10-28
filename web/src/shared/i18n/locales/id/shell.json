@@ -1,0 +1,45 @@
+{
+  "brand": {
+    "name": "API Documentation",
+    "subtitle": "Workspace cloud"
+  },
+  "nav": {
+    "mainLabel": "Navigasi utama",
+    "groupWorkspace": "Workspace",
+    "overview": "Ringkasan",
+    "workspaces": "Workspace",
+    "yourWorkspaces": "Workspace kamu",
+    "emptyWorkspaces": "Daftar workspace kamu akan muncul di sini.",
+    "createWorkspace": "Buat workspace",
+    "closeMenu": "Tutup menu",
+    "menu": "Menu",
+    "version": "Versi {{version}}"
+  },
+  "account": {
+    "signOut": "Keluar"
+  },
+  "breadcrumb": {
+    "root": "Cloud"
+  },
+  "api": {
+    "checking": "Memeriksa API",
+    "connected": "API terhubung",
+    "unavailable": "API tidak tersedia"
+  },
+  "page": {
+    "overview": "Ringkasan",
+    "workspaces": "Workspace",
+    "workspace": "Workspace"
+  },
+  "session": {
+    "checking": "Memeriksa sesi kamu…"
+  },
+  "unavailable": {
+    "title": "Workspace tidak tersedia",
+    "detail": "Workspace ini mungkin sudah dihapus atau akun kamu tidak lagi punya akses.",
+    "back": "Kembali ke workspace"
+  },
+  "notice": {
+    "dismiss": "Tutup"
+  }
+}

@@ -1,9 +1,11 @@
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Button } from '@/shared/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
+import { WORKSPACES_TEXT } from '../constants/workspaces-text.constants'
 
 export interface CreateWorkspaceDialogViewProps {
   isOpen: boolean
@@ -20,11 +22,11 @@ export function CreateWorkspaceDialogView({ isOpen, isBusy, errorMessage, onClos
       <DialogContent data-testid="workspaces-create-dialog">
         <form data-testid="workspaces-create-form" className="grid gap-4" onSubmit={onSubmit}>
           <DialogHeader>
-            <DialogTitle>{t('create.title')}</DialogTitle>
-            <DialogDescription>{t('create.description')}</DialogDescription>
+            <DialogTitle>{t(WORKSPACES_TEXT.create.title)}</DialogTitle>
+            <DialogDescription>{t(WORKSPACES_TEXT.create.description)}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
-            <Label htmlFor="workspace-name">{t('create.nameLabel')}</Label>
+            <Label htmlFor="workspace-name">{t(WORKSPACES_TEXT.create.nameLabel)}</Label>
             <Input
               id="workspace-name"
               name="name"
@@ -32,20 +34,20 @@ export function CreateWorkspaceDialogView({ isOpen, isBusy, errorMessage, onClos
               autoFocus
               required
               maxLength={100}
-              placeholder={t('create.namePlaceholder')}
+              placeholder={t(WORKSPACES_TEXT.create.namePlaceholder)}
             />
           </div>
           {errorMessage && (
-            <p data-testid="workspaces-create-error" role="alert" className="text-xs text-destructive">
-              {errorMessage}
-            </p>
+            <Alert variant="destructive" data-testid="workspaces-create-error">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" data-testid="workspaces-create-cancel-button" onClick={onClose}>
-              {t('create.cancel')}
+              {t(WORKSPACES_TEXT.create.cancel)}
             </Button>
             <Button type="submit" data-testid="workspaces-create-submit-button" disabled={isBusy}>
-              {isBusy ? t('create.busy') : t('create.submit')}
+              {isBusy ? t(WORKSPACES_TEXT.create.busy) : t(WORKSPACES_TEXT.create.submit)}
             </Button>
           </DialogFooter>
         </form>

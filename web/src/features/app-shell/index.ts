@@ -1,0 +1,8 @@
+export { SHELL_PAGE_TITLE, SHELL_TEXT, WORKSPACE_TAB_TEXT } from './constants/app-shell-text.constants'
+export type { AppRoute, WorkspaceTab } from './models/route.model'
+export { WORKSPACE_TABS } from './models/route.model'
+export { type Notice, useNoticeStore } from './stores/notice.store'
+export { readRoute, routeUrl } from './utils/route'
+export { useAppShellViewModel } from './viewmodels/use-app-shell.viewmodel'
+export { AppShellView } from './views/app-shell.view'
+export { NoticeBanner } from './views/notice-banner.view'

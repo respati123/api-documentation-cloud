@@ -2,12 +2,14 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto'
 import { SQL } from 'bun'
 import nodemailer from 'nodemailer'
 import { loadConfig } from '@/config'
+import { created, noContent, ok } from '@/lib/http'
 import { AppError } from '@/lib/errors/app-error'
 import { negotiateLocale } from '@/lib/locale'
 import { createLogger } from '@/lib/logger'
 import { routeLabel } from '@/lib/route-label'
 import { errorResponse } from '@/middleware/error-response'
 import { RateLimiter } from '@/middleware/rate-limit'
+import { runWithRequestId } from '@/lib/request-context'
 import { resolveRequestId } from '@/middleware/request-id'
 import { isSensitivePath, withResponseHeaders } from '@/middleware/response-headers'
 
@@ -35,10 +37,6 @@ const syncSocketTickets = new Map<string, SyncSocketTicket>()
 const syncSockets = new Set<Bun.ServerWebSocket<SyncSocketData>>()
 const desktopLoginCodes = new Map<string, { userId: string; expiresAt: number }>()
 const limiter = new RateLimiter()
-
-function json(data: unknown, status = 200): Response {
-  return Response.json(data, { status })
-}
 
 function tokenHash(token: string): string { return createHash('sha256').update(token).digest('hex') }
 function clientAddress(request: Request): string {
@@ -238,21 +236,20 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   const url = new URL(request.url)
   const path = url.pathname.replace(/\/+$/, '') || '/'
   const method = request.method.toUpperCase()
-  if (method === 'GET' && path === '/health') return json({ ok: true })
+  if (method === 'GET' && path === '/health') return ok({ ok: true })
 
   if (method === 'GET' && path === '/api/sync/events') {
-    if (!isAllowedSyncOrigin(request.headers.get('origin'))) return json({ error: 'WebSocket origin is not allowed.' }, 403)
+    if (!isAllowedSyncOrigin(request.headers.get('origin'))) throw new AppError('WEBSOCKET_ORIGIN_NOT_ALLOWED')
     const ticket = url.searchParams.get('ticket')
     const ticketKey = ticket ? tokenHash(ticket) : ''
     const ticketData = ticketKey ? syncSocketTickets.get(ticketKey) : undefined
     if (!ticketData || ticketData.expiresAt <= Date.now()) {
       if (ticketKey) syncSocketTickets.delete(ticketKey)
-      return json({ error: 'WebSocket ticket is missing or expired.' }, 401)
+      throw new AppError('WEBSOCKET_TICKET_INVALID')
     }
     syncSocketTickets.delete(ticketKey)
-    return server.upgrade(request, { data: { userId: ticketData.userId } })
-      ? undefined
-      : json({ error: 'Could not open the sync notification connection.' }, 400)
+    if (!server.upgrade(request, { data: { userId: ticketData.userId } })) throw new AppError('WEBSOCKET_UNAVAILABLE')
+    return undefined
   }
 
   if (method === 'POST' && path === '/api/auth/register') {
@@ -271,7 +268,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       throw error
     }
     const token = await createSession(id)
-    return json({ token, user: { id, email } }, 201)
+    return created({ token, user: { id, email } })
   }
 
   if (method === 'POST' && path === '/api/auth/login') {
@@ -283,7 +280,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const [user] = await db`SELECT id, email, password_hash FROM users WHERE email = ${email}`
     if (!user || !await Bun.password.verify(password, user.password_hash)) throw new AppError('INVALID_CREDENTIALS')
     const token = await createSession(user.id)
-    return json({ token, user: { id: user.id, email: user.email } })
+    return ok({ token, user: { id: user.id, email: user.email } })
   }
 
   if (method === 'POST' && path === '/api/auth/forgot-password') {
@@ -304,7 +301,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
         catch (error) { logger.error('Password reset email delivery failed', { error }) }
       }
     }
-    return json({ ok: true })
+    return noContent()
   }
 
   if (method === 'POST' && path === '/api/auth/reset-password') {
@@ -323,10 +320,10 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       return true
     })
     if (!reset) throw new AppError('RESET_TOKEN_INVALID')
-    return json({ ok: true })
+    return noContent()
   }
 
-  if (method === 'GET' && path === '/api/me') return json({ user: await currentUser(request) })
+  if (method === 'GET' && path === '/api/me') return ok({ user: await currentUser(request) })
 
   if (method === 'POST' && path === '/api/desktop-login/exchange') {
     const body = await bodyOf(request)
@@ -339,13 +336,13 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const [matchedUser] = await db`SELECT id, email FROM users WHERE id = ${entry.userId}`
     if (!matchedUser) throw new AppError('ACCOUNT_NOT_FOUND')
     const token = await createSession(entry.userId)
-    return json({ token, user: { id: matchedUser.id, email: matchedUser.email } })
+    return ok({ token, user: { id: matchedUser.id, email: matchedUser.email } })
   }
 
   if (method === 'POST' && path === '/api/auth/logout') {
     const bearer = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
     if (bearer) await db`DELETE FROM sessions WHERE token_hash = ${tokenHash(bearer)}`
-    return json({ ok: true })
+    return noContent()
   }
 
   const user = await currentUser(request)
@@ -354,7 +351,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     for (const [key, value] of syncSocketTickets) if (value.expiresAt <= now) syncSocketTickets.delete(key)
     const ticket = randomBytes(32).toString('base64url')
     syncSocketTickets.set(tokenHash(ticket), { userId: user.id, expiresAt: now + 30_000 })
-    return json({ ticket, expiresInSeconds: 30 })
+    return created({ ticket, expiresInSeconds: 30 })
   }
 
   if (method === 'POST' && path === '/api/desktop-login/approve') {
@@ -362,12 +359,12 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     for (const [key, value] of desktopLoginCodes) if (value.expiresAt <= now) desktopLoginCodes.delete(key)
     const code = randomBytes(32).toString('base64url')
     desktopLoginCodes.set(tokenHash(code), { userId: user.id, expiresAt: now + 2 * 60_000 })
-    return json({ code, expiresInSeconds: 120 })
+    return created({ code, expiresInSeconds: 120 })
   }
 
   if (method === 'GET' && path === '/api/workspaces') {
     const rows = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE m.user_id = ${user.id} ORDER BY c.created_at DESC NULLS LAST, w.created_at DESC`
-    return json({ workspaces: rows })
+    return ok({ workspaces: rows })
   }
 
   if (method === 'POST' && path === '/api/workspaces') {
@@ -376,7 +373,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const variables = body.variables === undefined ? emptyWorkspaceVariables() : body.variables
     if (!validateTree(tree)) throw new AppError('WORKSPACE_TREE_INVALID')
     if (!validateWorkspaceVariables(variables)) throw new AppError('WORKSPACE_VARIABLES_INVALID')
-    return json({ workspace: await createWorkspace(user, String(body.name || ''), tree, variables) }, 201)
+    return created({ workspace: await createWorkspace(user, String(body.name || ''), tree, variables) })
   }
 
   if (method === 'POST' && path === '/api/invites/accept') {
@@ -395,7 +392,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       return { ...workspace, role: invite.role, ...snapshot }
     })
     if (!result) throw new AppError('INVITE_INVALID')
-    return json({ workspace: result })
+    return created({ workspace: result })
   }
 
   const workspaceMatch = path.match(/^\/api\/workspaces\/([\w-]+)(?:\/(.*))?$/)
@@ -408,8 +405,9 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const body = await bodyOf(request)
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     if (!name || name.length > 100) throw new AppError('WORKSPACE_NAME_INVALID')
-    const [workspace] = await db`UPDATE workspaces SET name = ${name} WHERE id = ${workspaceId} RETURNING id, name`
-    return json({ workspace: { id: workspace.id, name: workspace.name } })
+    await db`UPDATE workspaces SET name = ${name} WHERE id = ${workspaceId}`
+    const [workspace] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE w.id = ${workspaceId} AND m.user_id = ${user.id}`
+    return ok({ workspace })
   }
 
   if (method === 'DELETE' && action === '') {
@@ -418,7 +416,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const [workspace] = await db`SELECT name FROM workspaces WHERE id = ${workspaceId}`
     if (typeof body.confirmName !== 'string' || body.confirmName.trim() !== workspace.name) throw new AppError('WORKSPACE_DELETE_CONFIRMATION_MISMATCH')
     await db`DELETE FROM workspaces WHERE id = ${workspaceId}`
-    return json({ ok: true })
+    return noContent()
   }
 
   const memberMatch = action.match(/^members\/([\w-]+)$/)
@@ -431,7 +429,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     if (!target) throw new AppError('MEMBER_NOT_FOUND')
     if (target.role === 'owner') throw new AppError('OWNER_ROLE_IMMUTABLE')
     await db`UPDATE memberships SET role = ${role} WHERE workspace_id = ${workspaceId} AND user_id = ${memberMatch[1]}`
-    return json({ ok: true, role })
+    return ok({ member: { userId: memberMatch[1], role } })
   }
 
   if (method === 'DELETE' && memberMatch) {
@@ -442,19 +440,19 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     if (!target) throw new AppError('MEMBER_NOT_FOUND')
     if (target.role === 'owner') throw new AppError('OWNER_CANNOT_LEAVE')
     await db`DELETE FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${targetId}`
-    return json({ ok: true })
+    return noContent()
   }
 
   if (method === 'GET' && action === 'members') {
     await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
     const members = await db`SELECT u.id, u.email, m.role, m.created_at AS "joinedAt" FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${workspaceId} ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END, m.created_at`
-    return json({ members })
+    return ok({ members })
   }
 
   if (method === 'GET' && action === 'invites') {
     await requireRole(workspaceId, user.id, ['owner'])
     const invites = await db`SELECT i.id, i.email, i.role, i.expires_at AS "expiresAt", i.created_at AS "createdAt", u.email AS "createdByEmail" FROM invites i JOIN users u ON u.id = i.created_by WHERE i.workspace_id = ${workspaceId} AND i.used_at IS NULL AND i.expires_at > now() ORDER BY i.created_at DESC`
-    return json({ invites })
+    return ok({ invites })
   }
 
   if (method === 'POST' && action === 'invites') {
@@ -479,23 +477,23 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       try { await sendInviteEmail(email, String(workspace.name), role, user.email, inviteUrl); emailSent = true }
       catch (error) { logger.error('Workspace invitation email delivery failed', { error }) }
     }
-    return json({ id, token: rawToken, email, expiresInDays: 7, role, emailSent }, 201)
+    return created({ id, token: rawToken, email, expiresInDays: 7, role, emailSent })
   }
 
   const inviteMatch = action.match(/^invites\/([\w-]+)$/)
   if (method === 'DELETE' && inviteMatch) {
     await requireRole(workspaceId, user.id, ['owner'])
     await db`DELETE FROM invites WHERE id = ${inviteMatch[1]} AND workspace_id = ${workspaceId}`
-    return json({ ok: true })
+    return noContent()
   }
 
   if (method === 'GET' && action === 'sync/pull') {
     await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
     const [workspace] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", c.parent_ids AS "parentIds", c.message, c.snapshot, c.created_at AS "createdAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE w.id = ${workspaceId} AND m.user_id = ${user.id}`
-    if (!workspace) return json({ workspace: null })
+    if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
     const snapshot = parseSnapshot(parseJson<unknown>(workspace.snapshot, []))
     const { snapshot: _snapshot, ...workspaceData } = workspace
-    return json({ workspace: { ...workspaceData, parentIds: parseJson<string[]>(workspace.parentIds, []), ...snapshot } })
+    return ok({ workspace: { ...workspaceData, parentIds: parseJson<string[]>(workspace.parentIds, []), ...snapshot } })
   }
 
   if (method === 'GET' && action === 'sync/history') {
@@ -508,7 +506,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       createdAt: row.createdAt,
       authorEmail: String(row.authorEmail)
     }))
-    return json({ commits })
+    return ok({ commits })
   }
 
   const historyCommitMatch = action.match(/^sync\/history\/([\w-]+)$/)
@@ -516,7 +514,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
     const [row] = await db`SELECT id, parent_ids AS "parentIds", message, snapshot, created_at AS "createdAt" FROM commits WHERE workspace_id = ${workspaceId} AND id = ${historyCommitMatch[1]}`
     if (!row) throw new AppError('COMMIT_NOT_FOUND')
-    return json({ commit: {
+    return ok({ commit: {
       id: String(row.id),
       parentIds: parseJson<string[]>(row.parentIds, []),
       message: String(row.message),
@@ -544,7 +542,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       return { headId: restoredId, message }
     })
     await broadcastWorkspaceUpdate(workspaceId, result.headId, result.message, user, 1)
-    return json({ headCommitId: result.headId })
+    return created({ headCommitId: result.headId })
   }
 
   if (method === 'POST' && action === 'sync/push') {
@@ -576,12 +574,12 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       }
       return { headId }
     })
-    if ('conflict' in result) return json({ error: 'remote_advanced', remote: result.conflict }, 409)
+    if ('conflict' in result) throw new AppError('SYNC_REMOTE_ADVANCED', { details: { remote: result.conflict } })
     if (result.headId) {
       const lastCommit = commits[commits.length - 1]
       await broadcastWorkspaceUpdate(workspaceId, result.headId, typeof lastCommit.message === 'string' ? lastCommit.message : 'Workspace updated', user, commits.length)
     }
-    return json({ headCommitId: result.headId })
+    return created({ headCommitId: result.headId })
   }
 
   throw new AppError('ROUTE_NOT_FOUND')
@@ -606,7 +604,7 @@ async function initialize() {
       const path = new URL(request.url).pathname
       let response: Response | undefined
       try {
-        response = await handle(request, server)
+        response = await runWithRequestId(requestId, () => handle(request, server))
       } catch (error) {
         const duplicate = isRecord(error) && error.code === '23505'
         response = errorResponse(duplicate ? new AppError('ALREADY_MEMBER') : error, { requestId, locale, logger })

@@ -1,7 +1,12 @@
 import { useTranslation } from 'react-i18next'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
 import { Button } from '@/shared/components/ui/button'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/shared/components/ui/empty'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
+import { COMMON_TEXT } from '@/shared/constants/common-text.constants'
 import type { CloudWorkspaceRef } from '@/shared/models/workspace.model'
+import { WORKSPACES_ROLE_TEXT, WORKSPACES_TEXT } from '../constants/workspaces-text.constants'
 import type { WorkspaceListStatus } from '../models/workspaces.model'
 
 const skeletonRows = ['first', 'second', 'third']
@@ -30,49 +35,58 @@ export function WorkspaceListView({ status, workspaces, errorMessage, onOpen, on
 
   if (status === 'error') {
     return (
-      <div data-testid="workspaces-error-state" role="alert" className="grid justify-items-start gap-3 rounded-md border border-border p-4">
-        <p className="text-sm font-medium">{t('common:error.title')}</p>
-        <p className="text-xs text-muted-foreground">{errorMessage}</p>
-        <Button variant="outline" data-testid="workspaces-retry-button" onClick={onRetry}>
-          {t('common:error.retry')}
+      <Alert variant="destructive" data-testid="workspaces-error-state">
+        <AlertTitle>{t(COMMON_TEXT.error.title)}</AlertTitle>
+        <AlertDescription>{errorMessage}</AlertDescription>
+        <Button variant="outline" className="mt-2 justify-self-start" data-testid="workspaces-retry-button" onClick={onRetry}>
+          {t(COMMON_TEXT.error.retry)}
         </Button>
-      </div>
+      </Alert>
     )
   }
 
   if (status === 'empty') {
     return (
-      <div
-        data-testid="workspaces-empty-state"
-        className="grid justify-items-start gap-3 rounded-md border border-dashed border-border p-6"
-      >
-        <p className="text-sm font-medium">{t('list.emptyTitle')}</p>
-        <p className="text-xs text-muted-foreground">{t('list.emptyDetail')}</p>
-        <Button data-testid="workspaces-empty-create-button" onClick={onCreate}>
-          {t('list.create')}
-        </Button>
-      </div>
+      <Empty data-testid="workspaces-empty-state" className="border border-dashed border-border">
+        <EmptyHeader>
+          <EmptyTitle>{t(WORKSPACES_TEXT.list.emptyTitle)}</EmptyTitle>
+          <EmptyDescription>{t(WORKSPACES_TEXT.list.emptyDetail)}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button data-testid="workspaces-empty-create-button" onClick={onCreate}>
+            {t(WORKSPACES_TEXT.list.create)}
+          </Button>
+        </EmptyContent>
+      </Empty>
     )
   }
 
   return (
-    <ul data-testid="workspaces-list-container" className="grid gap-2">
-      {workspaces.map((workspace) => (
-        <li key={workspace.id}>
-          <button
-            type="button"
-            data-testid={`workspaces-row-${workspace.id}`}
-            className="flex w-full items-center justify-between gap-4 rounded-md border border-border bg-card p-3 text-left hover:bg-accent"
-            onClick={() => onOpen(workspace.id)}
-          >
-            <span className="grid min-w-0 gap-1">
-              <span className="truncate text-sm font-medium">{workspace.name}</span>
-              <span className="text-xs text-muted-foreground">{t(`roles.${workspace.role}`)}</span>
-            </span>
-            <span className="text-xs text-muted-foreground">{t('list.open')}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div className="overflow-hidden rounded-md border border-border bg-card">
+      <Table data-testid="workspaces-list-container">
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t(WORKSPACES_TEXT.list.columns.workspace)}</TableHead>
+            <TableHead>{t(WORKSPACES_TEXT.list.columns.role)}</TableHead>
+            <TableHead className="text-right">
+              <span className="sr-only">{t(WORKSPACES_TEXT.list.columns.action)}</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {workspaces.map((workspace) => (
+            <TableRow key={workspace.id}>
+              <TableCell className="truncate font-medium">{workspace.name}</TableCell>
+              <TableCell className="text-muted-foreground">{t(WORKSPACES_ROLE_TEXT[workspace.role])}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="ghost" size="sm" data-testid={`workspaces-row-${workspace.id}`} onClick={() => onOpen(workspace.id)}>
+                  {t(WORKSPACES_TEXT.list.open)}
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

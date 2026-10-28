@@ -37,5 +37,9 @@ export const en = {
   INVITE_ROLE_INVALID: 'Invite role must be editor or viewer.',
   INVITE_EMAIL_INVALID: 'Enter a valid invitation email address.',
   EMAIL_INVALID: 'Enter a valid email address.',
+  WEBSOCKET_ORIGIN_NOT_ALLOWED: 'This origin cannot open the sync connection.',
+  WEBSOCKET_TICKET_INVALID: 'The sync connection ticket is missing or expired.',
+  WEBSOCKET_UNAVAILABLE: 'Could not open the sync notification connection.',
+  SYNC_REMOTE_ADVANCED: 'The cloud version changed since your last pull. Pull and merge before pushing again.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>

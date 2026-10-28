@@ -12,10 +12,10 @@ export function errorResponse(error: unknown, context: ErrorContext): Response {
   const appError = error instanceof AppError ? error : new AppError('INTERNAL_ERROR', { cause: error })
   logError(error, appError, context)
   const body = {
-    error: appError.localizedMessage(context.locale),
     code: appError.code,
+    error: appError.localizedMessage(context.locale),
+    details: appError.details ?? null,
     requestId: context.requestId,
-    ...(appError.details === undefined ? {} : { details: appError.details }),
   }
   const headers = new Headers({
     'Content-Type': 'application/json',

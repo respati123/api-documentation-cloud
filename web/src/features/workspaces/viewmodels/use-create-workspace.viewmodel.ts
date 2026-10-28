@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
+import { COMMON_TEXT } from '@/shared/constants/common-text.constants'
 import { ApiError } from '@/shared/services/api-client'
 import { workspacesService } from '../services/workspaces.service'
 import { useCreateWorkspaceStore } from '../stores/create-workspace.store'
@@ -38,7 +39,7 @@ export function useCreateWorkspaceViewModel(onCreated: (workspace: { id: string;
   return {
     isOpen,
     isBusy: creation.isPending,
-    errorMessage: creation.error ? (creation.error instanceof ApiError ? creation.error.message : t('common:error.unexpected')) : null,
+    errorMessage: creation.error ? (creation.error instanceof ApiError ? creation.error.message : t(COMMON_TEXT.error.unexpected)) : null,
     handleSubmit,
     handleClose,
   }

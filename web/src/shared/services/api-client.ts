@@ -4,11 +4,17 @@ const apiBaseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 
 export class ApiError extends Error {
   readonly status: number
+  readonly code: string | undefined
+  readonly requestId: string | undefined
+  readonly details: unknown
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, body: { code?: string; requestId?: string; details?: unknown } = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = body.code
+    this.requestId = body.requestId
+    this.details = body.details
   }
 }
 
@@ -31,8 +37,9 @@ export async function apiCall<T = unknown>(path: string, options: ApiCallOptions
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
   })
   const result: unknown = await response.json().catch(() => ({}))
-  if (!response.ok) throw new ApiError(readErrorMessage(result) ?? `Request failed (${response.status}).`, response.status)
-  return result as T
+  if (!response.ok)
+    throw new ApiError(readErrorMessage(result) ?? `Request failed (${response.status}).`, response.status, readErrorBody(result))
+  return unwrapData<T>(result)
 }
 
 export async function checkApiHealth(): Promise<boolean> {
@@ -47,4 +54,19 @@ export async function checkApiHealth(): Promise<boolean> {
 function readErrorMessage(value: unknown): string | undefined {
   if (typeof value === 'object' && value !== null && 'error' in value && typeof value.error === 'string') return value.error
   return undefined
+}
+
+function readErrorBody(value: unknown): { code?: string; requestId?: string; details?: unknown } {
+  if (typeof value !== 'object' || value === null) return {}
+  const { code, requestId, details } = value as { code?: unknown; requestId?: unknown; details?: unknown }
+  return {
+    code: typeof code === 'string' ? code : undefined,
+    requestId: typeof requestId === 'string' ? requestId : undefined,
+    details,
+  }
+}
+
+function unwrapData<T>(value: unknown): T {
+  if (typeof value === 'object' && value !== null && 'data' in value) return value.data as T
+  return value as T
 }

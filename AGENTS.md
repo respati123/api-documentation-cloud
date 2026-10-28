@@ -11,6 +11,12 @@ Shared files at this level: `docker-compose.yml` (local stack), `docker-compose.
 
 Nothing in `web/` may import from `server/`, and nothing in `server/` may import from `web/`. The two apps talk only over HTTP and the WebSocket.
 
+## Library documentation (mandatory)
+
+- **Always use Context7 for library, framework, and API details.** Before you write or change code that calls a library (React, Vite, Tailwind, shadcn/ui, TanStack Query, zod, i18next, Bun, PostgreSQL drivers, and so on), resolve the library ID with the Context7 MCP tools, then query the docs for the exact API you need.
+- Do not write library API calls from memory. If the docs and your memory disagree, the docs win.
+- If the Context7 MCP tools are not available in the session, use the official documentation through WebFetch or WebSearch, and say in your reply that Context7 was not available.
+
 ## Commits and pull requests
 
 - Do not add a "Generated with Claude Code" footer or any similar tool-generated line to commit messages or pull request descriptions.

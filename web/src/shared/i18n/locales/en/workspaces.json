@@ -6,7 +6,8 @@
     "namePlaceholder": "e.g. Payments API",
     "cancel": "Cancel",
     "submit": "Create workspace",
-    "busy": "Creating…"
+    "busy": "Creating…",
+    "ready": "{{name}} is ready in the cloud."
   },
   "list": {
     "title": "Workspaces",
@@ -14,7 +15,12 @@
     "emptyTitle": "No workspaces to show",
     "emptyDetail": "Create a workspace or ask a teammate to invite you.",
     "create": "New workspace",
-    "open": "Open"
+    "open": "Open",
+    "columns": {
+      "workspace": "Workspace",
+      "role": "Your role",
+      "action": "Action"
+    }
   },
   "overview": {
     "title": "Overview",

@@ -39,6 +39,8 @@ jobs:
       - run: bun install --cwd web --frozen-lockfile
       - run: bun install --cwd server --frozen-lockfile
       - run: bun run cloud:typecheck
+      - run: bun run cloud:lint
+      - run: bun run cloud:test
       - run: bun run api:typecheck
       - run: bun run api:test
       - run: bun run cloud:build
@@ -61,6 +63,8 @@ jobs:
       - run: bun install --cwd web --frozen-lockfile
       - run: bun install --cwd server --frozen-lockfile
       - run: bun run cloud:typecheck
+      - run: bun run cloud:lint
+      - run: bun run cloud:test
       - run: bun run api:typecheck
       - run: bun run api:test
       - run: bun run cloud:build

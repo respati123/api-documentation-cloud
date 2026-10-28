@@ -41,7 +41,7 @@ describe('authService.currentUser', () => {
 
 describe('authService.resetPassword', () => {
   test('sends the reset token and new password', async () => {
-    vi.mocked(apiCall).mockResolvedValue({ ok: true })
+    vi.mocked(apiCall).mockResolvedValue({})
 
     await authService.resetPassword('reset-token', 'brand-new-pass-2')
     expect(apiCall).toHaveBeenCalledWith('/api/auth/reset-password', {
@@ -50,9 +50,9 @@ describe('authService.resetPassword', () => {
     })
   })
 
-  test('rejects when the server does not confirm with ok', async () => {
-    vi.mocked(apiCall).mockResolvedValue({ ok: false })
+  test('resolves when the server answers 204 with no body', async () => {
+    vi.mocked(apiCall).mockResolvedValue({})
 
-    await expect(authService.resetPassword('reset-token', 'brand-new-pass-2')).rejects.toThrow()
+    await expect(authService.resetPassword('reset-token', 'brand-new-pass-2')).resolves.toBeUndefined()
   })
 })

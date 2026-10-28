@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { COMMON_TEXT } from '@/shared/constants/common-text.constants'
 import { ApiError } from '@/shared/services/api-client'
+import { AUTH_TEXT } from '../constants/auth-text.constants'
 import type { AuthMode } from '../models/auth.model'
 import { authService } from '../services/auth.service'
 import { useAuthSessionStore } from '../stores/auth-session.store'
@@ -42,13 +44,13 @@ export function useAuthPageViewModel() {
         return
       }
       if (variables.mode === 'forgot') {
-        setNotice(t('auth:notice.resetSent'))
+        setNotice(t(AUTH_TEXT.notice.resetSent))
         return
       }
       clearSession()
       window.history.replaceState({}, '', '/')
       setMode('login')
-      setNotice(t('auth:notice.passwordUpdated'))
+      setNotice(t(AUTH_TEXT.notice.passwordUpdated))
     },
   })
 
@@ -74,8 +76,8 @@ export function useAuthPageViewModel() {
     changeMode,
     handleSubmit,
     isBusy: submission.isPending,
-    errorMessage: submission.error ? readErrorMessage(submission.error, t('common:error.unexpected')) : null,
-    noticeMessage: notice ?? (sessionExpired && mode === 'login' ? t('auth:notice.sessionExpired') : null),
+    errorMessage: submission.error ? readErrorMessage(submission.error, t(COMMON_TEXT.error.unexpected)) : null,
+    noticeMessage: notice ?? (sessionExpired && mode === 'login' ? t(AUTH_TEXT.notice.sessionExpired) : null),
   }
 }
 

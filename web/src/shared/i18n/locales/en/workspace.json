@@ -1,0 +1,53 @@
+{
+  "header": { "subtitle": "Shared collection, API reference, and change history.", "invite": "Invite teammate" },
+  "tabs": {
+    "label": "Workspace sections",
+    "overview": "Overview",
+    "docs": "API docs",
+    "activity": "Activity",
+    "team": "Team",
+    "settings": "Settings"
+  },
+  "state": {
+    "loading": "Loading workspace…",
+    "loadingView": "Loading view…",
+    "errorTitle": "Could not load this view",
+    "retry": "Try again",
+    "unavailableTitle": "Workspace data is unavailable",
+    "unavailableDetail": "Refresh this view or check your access.",
+    "unavailableMessage": "This workspace is no longer available to your account.",
+    "loadFailed": "Could not load this workspace."
+  },
+  "overview": {
+    "endpoints": "Endpoints",
+    "collections": "Collections",
+    "members": "Team members",
+    "latestChange": "Latest change",
+    "latestVersion": "Latest version",
+    "notAvailable": "Not available",
+    "dateUnavailable": "Date unavailable",
+    "collectionsTitle": "Collections",
+    "collectionsDetail": "Folders and requests in this workspace.",
+    "browseDocs": "Browse API docs",
+    "emptyCollectionsTitle": "No API collections yet",
+    "emptyCollectionsDetail": "Publish a collection from the desktop app to make its documentation available here.",
+    "endpointCount_one": "{{count}} endpoint",
+    "endpointCount_other": "{{count}} endpoints",
+    "noUrl": "No URL",
+    "recentTitle": "Recent changes",
+    "recentDetail": "Commits pushed to the cloud workspace.",
+    "viewHistory": "View history",
+    "emptyCommitsTitle": "No commits yet",
+    "emptyCommitsDetail": "Changes pushed from the desktop app will appear here.",
+    "syncNote": "This browser view reflects the latest version pushed to the cloud. Edit and sync local drafts from the desktop app.",
+    "created": "Created {{date}}",
+    "workspaceId": "Workspace ID",
+    "manageTeam": "Manage team"
+  },
+  "invite": {
+    "accepting": "Accepting your workspace invitation…",
+    "joined": "You joined {{name}}.",
+    "failed": "Could not accept this invitation.",
+    "signInPrompt": "Sign in with the invited email address to join this workspace."
+  }
+}

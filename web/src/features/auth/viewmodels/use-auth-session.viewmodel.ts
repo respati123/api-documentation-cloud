@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import type { CloudUser } from '@/shared/models/user.model'
 import { authService } from '../services/auth.service'
 import { useAuthSessionStore } from '../stores/auth-session.store'
+import { shouldEndSession } from '../utils/session-errors'
 
 export const authKeys = {
   all: ['auth'] as const,
@@ -29,10 +30,10 @@ export function useAuthSessionViewModel(): {
     retry: false,
   })
 
-  const hasFailed = currentUser.isError
+  const sessionEnded = currentUser.isError && shouldEndSession(currentUser.error)
   useEffect(() => {
-    if (hasFailed) clearSession({ expired: true })
-  }, [hasFailed, clearSession])
+    if (sessionEnded) clearSession({ expired: true })
+  }, [sessionEnded, clearSession])
 
   const status: SessionStatus =
     token === '' ? 'anonymous' : currentUser.isPending ? 'checking' : currentUser.isSuccess ? 'authenticated' : 'anonymous'

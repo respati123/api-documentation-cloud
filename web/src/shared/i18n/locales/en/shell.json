@@ -1,0 +1,45 @@
+{
+  "brand": {
+    "name": "API Documentation",
+    "subtitle": "Cloud workspace"
+  },
+  "nav": {
+    "mainLabel": "Main navigation",
+    "groupWorkspace": "Workspace",
+    "overview": "Overview",
+    "workspaces": "Workspaces",
+    "yourWorkspaces": "Your workspaces",
+    "emptyWorkspaces": "Your workspace list will appear here.",
+    "createWorkspace": "Create workspace",
+    "closeMenu": "Close menu",
+    "menu": "Menu",
+    "version": "Version {{version}}"
+  },
+  "account": {
+    "signOut": "Sign out"
+  },
+  "breadcrumb": {
+    "root": "Cloud"
+  },
+  "api": {
+    "checking": "Checking API",
+    "connected": "API connected",
+    "unavailable": "API unavailable"
+  },
+  "page": {
+    "overview": "Overview",
+    "workspaces": "Workspaces",
+    "workspace": "Workspace"
+  },
+  "session": {
+    "checking": "Checking your session…"
+  },
+  "unavailable": {
+    "title": "Workspace unavailable",
+    "detail": "This workspace may have been removed or your account no longer has access.",
+    "back": "Back to workspaces"
+  },
+  "notice": {
+    "dismiss": "Dismiss"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "brand": {
+    "name": "API Documentation",
+    "heading": "Approve this sign-in.",
+    "copy": "The desktop app is waiting for you to confirm it's really you before it connects to your cloud workspace.",
+    "foot": "Desktop app and browser portal · one shared cloud workspace"
+  },
+  "title": "Sign in to the desktop app?",
+  "subtitle": "Signed in as {{email}}. Approving lets the desktop app on this computer access your workspaces.",
+  "approve": "Approve sign-in",
+  "approving": "Approving…",
+  "cancel": "Not me — cancel",
+  "done": "Approved. Return to the desktop app — it should sign in automatically. You can close this tab.",
+  "notDesktop": "This sign-in link is not from the desktop app. Start sign-in again from the desktop app.",
+  "failed": "Could not approve this sign-in.",
+  "signInPrompt": "Sign in to approve the desktop app.",
+  "loading": "Loading…"
+}

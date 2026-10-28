@@ -1,12 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import enAuth from './locales/en/auth.json'
-import enCommon from './locales/en/common.json'
-import enWorkspaces from './locales/en/workspaces.json'
-import idAuth from './locales/id/auth.json'
-import idCommon from './locales/id/common.json'
-import idWorkspaces from './locales/id/workspaces.json'
 
 type Tree = { [key: string]: string | Tree }
+
+const locales = import.meta.glob('./locales/*/*.json', { eager: true, import: 'default' }) as Record<string, Tree>
 
 function flatKeys(tree: Tree, prefix = ''): string[] {
   return Object.entries(tree).flatMap(([key, value]) =>
@@ -14,24 +10,28 @@ function flatKeys(tree: Tree, prefix = ''): string[] {
   )
 }
 
+function namespaceFiles(language: 'en' | 'id'): Record<string, Tree> {
+  return Object.fromEntries(
+    Object.entries(locales)
+      .filter(([path]) => path.startsWith(`./locales/${language}/`))
+      .map(([path, tree]) => [path.split('/').pop()?.replace('.json', '') ?? path, tree]),
+  )
+}
+
+const en = namespaceFiles('en')
+const id = namespaceFiles('id')
+
 describe('locale files', () => {
-  test.each([
-    ['auth', enAuth, idAuth],
-    ['common', enCommon, idCommon],
-    ['workspaces', enWorkspaces, idWorkspaces],
-  ])('%s has the same keys in en and id', (_name, en, id) => {
-    expect(flatKeys(id).sort()).toEqual(flatKeys(en).sort())
+  test('every namespace exists in both languages', () => {
+    expect(Object.keys(id).sort()).toEqual(Object.keys(en).sort())
+  })
+
+  test.each(Object.keys(en))('%s has the same keys in en and id', (name) => {
+    expect(flatKeys(id[name]).sort()).toEqual(flatKeys(en[name]).sort())
   })
 
   test('no value is empty', () => {
-    const empty = [
-      ...flatKeys(enAuth),
-      ...flatKeys(idAuth),
-      ...flatKeys(enCommon),
-      ...flatKeys(idCommon),
-      ...flatKeys(enWorkspaces),
-      ...flatKeys(idWorkspaces),
-    ]
-    expect(empty.length).toBeGreaterThan(0)
+    const values = Object.values({ ...en, ...id }).flatMap((tree) => flatKeys(tree))
+    expect(values.length).toBeGreaterThan(0)
   })
 })

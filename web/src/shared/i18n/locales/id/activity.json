@@ -1,0 +1,37 @@
+{
+  "empty": {
+    "title": "Belum ada commit di cloud",
+    "detail": "Dorong commit dari aplikasi desktop untuk memulai riwayat workspace bersama."
+  },
+  "history": {
+    "title": "Riwayat commit",
+    "count_other": "{{count}} commit di workspace ini",
+    "count_one": "{{count}} commit di workspace ini"
+  },
+  "actions": {
+    "restore": "Pulihkan versi ini",
+    "latest": "Ini sudah versi terbaru",
+    "restored": "Versi dipulihkan sebagai perubahan terbaru.",
+    "restoreFailed": "Versi ini tidak bisa dipulihkan.",
+    "confirmTitle": "Pulihkan versi ini?",
+    "confirmDetail": "Versi ini menjadi versi terbaru untuk semua orang di workspace ini.",
+    "confirm": "Pulihkan",
+    "cancel": "Batal"
+  },
+  "detail": {
+    "loading": "Memuat perbedaan commit…",
+    "errorTitle": "Detail commit tidak bisa dimuat",
+    "errorFallback": "Commit ini tidak bisa dimuat.",
+    "noChangesTitle": "Tidak ada item yang berubah",
+    "noChangesDetail": "Commit ini tidak mengubah koleksi apa pun.",
+    "changedItems": "Item yang berubah",
+    "previous": "Sebelumnya",
+    "previousNone": "Belum ada versi sebelumnya",
+    "beforeCommit": "Sebelum commit",
+    "committed": "Dikommit",
+    "removed": "Dihapus",
+    "afterCommit": "Setelah commit",
+    "empty": "(kosong)"
+  },
+  "kind": { "added": "Ditambahkan", "modified": "Diubah", "deleted": "Dihapus" }
+}

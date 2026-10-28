@@ -1,8 +1,20 @@
+import { Circle, Folder } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Alert, AlertDescription } from '@/shared/components/ui/alert'
+import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
+import {
+  AUTH_BUSY_TEXT,
+  AUTH_HEADING_TEXT,
+  AUTH_PREVIEW_METHOD,
+  AUTH_SUBMIT_TEXT,
+  AUTH_SUBTITLE_TEXT,
+  AUTH_SWITCH_TEXT,
+  AUTH_TEXT,
+} from '../constants/auth-text.constants'
 import type { AuthMode } from '../models/auth.model'
 
 export interface AuthViewProps {
@@ -15,54 +27,46 @@ export interface AuthViewProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 
-const switchTargets: Partial<Record<AuthMode, { prompt: string; target: AuthMode; label: string }>> = {
-  login: { prompt: 'switch.newHere', target: 'register', label: 'switch.createAccount' },
-  register: { prompt: 'switch.haveAccount', target: 'login', label: 'switch.signIn' },
-  forgot: { prompt: 'switch.remembered', target: 'login', label: 'switch.backToSignIn' },
-}
-
 export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMessage, onModeChange, onSubmit }: AuthViewProps) {
   const { t } = useTranslation('auth')
   const isStrongPassword = mode === 'register' || mode === 'reset'
-  const switchTarget = switchTargets[mode]
+  const switchTarget = AUTH_SWITCH_TEXT[mode]
 
   return (
     <main data-testid="auth-view-container" className="grid min-h-screen grid-cols-1 bg-background text-foreground md:grid-cols-[45%_1fr]">
       <section className="hidden flex-col justify-between border-r border-border bg-sidebar p-12 md:flex">
         <div className="flex items-center gap-3 text-sm font-semibold">
           <ProductMark />
-          <span>{t('brand.name')}</span>
+          <span>{t(AUTH_TEXT.brand.name)}</span>
         </div>
         <div className="flex flex-col gap-4">
-          <p className="text-xs tracking-widest text-muted-foreground">{t('brand.kicker')}</p>
-          <h1 className="text-4xl font-semibold leading-tight">{t('brand.title')}</h1>
-          <p className="max-w-md text-sm text-muted-foreground">{t('brand.copy')}</p>
+          <h1 className="text-4xl font-semibold leading-tight">{t(AUTH_TEXT.brand.title)}</h1>
+          <p className="max-w-md text-sm text-muted-foreground">{t(AUTH_TEXT.brand.copy)}</p>
           <ModelDiagram />
         </div>
-        <p className="text-xs text-muted-foreground">{t('brand.foot')}</p>
+        <p className="text-xs text-muted-foreground">{t(AUTH_TEXT.brand.foot)}</p>
       </section>
 
       <section className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <p className="mb-3 text-[10px] tracking-widest text-muted-foreground">{t('eyebrow')}</p>
-          <h2 className="text-2xl font-semibold">{t(`heading.${mode}`)}</h2>
-          <p className="mt-2 mb-6 text-sm text-muted-foreground">{t(`subtitle.${mode}`)}</p>
+          <h2 className="text-2xl font-semibold">{t(AUTH_HEADING_TEXT[mode])}</h2>
+          <p className="mt-2 mb-6 text-sm text-muted-foreground">{t(AUTH_SUBTITLE_TEXT[mode])}</p>
 
           {inviteMessage && (
-            <div data-testid="auth-invite-note" role="status" className="mb-4 rounded-md border border-border bg-accent p-3 text-xs">
-              {inviteMessage}
-            </div>
+            <Alert data-testid="auth-invite-note" role="status" className="mb-4">
+              <AlertDescription>{inviteMessage}</AlertDescription>
+            </Alert>
           )}
           {noticeMessage && (
-            <div data-testid="auth-notice" role="status" className="mb-4 rounded-md border border-border bg-accent p-3 text-xs">
-              {noticeMessage}
-            </div>
+            <Alert data-testid="auth-notice" role="status" className="mb-4">
+              <AlertDescription>{noticeMessage}</AlertDescription>
+            </Alert>
           )}
 
           <form data-testid="auth-form" className="grid gap-4" onSubmit={onSubmit}>
             {mode !== 'reset' && (
               <div className="grid gap-2">
-                <Label htmlFor="auth-email">{t('field.email')}</Label>
+                <Label htmlFor="auth-email">{t(AUTH_TEXT.field.email)}</Label>
                 <Input
                   id="auth-email"
                   name="email"
@@ -72,13 +76,13 @@ export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMess
                   autoFocus
                   required
                   maxLength={254}
-                  placeholder={t('placeholder.email')}
+                  placeholder={t(AUTH_TEXT.placeholder.email)}
                 />
               </div>
             )}
             {mode !== 'forgot' && (
               <div className="grid gap-2">
-                <Label htmlFor="auth-password">{mode === 'reset' ? t('field.newPassword') : t('field.password')}</Label>
+                <Label htmlFor="auth-password">{mode === 'reset' ? t(AUTH_TEXT.field.newPassword) : t(AUTH_TEXT.field.password)}</Label>
                 <Input
                   id="auth-password"
                   name="password"
@@ -89,9 +93,9 @@ export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMess
                   required
                   minLength={isStrongPassword ? 10 : 1}
                   maxLength={256}
-                  placeholder={isStrongPassword ? t('placeholder.newPassword') : t('placeholder.password')}
+                  placeholder={isStrongPassword ? t(AUTH_TEXT.placeholder.newPassword) : t(AUTH_TEXT.placeholder.password)}
                 />
-                {isStrongPassword && <p className="text-xs text-muted-foreground">{t('hint')}</p>}
+                {isStrongPassword && <p className="text-xs text-muted-foreground">{t(AUTH_TEXT.hint)}</p>}
               </div>
             )}
             {mode === 'login' && (
@@ -103,17 +107,17 @@ export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMess
                   className="h-auto p-0 text-xs text-ring"
                   onClick={() => onModeChange('forgot')}
                 >
-                  {t('forgot')}
+                  {t(AUTH_TEXT.forgot)}
                 </Button>
               </p>
             )}
             {errorMessage && (
-              <p data-testid="auth-error-message" role="alert" className="text-xs text-destructive">
-                {errorMessage}
-              </p>
+              <Alert variant="destructive" data-testid="auth-error-message">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
             )}
             <Button type="submit" data-testid="auth-submit-button" className="h-11 w-full" disabled={isBusy}>
-              {isBusy ? t(`busy.${mode}`) : t(`submit.${mode}`)}
+              {isBusy ? t(AUTH_BUSY_TEXT[mode]) : t(AUTH_SUBMIT_TEXT[mode])}
             </Button>
           </form>
 
@@ -131,7 +135,7 @@ export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMess
               </Button>
             </p>
           )}
-          <p className="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">{t('localNote')}</p>
+          <p className="mt-8 border-t border-border pt-4 text-xs text-muted-foreground">{t(AUTH_TEXT.localNote)}</p>
         </div>
       </section>
     </main>
@@ -156,20 +160,22 @@ function ModelDiagram() {
   return (
     <div data-testid="auth-model-diagram" className="mt-6 flex max-w-sm flex-col gap-3 rounded-md border border-border bg-card p-4 text-xs">
       <div className="flex items-center gap-2">
-        <span className="size-3 rounded-sm border border-muted-foreground" aria-hidden="true" />
-        {t('model.workspace')}
+        <Folder aria-hidden="true" className="size-3.5 text-muted-foreground" />
+        {t(AUTH_TEXT.model.workspace)}
       </div>
       <div className="flex items-center gap-2 pl-4">
-        <span className="size-3 rounded-sm border border-muted-foreground" aria-hidden="true" />
-        {t('model.collection')}
+        <Folder aria-hidden="true" className="size-3.5 text-muted-foreground" />
+        {t(AUTH_TEXT.model.collection)}
       </div>
       <div className="flex items-center gap-2 pl-8">
-        <span className="rounded border border-ring px-1 text-[10px] font-semibold text-ring">GET</span>
-        {t('model.request')}
+        <Badge variant="outline" className="text-ring">
+          {AUTH_PREVIEW_METHOD}
+        </Badge>
+        {t(AUTH_TEXT.model.request)}
       </div>
       <div className="flex items-center gap-2 pl-12">
-        <span className="size-2 rounded-full border border-muted-foreground" aria-hidden="true" />
-        {t('model.contract')}
+        <Circle aria-hidden="true" className="size-2.5 text-muted-foreground" />
+        {t(AUTH_TEXT.model.contract)}
       </div>
     </div>
   )
