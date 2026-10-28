@@ -2,6 +2,7 @@ import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { ok } from '@/lib/http'
 import type { SyncSocketData } from '@/models/workspace'
+import { preflightResponse } from '@/middleware/cors'
 import { currentUser } from '@/services/auth'
 import { handleDesktopApprove } from '@/routes/desktop'
 import { handleInviteAccept } from '@/routes/invite-accept'
@@ -20,6 +21,9 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   const path = url.pathname.replace(/\/+$/, '') || '/'
   const method = request.method.toUpperCase()
   if (method === 'GET' && path === '/health') return ok({ ok: true })
+
+  // A browser sends the preflight without credentials, so it is answered before any session check.
+  if (method === 'OPTIONS') return preflightResponse(request.headers.get('Origin'), ctx.config.corsOrigins)
 
   if (method === 'GET' && path === '/api/sync/events') {
     if (!server) throw new AppError('WEBSOCKET_UNAVAILABLE')

@@ -21,6 +21,7 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
   const db = new SQL(testUrl ?? 'postgres://invalid')
   let app: ReturnType<typeof createApp>
   let ctx: AppContext
+  let corsApp: ReturnType<typeof createApp>
 
   async function call(method: string, path: string, { token, body, headers = {} }: { token?: string; body?: unknown; headers?: Record<string, string> } = {}) {
     if (!app) throw new Error('The app is not built yet.')
@@ -52,11 +53,44 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     const config = loadConfig({ ...process.env, DATABASE_URL: testUrl ?? '' })
     ctx = createAppContext({ db, config, logger: silent })
     app = createApp(ctx)
+    corsApp = createApp(createAppContext({ db, config: { ...config, corsOrigins: ['http://localhost:13100', 'null'] }, logger: silent }))
     await runMigrations(db, new URL('../migrations/', import.meta.url), { info: () => undefined })
   })
 
   afterAll(async () => {
     await db.close()
+  })
+
+  test('a browser preflight from an allowed origin is answered without a session', async () => {
+    const response = await corsApp.fetch(
+      new Request('http://api.test/api/workspaces', {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://localhost:13100', 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'authorization,content-type' },
+      }),
+    )
+
+    expect(response?.status).toBe(204)
+    expect(response?.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:13100')
+    expect(response?.headers.get('Access-Control-Allow-Headers')).toContain('Authorization')
+  })
+
+  test('the desktop app origin "null" can call the API with a bearer token', async () => {
+    const account = await signUp('desktop-origin')
+    const response = await corsApp.fetch(
+      new Request('http://api.test/api/me', { headers: { Origin: 'null', Authorization: `Bearer ${account.token}` } }),
+    )
+
+    expect(response?.status).toBe(200)
+    expect(response?.headers.get('Access-Control-Allow-Origin')).toBe('null')
+  })
+
+  test('a preflight from an origin that is not listed is refused', async () => {
+    const response = await corsApp.fetch(
+      new Request('http://api.test/api/workspaces', { method: 'OPTIONS', headers: { Origin: 'https://evil.test', 'Access-Control-Request-Method': 'GET' } }),
+    )
+
+    expect(response?.status).toBe(403)
+    expect(response?.headers.get('Access-Control-Allow-Origin')).toBeNull()
   })
 
   test('health answers without a session', async () => {
