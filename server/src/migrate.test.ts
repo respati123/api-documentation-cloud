@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -23,8 +23,11 @@ describe.skipIf(!enabled)('runMigrations against PostgreSQL', () => {
     if (directory) await rm(directory, { recursive: true, force: true })
   })
 
+  // The shared test database may already hold the real migrations, so the temporary folder carries them too.
   async function writeFiles(a: string, b: string) {
     directory = directory || (await mkdtemp(join(tmpdir(), 'migrations-')))
+    const real = new URL('../migrations/', import.meta.url)
+    for (const name of await readdir(real)) await copyFile(new URL(name, real), join(directory, name))
     await writeFile(join(directory, '9101_create_a.sql'), a)
     await writeFile(join(directory, '9102_create_b.sql'), b)
     return pathToFileURL(`${directory}/`)

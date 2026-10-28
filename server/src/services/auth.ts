@@ -1,0 +1,37 @@
+import { createHash, randomBytes } from 'node:crypto'
+import type { SQL } from 'bun'
+import { AppError } from '@/lib/errors/app-error'
+import type { AuthUser } from '@/models/workspace'
+import type { RateLimiter } from '@/middleware/rate-limit'
+
+export const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000
+
+export function tokenHash(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+export function clientAddress(request: Request): string {
+  return request.headers.get('cf-connecting-ip')?.trim() || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+}
+
+export function enforceLimit(limiter: RateLimiter, key: string, limit: number, windowMs: number) {
+  if (!limiter.hit(key, limit, windowMs)) throw new AppError('RATE_LIMITED')
+}
+
+export function bearerToken(request: Request): string | undefined {
+  return request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
+}
+
+export async function createSession(db: SQL, userId: string): Promise<string> {
+  const token = randomBytes(32).toString('base64url')
+  await db`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (${tokenHash(token)}, ${userId}, ${new Date(Date.now() + sessionLifetimeMs)})`
+  return token
+}
+
+export async function currentUser(db: SQL, request: Request): Promise<AuthUser> {
+  const bearer = bearerToken(request)
+  if (!bearer) throw new AppError('AUTH_REQUIRED')
+  const [user] = await db`SELECT u.id, u.email FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ${tokenHash(bearer)} AND s.expires_at > now()`
+  if (!user) throw new AppError('SESSION_EXPIRED')
+  return user as AuthUser
+}
