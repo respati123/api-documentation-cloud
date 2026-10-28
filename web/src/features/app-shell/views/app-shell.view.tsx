@@ -1,6 +1,7 @@
 import { Layers, LayoutGrid, LogOut, Menu, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { SplitFlap } from '@/shared/components/split-flap'
 import { Badge } from '@/shared/components/ui/badge'
 import {
@@ -123,6 +124,7 @@ export function AppShellView({
               )}
             </BreadcrumbList>
           </Breadcrumb>
+          <LanguageSwitcher />
           <Badge
             variant="outline"
             role="status"

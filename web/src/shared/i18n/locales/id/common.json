@@ -6,5 +6,10 @@
     "back": "Kembali ke workspace",
     "unexpected": "Terjadi sesuatu yang tidak terduga. Coba lagi.",
     "invalidResponse": "Server mengirim respons yang tidak sesuai."
+  },
+  "language": {
+    "label": "Bahasa",
+    "id": "Bahasa Indonesia",
+    "en": "English"
   }
 }
