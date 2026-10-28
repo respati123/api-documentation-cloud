@@ -6,7 +6,8 @@ Read this when you handle a failed request, add an error state, or add an error 
 
 - The backend always returns JSON with an `error` string and the HTTP status. Some responses also include `details`.
 - Show the `error` string from the response. Do not write your own text for an API failure.
-- The shared `apiCall` already throws an `ApiError` with that message and the status. Read `error.message` and `error.status`. Do not parse the response again.
+- The shared `apiCall` throws an `ApiError` with the backend's `error` text as the message, plus `status`, `code`, `requestId`, and `details`. Branch on `code` when the UI must react to a specific error. Show `message`. Do not parse the response again.
+- The session ends only on a `401`. Other failures keep the session, so a server error does not sign the user out.
 - Do not add a catch block that replaces the backend message with a generic one. If a request has no useful message, show the generic error state from the shared component, not a made-up sentence.
 - Do not invent error codes on the client.
 

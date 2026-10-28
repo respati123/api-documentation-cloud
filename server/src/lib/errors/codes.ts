@@ -34,6 +34,10 @@ export const errorDefinitions = {
   INVITE_ROLE_INVALID: { status: 400 },
   INVITE_EMAIL_INVALID: { status: 400 },
   EMAIL_INVALID: { status: 400 },
+  WEBSOCKET_ORIGIN_NOT_ALLOWED: { status: 403 },
+  WEBSOCKET_TICKET_INVALID: { status: 401 },
+  WEBSOCKET_UNAVAILABLE: { status: 400 },
+  SYNC_REMOTE_ADVANCED: { status: 409 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

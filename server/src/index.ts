@@ -241,18 +241,17 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   if (method === 'GET' && path === '/health') return json({ ok: true })
 
   if (method === 'GET' && path === '/api/sync/events') {
-    if (!isAllowedSyncOrigin(request.headers.get('origin'))) return json({ error: 'WebSocket origin is not allowed.' }, 403)
+    if (!isAllowedSyncOrigin(request.headers.get('origin'))) throw new AppError('WEBSOCKET_ORIGIN_NOT_ALLOWED')
     const ticket = url.searchParams.get('ticket')
     const ticketKey = ticket ? tokenHash(ticket) : ''
     const ticketData = ticketKey ? syncSocketTickets.get(ticketKey) : undefined
     if (!ticketData || ticketData.expiresAt <= Date.now()) {
       if (ticketKey) syncSocketTickets.delete(ticketKey)
-      return json({ error: 'WebSocket ticket is missing or expired.' }, 401)
+      throw new AppError('WEBSOCKET_TICKET_INVALID')
     }
     syncSocketTickets.delete(ticketKey)
-    return server.upgrade(request, { data: { userId: ticketData.userId } })
-      ? undefined
-      : json({ error: 'Could not open the sync notification connection.' }, 400)
+    if (!server.upgrade(request, { data: { userId: ticketData.userId } })) throw new AppError('WEBSOCKET_UNAVAILABLE')
+    return undefined
   }
 
   if (method === 'POST' && path === '/api/auth/register') {
@@ -576,7 +575,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       }
       return { headId }
     })
-    if ('conflict' in result) return json({ error: 'remote_advanced', remote: result.conflict }, 409)
+    if ('conflict' in result) throw new AppError('SYNC_REMOTE_ADVANCED', { details: { remote: result.conflict } })
     if (result.headId) {
       const lastCommit = commits[commits.length - 1]
       await broadcastWorkspaceUpdate(workspaceId, result.headId, typeof lastCommit.message === 'string' ? lastCommit.message : 'Workspace updated', user, commits.length)
