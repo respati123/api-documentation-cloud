@@ -15,22 +15,29 @@ beforeEach(() => {
 })
 
 describe('workspacesService.listPage', () => {
-  test('requests the first page with the bearer token and returns the rows and next cursor', async () => {
-    vi.mocked(apiPage).mockResolvedValue({ data: { workspaces: [ref] }, nextCursor: 'next-1' })
+  test('requests the first page with the bearer token and returns the rows, next cursor, and counts', async () => {
+    vi.mocked(apiPage).mockResolvedValue({ data: { workspaces: [ref], counts: { total: 4, owned: 1 } }, nextCursor: 'next-1' })
 
-    await expect(workspacesService.listPage('token-1', null)).resolves.toEqual({ items: [ref], nextCursor: 'next-1' })
+    await expect(workspacesService.listPage('token-1', null)).resolves.toEqual({
+      items: [ref],
+      nextCursor: 'next-1',
+      counts: { total: 4, owned: 1 },
+    })
     expect(apiPage).toHaveBeenCalledWith('/api/workspaces?limit=50', { token: 'token-1' })
   })
 
   test('sends the cursor for the next page', async () => {
-    vi.mocked(apiPage).mockResolvedValue({ data: { workspaces: [] }, nextCursor: null })
+    vi.mocked(apiPage).mockResolvedValue({ data: { workspaces: [], counts: { total: 0, owned: 0 } }, nextCursor: null })
 
     await workspacesService.listPage('token-1', 'next-1')
     expect(apiPage).toHaveBeenCalledWith('/api/workspaces?limit=50&cursor=next-1', { token: 'token-1' })
   })
 
   test('rejects a row with an unknown role', async () => {
-    vi.mocked(apiPage).mockResolvedValue({ data: { workspaces: [{ ...ref, role: 'admin' }] }, nextCursor: null })
+    vi.mocked(apiPage).mockResolvedValue({
+      data: { workspaces: [{ ...ref, role: 'admin' }], counts: { total: 1, owned: 0 } },
+      nextCursor: null,
+    })
 
     await expect(workspacesService.listPage('token-1', null)).rejects.toThrow()
   })

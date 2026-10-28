@@ -16,7 +16,9 @@ export function useWorkspacesPageViewModel() {
   return {
     status,
     workspaces,
-    ownedCount: workspaces.filter((workspace) => workspace.role === 'owner').length,
+    total: query.counts?.total ?? 0,
+    ownedCount: query.counts?.owned ?? 0,
+    sharedCount: (query.counts?.total ?? 0) - (query.counts?.owned ?? 0),
     errorMessage: query.error ? (query.error instanceof ApiError ? query.error.message : t(COMMON_TEXT.error.unexpected)) : null,
     hasMore: query.hasMore,
     isLoadingMore: query.isLoadingMore,

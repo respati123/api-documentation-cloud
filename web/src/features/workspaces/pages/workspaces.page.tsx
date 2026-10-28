@@ -32,7 +32,7 @@ export function WorkspacesPage({ variant, onOpenWorkspace }: WorkspacesPageProps
           <Card size="sm">
             <CardContent>
               <p className="text-muted-foreground">{t(WORKSPACES_TEXT.summary.total)}</p>
-              <p className="text-xl font-semibold">{vm.workspaces.length}</p>
+              <p className="text-xl font-semibold">{vm.total}</p>
             </CardContent>
           </Card>
           <Card size="sm">
@@ -44,7 +44,7 @@ export function WorkspacesPage({ variant, onOpenWorkspace }: WorkspacesPageProps
           <Card size="sm">
             <CardContent>
               <p className="text-muted-foreground">{t(WORKSPACES_TEXT.summary.shared)}</p>
-              <p className="text-xl font-semibold">{vm.workspaces.length - vm.ownedCount}</p>
+              <p className="text-xl font-semibold">{vm.sharedCount}</p>
             </CardContent>
           </Card>
         </div>

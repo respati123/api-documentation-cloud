@@ -19,6 +19,7 @@ export function useWorkspacesQuery(token: string) {
 
   return {
     workspaces: query.data?.pages.flatMap((page) => page.items) ?? [],
+    counts: query.data?.pages[0]?.counts ?? null,
     isPending: query.isPending,
     isError: query.isError,
     error: query.error,

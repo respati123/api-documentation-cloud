@@ -97,6 +97,19 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     expect(response.json.code).toBe('AUTH_REQUIRED')
   })
 
+  test('the workspace list reports how many workspaces the user has and owns', async () => {
+    const owner = await signUp('owner-counts')
+    const other = await signUp('other-counts')
+    await createWorkspace(owner, 'Counted one')
+    await createWorkspace(owner, 'Counted two')
+    const shared = await createWorkspace(other, 'Shared with owner')
+    await inviteAndAccept(other, shared.workspaceId, owner, 'viewer')
+
+    const listed = await call('GET', '/api/workspaces?limit=1', { token: owner.token })
+
+    expect((listed.json.data as { counts: { total: number; owned: number } }).counts).toEqual({ total: 3, owned: 2 })
+  })
+
   test('a created workspace appears in the list, with no next page', async () => {
     const owner = await signUp('owner')
     const created = await call('POST', '/api/workspaces', { token: owner.token, body: { name: 'Payments API', tree: [], variables: { globals: [], environments: [] } } })

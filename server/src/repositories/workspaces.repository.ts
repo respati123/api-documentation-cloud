@@ -81,3 +81,9 @@ export async function renameWorkspace(db: SQL, workspaceId: string, name: string
 export async function deleteWorkspace(db: SQL, workspaceId: string): Promise<void> {
   await db`DELETE FROM workspaces WHERE id = ${workspaceId}`
 }
+
+// Counts over every membership of the user, not only the page being read.
+export async function countWorkspaces(db: SQL, userId: string): Promise<{ total: number; owned: number }> {
+  const [row] = await db`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE role = 'owner')::int AS owned FROM memberships WHERE user_id = ${userId}`
+  return { total: row.total, owned: row.owned }
+}

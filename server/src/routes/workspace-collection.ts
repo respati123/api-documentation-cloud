@@ -11,7 +11,7 @@ export async function handleWorkspaceCollection(ctx: AppContext, request: Reques
   const { db } = ctx
   if (method === 'GET' && path === '/api/workspaces') {
     const page = await listWorkspacesPage(db, user.id, readLimit(url), decodeCursor(url.searchParams.get('cursor')))
-    return ok({ workspaces: page.items }, { nextCursor: page.nextCursor })
+    return ok({ workspaces: page.items, counts: page.counts }, { nextCursor: page.nextCursor })
   }
 
   if (method === 'POST' && path === '/api/workspaces') {
