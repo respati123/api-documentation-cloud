@@ -1,15 +1,17 @@
-import { FormEvent, ReactNode, CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, lazy, ReactNode, CSSProperties, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiCall, checkApiHealth } from '@/shared/services/api-client'
-import { ActivityView } from './components/ActivityView'
 import { AuthPage, isPasswordResetRoute, useAuthSessionStore, useAuthSessionViewModel } from '@/features/auth'
 import { CloudShell } from './components/CloudShell'
-import { DesktopLoginApprove } from './components/DesktopLoginApprove'
 import { isDesktopLoopbackRedirect } from './desktop-redirect'
-import { EndpointDocumentation } from './components/EndpointDocumentation'
-import { TeamView } from './components/TeamView'
-import { WorkspaceOverview } from './components/WorkspaceOverview'
-import { WorkspaceSettings } from './components/WorkspaceSettings'
 import type { ApiNode, CloudCommit, CloudInvite, CloudMember, CloudWorkspaceRef, RequestNode, WorkspaceRole, WorkspaceSnapshot } from './types'
+
+const ActivityView = lazy(() => import('./components/ActivityView').then((module) => ({ default: module.ActivityView })))
+const DesktopLoginApprove = lazy(() => import('./components/DesktopLoginApprove').then((module) => ({ default: module.DesktopLoginApprove })))
+const EndpointDocumentation = lazy(() => import('./components/EndpointDocumentation').then((module) => ({ default: module.EndpointDocumentation })))
+const TeamView = lazy(() => import('./components/TeamView').then((module) => ({ default: module.TeamView })))
+const WorkspaceOverview = lazy(() => import('./components/WorkspaceOverview').then((module) => ({ default: module.WorkspaceOverview })))
+const WorkspaceSettings = lazy(() => import('./components/WorkspaceSettings').then((module) => ({ default: module.WorkspaceSettings })))
+
 
 type WorkspaceTab = 'overview' | 'docs' | 'activity' | 'team' | 'settings'
 type Route = { page: 'overview' | 'workspaces' | 'workspace'; workspaceId?: string; tab?: WorkspaceTab }
@@ -418,7 +420,7 @@ export default function App() {
     return <AuthPage inviteMessage={inviteMessage} />
   }
   if (!user) return null
-  if (desktopLoginState) return <DesktopLoginApprove email={user.email} busy={desktopLoginBusy} done={desktopLoginDone} error={desktopLoginError} onApprove={() => void approveDesktopLogin()} onCancel={cancelDesktopLogin} />
+  if (desktopLoginState) return <Suspense fallback={<LoadingState label="Loading…" />}><DesktopLoginApprove email={user.email} busy={desktopLoginBusy} done={desktopLoginDone} error={desktopLoginError} onApprove={() => void approveDesktopLogin()} onCancel={cancelDesktopLogin} /></Suspense>
 
   const title = route.page === 'workspace' ? activeWorkspace?.name || activeSnapshot?.name || 'Workspace' : route.page === 'workspaces' ? 'Workspaces' : 'Overview'
   const routeForTab = (tab: WorkspaceTab): Route => ({ page: 'workspace', workspaceId: requestedWorkspaceId, tab })
@@ -557,6 +559,7 @@ function WorkspacePage(props: {
     <div className="workspace-heading"><div className="workspace-heading-title"><p className="page-eyebrow">CLOUD WORKSPACE</p><div className="workspace-title-line"><h1>{workspace.name}</h1><span className={`role-label role-${workspace.role}`}>{roleLabel(workspace.role)}</span></div><p>Shared collection, API reference, and change history.</p></div>{tab === 'team' && workspace.role === 'owner' && <button type="button" className="cloud-button cloud-button-primary" onClick={props.onInvite}><span className="button-plus">+</span>Invite teammate</button>}</div>
     <nav className="workspace-tabs" aria-label="Workspace sections">{((workspace.role === 'owner' ? ['overview', 'docs', 'activity', 'team', 'settings'] : ['overview', 'docs', 'activity', 'team']) as WorkspaceTab[]).map((item) => <button key={item} type="button" className={tab === item ? 'workspace-tab active' : 'workspace-tab'} aria-current={tab === item ? 'page' : undefined} onClick={() => props.onTab(item)}>{tabName(item)}{item === 'team' && <span className="tab-count">{members.length}</span>}</button>)}</nav>
     {loading && !snapshot ? <LoadingState label="Loading workspace…" /> : error ? <ErrorState message={error} onRetry={props.onRetry} /> : !snapshot ? <EmptyState title="Workspace data is unavailable" detail="Refresh this view or check your access." /> : <>
+      <Suspense fallback={<LoadingState label="Loading view…" />}>
       {tab === 'overview' && <WorkspaceOverview workspace={workspace} snapshot={snapshot} counts={counts} members={members} commits={commits} onTab={props.onTab} />}
       {tab === 'docs' && <div className="docs-browser">
         <CollectionTree nodes={props.tree} selectedId={props.selectedRequestId} onSelect={props.onRequestSelect} />
@@ -565,6 +568,7 @@ function WorkspacePage(props: {
       {tab === 'activity' && <ActivityView workspaceId={workspace.id} token={getSessionToken()} commits={commits} canRestore={workspace.role !== 'viewer'} onRestore={props.onRestoreCommit} />}
       {tab === 'team' && <TeamView workspace={workspace} currentUserId={userId()} members={members} invites={props.invites} loading={props.invitesLoading} error={props.invitesError} onInvite={props.onInvite} onCancelInvite={props.onCancelInvite} onChangeRole={props.onChangeMemberRole} onRemoveMember={props.onRemoveMember} lastInviteLink={props.lastInviteLink} onCopyInvite={props.onCopyInvite} />}
       {tab === 'settings' && workspace.role === 'owner' && <WorkspaceSettings workspace={workspace} onRename={props.onRenameWorkspace} onDelete={props.onDeleteWorkspace} />}
+      </Suspense>
     </>}
   </div>
 }
