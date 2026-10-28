@@ -74,6 +74,4 @@ Do not write your own error messages for API failures. Show the `error` field th
 
 ## Types
 
-- Props interfaces are explicit.
-- Keep a type in its feature's `models/` unless two or more features use it. Then move it to `shared/models/`.
-- Do not define types inline inside components.
+Where a type lives is decided in `architecture.md` ("Where types go"). In short: one owner per type, shared domain in `shared/models`, feature-only types in the feature's `models`, and zod schemas next to the types they infer.
