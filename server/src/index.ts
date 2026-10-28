@@ -1,7 +1,15 @@
 import { randomBytes, randomUUID, createHash } from 'node:crypto'
 import { SQL } from 'bun'
 import nodemailer from 'nodemailer'
-import { RateLimiter } from './rate-limit'
+import { loadConfig } from '@/config'
+import { AppError } from '@/lib/errors/app-error'
+import { negotiateLocale } from '@/lib/locale'
+import { createLogger } from '@/lib/logger'
+import { routeLabel } from '@/lib/route-label'
+import { errorResponse } from '@/middleware/error-response'
+import { RateLimiter } from '@/middleware/rate-limit'
+import { resolveRequestId } from '@/middleware/request-id'
+import { isSensitivePath, withResponseHeaders } from '@/middleware/response-headers'
 
 type Role = 'owner' | 'editor' | 'viewer'
 type BodyMode = 'form-data' | 'urlencoded' | 'graphql' | 'json' | 'xml' | 'yaml' | 'edn' | 'text' | 'other' | 'file' | 'none'
@@ -19,21 +27,17 @@ type AuthUser = { id: string; email: string }
 type SyncSocketData = { userId: string }
 type SyncSocketTicket = { userId: string; expiresAt: number }
 
-const databaseUrl = process.env.DATABASE_URL
-if (!databaseUrl) throw new Error('DATABASE_URL is required. Copy server/.env.example to server/.env and set it.')
-const db = new SQL(databaseUrl)
+const config = loadConfig()
+const logger = createLogger({ level: config.logLevel, service: 'api', version: config.appVersion })
+const db = new SQL(config.databaseUrl)
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000
 const syncSocketTickets = new Map<string, SyncSocketTicket>()
 const syncSockets = new Set<Bun.ServerWebSocket<SyncSocketData>>()
 const desktopLoginCodes = new Map<string, { userId: string; expiresAt: number }>()
 const limiter = new RateLimiter()
 
-class HttpError extends Error {
-  constructor(public status: number, message: string, public details?: unknown) { super(message) }
-}
-
 function json(data: unknown, status = 200): Response {
-  return Response.json(data, { status, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS' } })
+  return Response.json(data, { status })
 }
 
 function tokenHash(token: string): string { return createHash('sha256').update(token).digest('hex') }
@@ -41,28 +45,24 @@ function clientAddress(request: Request): string {
   return request.headers.get('cf-connecting-ip')?.trim() || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
 }
 function enforceLimit(key: string, limit: number, windowMs: number) {
-  if (!limiter.hit(key, limit, windowMs)) throw new HttpError(429, 'Too many attempts. Wait a few minutes and try again.')
+  if (!limiter.hit(key, limit, windowMs)) throw new AppError('RATE_LIMITED')
 }
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
 }
 function createMailer() {
-  const host = process.env.SMTP_HOST?.trim()
+  const { host, port, secure, user, password } = config.smtp
   if (!host) throw new Error('SMTP_HOST is not configured.')
-  const port = Number(process.env.SMTP_PORT || 1025)
-  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('SMTP_PORT is invalid.')
-  const user = process.env.SMTP_USER?.trim()
-  const password = process.env.SMTP_PASSWORD
   return nodemailer.createTransport({
     host,
     port,
-    secure: process.env.SMTP_SECURE?.toLowerCase() === 'true',
+    secure,
     ...(user && password ? { auth: { user, pass: password } } : {})
   })
 }
 async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
   await createMailer().sendMail({
-    from: process.env.SMTP_FROM || 'API Documentation <no-reply@example.test>',
+    from: config.smtp.from,
     to,
     subject: 'Reset your API Documentation password',
     text: `We received a request to reset the password for your account.\n\nOpen this link to choose a new password. It expires in 1 hour:\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
@@ -76,7 +76,7 @@ async function sendInviteEmail(to: string, workspaceName: string, role: 'editor'
   const safeInviterEmail = escapeHtml(inviterEmail)
   const safeInviteUrl = escapeHtml(inviteUrl)
   await transporter.sendMail({
-    from: process.env.SMTP_FROM || 'API Documentation <no-reply@example.test>',
+    from: config.smtp.from,
     to,
     subject: `Invitation to ${workspaceName}`,
     text: `${inviterEmail} invited you to join ${workspaceName} with the ${role} role.\n\nThis invitation expires in 7 days. Open the API Documentation desktop app and use this invitation link:\n${inviteUrl}`,
@@ -176,22 +176,22 @@ async function bodyOf(request: Request): Promise<Record<string, unknown>> {
     const body: unknown = await request.json()
     if (!isRecord(body)) throw new Error()
     return body
-  } catch { throw new HttpError(400, 'Request body must be a JSON object.') }
+  } catch { throw new AppError('BODY_NOT_OBJECT') }
 }
 
 async function currentUser(request: Request): Promise<AuthUser> {
   const bearer = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
-  if (!bearer) throw new HttpError(401, 'Sign in is required.')
+  if (!bearer) throw new AppError('AUTH_REQUIRED')
   const [user] = await db`SELECT u.id, u.email FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ${tokenHash(bearer)} AND s.expires_at > now()`
-  if (!user) throw new HttpError(401, 'Session expired. Sign in again.')
+  if (!user) throw new AppError('SESSION_EXPIRED')
   return user as AuthUser
 }
 
 async function requireRole(workspaceId: string, userId: string, allowed: Role[]): Promise<Role> {
   const [membership] = await db`SELECT role FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${userId}`
-  if (!membership) throw new HttpError(404, 'Workspace not found.')
+  if (!membership) throw new AppError('WORKSPACE_NOT_FOUND')
   const role = membership.role as Role
-  if (!allowed.includes(role)) throw new HttpError(403, 'Your workspace role cannot perform this action.')
+  if (!allowed.includes(role)) throw new AppError('ROLE_NOT_ALLOWED')
   return role
 }
 
@@ -221,8 +221,8 @@ async function broadcastWorkspaceUpdate(workspaceId: string, headId: string, mes
 }
 
 async function createWorkspace(user: AuthUser, name: string, snapshot: TreeNode[], variables: WorkspaceVariables) {
-  if (!name.trim() || name.trim().length > 100) throw new HttpError(400, 'Workspace name must be 1–100 characters.')
-  if (!validateTree(snapshot) || !validateWorkspaceVariables(variables)) throw new HttpError(400, 'Workspace snapshot is invalid.')
+  if (!name.trim() || name.trim().length > 100) throw new AppError('WORKSPACE_NAME_INVALID')
+  if (!validateTree(snapshot) || !validateWorkspaceVariables(variables)) throw new AppError('WORKSPACE_SNAPSHOT_INVALID')
   variables = sanitizeWorkspaceVariables(variables)
   const workspaceId = randomUUID()
   const commitId = randomUUID()
@@ -238,7 +238,6 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   const url = new URL(request.url)
   const path = url.pathname.replace(/\/+$/, '') || '/'
   const method = request.method.toUpperCase()
-  if (method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS' } })
   if (method === 'GET' && path === '/health') return json({ ok: true })
 
   if (method === 'GET' && path === '/api/sync/events') {
@@ -261,14 +260,14 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const body = await bodyOf(request)
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const password = typeof body.password === 'string' ? body.password : ''
-    if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new HttpError(400, 'Enter a valid email address.')
-    if (password.length < 10 || password.length > 256) throw new HttpError(400, 'Password must be 10–256 characters.')
+    if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new AppError('EMAIL_INVALID')
+    if (password.length < 10 || password.length > 256) throw new AppError('PASSWORD_LENGTH_INVALID')
     const id = randomUUID()
     try {
       const hash = await Bun.password.hash(password, { algorithm: 'argon2id' })
       await db`INSERT INTO users (id, email, password_hash) VALUES (${id}, ${email}, ${hash})`
     } catch (error) {
-      if (isRecord(error) && error.code === '23505') throw new HttpError(409, 'An account with this email already exists.')
+      if (isRecord(error) && error.code === '23505') throw new AppError('EMAIL_TAKEN')
       throw error
     }
     const token = await createSession(id)
@@ -282,7 +281,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     enforceLimit(`login:${clientAddress(request)}`, 30, 15 * 60_000)
     if (email) enforceLimit(`login-email:${email}`, 10, 15 * 60_000)
     const [user] = await db`SELECT id, email, password_hash FROM users WHERE email = ${email}`
-    if (!user || !await Bun.password.verify(password, user.password_hash)) throw new HttpError(401, 'Email or password is incorrect.')
+    if (!user || !await Bun.password.verify(password, user.password_hash)) throw new AppError('INVALID_CREDENTIALS')
     const token = await createSession(user.id)
     return json({ token, user: { id: user.id, email: user.email } })
   }
@@ -299,12 +298,10 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
         await tx`DELETE FROM password_resets WHERE user_id = ${account.id} AND used_at IS NULL`
         await tx`INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (${tokenHash(rawToken)}, ${account.id}, ${new Date(Date.now() + 60 * 60_000)})`
       })
-      const publicWebUrl = process.env.PUBLIC_WEB_URL?.trim().replace(/\/+$/, '')
-      if (!publicWebUrl) console.error('PUBLIC_WEB_URL is not set. A password reset link was not sent.')
-      else if (!process.env.SMTP_HOST?.trim()) console.error('SMTP_HOST is not set. A password reset email was not sent.')
+      if (!config.smtp.host) logger.warn('SMTP_HOST is not set. A password reset email was not sent.')
       else {
-        try { await sendPasswordResetEmail(account.email, `${publicWebUrl}/reset-password?token=${encodeURIComponent(rawToken)}`) }
-        catch (error) { console.error('Password reset email delivery failed:', error) }
+        try { await sendPasswordResetEmail(account.email, `${config.publicWebUrl}/reset-password?token=${encodeURIComponent(rawToken)}`) }
+        catch (error) { logger.error('Password reset email delivery failed', { error }) }
       }
     }
     return json({ ok: true })
@@ -315,7 +312,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const body = await bodyOf(request)
     const rawToken = typeof body.token === 'string' ? body.token.trim() : ''
     const password = typeof body.password === 'string' ? body.password : ''
-    if (password.length < 10 || password.length > 256) throw new HttpError(400, 'Password must be 10–256 characters.')
+    if (password.length < 10 || password.length > 256) throw new AppError('PASSWORD_LENGTH_INVALID')
     const hash = await Bun.password.hash(password, { algorithm: 'argon2id' })
     const reset = await db.begin(async (tx) => {
       const [row] = await tx`SELECT user_id FROM password_resets WHERE token_hash = ${tokenHash(rawToken)} AND used_at IS NULL AND expires_at > now() FOR UPDATE`
@@ -325,7 +322,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       await tx`DELETE FROM sessions WHERE user_id = ${row.user_id}`
       return true
     })
-    if (!reset) throw new HttpError(400, 'This reset link is invalid or has expired. Request a new one.')
+    if (!reset) throw new AppError('RESET_TOKEN_INVALID')
     return json({ ok: true })
   }
 
@@ -334,13 +331,13 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   if (method === 'POST' && path === '/api/desktop-login/exchange') {
     const body = await bodyOf(request)
     const code = typeof body.code === 'string' ? body.code.trim() : ''
-    if (!code) throw new HttpError(400, 'A sign-in code is required.')
+    if (!code) throw new AppError('DESKTOP_CODE_REQUIRED')
     const key = tokenHash(code)
     const entry = desktopLoginCodes.get(key)
     desktopLoginCodes.delete(key)
-    if (!entry || entry.expiresAt <= Date.now()) throw new HttpError(400, 'This sign-in link expired or was already used. Sign in again from the desktop app.')
+    if (!entry || entry.expiresAt <= Date.now()) throw new AppError('DESKTOP_CODE_INVALID')
     const [matchedUser] = await db`SELECT id, email FROM users WHERE id = ${entry.userId}`
-    if (!matchedUser) throw new HttpError(404, 'Account not found.')
+    if (!matchedUser) throw new AppError('ACCOUNT_NOT_FOUND')
     const token = await createSession(entry.userId)
     return json({ token, user: { id: matchedUser.id, email: matchedUser.email } })
   }
@@ -377,19 +374,19 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const body = await bodyOf(request)
     const tree = body.tree === undefined ? [] : body.tree
     const variables = body.variables === undefined ? emptyWorkspaceVariables() : body.variables
-    if (!validateTree(tree)) throw new HttpError(400, 'Workspace tree is invalid or contains local-only file paths.')
-    if (!validateWorkspaceVariables(variables)) throw new HttpError(400, 'Workspace variables are invalid or include a secret value.')
+    if (!validateTree(tree)) throw new AppError('WORKSPACE_TREE_INVALID')
+    if (!validateWorkspaceVariables(variables)) throw new AppError('WORKSPACE_VARIABLES_INVALID')
     return json({ workspace: await createWorkspace(user, String(body.name || ''), tree, variables) }, 201)
   }
 
   if (method === 'POST' && path === '/api/invites/accept') {
     const body = await bodyOf(request)
     const token = typeof body.token === 'string' ? body.token.trim() : ''
-    if (!token) throw new HttpError(400, 'Invite token is required.')
+    if (!token) throw new AppError('INVITE_TOKEN_REQUIRED')
     const result = await db.begin(async (tx) => {
       const [invite] = await tx`SELECT id, workspace_id, email, role FROM invites WHERE token_hash = ${tokenHash(token)} AND used_at IS NULL AND expires_at > now() FOR UPDATE`
       if (!invite) return null
-      if (invite.email && String(invite.email).toLowerCase() !== user.email.toLowerCase()) throw new HttpError(403, `This invitation was sent to ${invite.email}. Sign in with that email address.`)
+      if (invite.email && String(invite.email).toLowerCase() !== user.email.toLowerCase()) throw new AppError('INVITE_EMAIL_MISMATCH', { params: { email: String(invite.email) } })
       await tx`INSERT INTO memberships (workspace_id, user_id, role) VALUES (${invite.workspace_id}, ${user.id}, ${invite.role}) ON CONFLICT (workspace_id, user_id) DO NOTHING`
       await tx`UPDATE invites SET used_at = now() WHERE id = ${invite.id}`
       const [workspace] = await tx`SELECT id, name, head_commit_id AS "headCommitId" FROM workspaces WHERE id = ${invite.workspace_id}`
@@ -397,12 +394,12 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
       const snapshot = parseSnapshot(parseJson<unknown>(commit.snapshot, []))
       return { ...workspace, role: invite.role, ...snapshot }
     })
-    if (!result) throw new HttpError(410, 'Invite link is invalid, expired, or already used.')
+    if (!result) throw new AppError('INVITE_INVALID')
     return json({ workspace: result })
   }
 
   const workspaceMatch = path.match(/^\/api\/workspaces\/([\w-]+)(?:\/(.*))?$/)
-  if (!workspaceMatch) throw new HttpError(404, 'Endpoint not found.')
+  if (!workspaceMatch) throw new AppError('ROUTE_NOT_FOUND')
   const workspaceId = workspaceMatch[1]
   const action = workspaceMatch[2] || ''
 
@@ -410,7 +407,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     await requireRole(workspaceId, user.id, ['owner'])
     const body = await bodyOf(request)
     const name = typeof body.name === 'string' ? body.name.trim() : ''
-    if (!name || name.length > 100) throw new HttpError(400, 'Workspace name must be 1–100 characters.')
+    if (!name || name.length > 100) throw new AppError('WORKSPACE_NAME_INVALID')
     const [workspace] = await db`UPDATE workspaces SET name = ${name} WHERE id = ${workspaceId} RETURNING id, name`
     return json({ workspace: { id: workspace.id, name: workspace.name } })
   }
@@ -419,7 +416,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     await requireRole(workspaceId, user.id, ['owner'])
     const body = await bodyOf(request)
     const [workspace] = await db`SELECT name FROM workspaces WHERE id = ${workspaceId}`
-    if (typeof body.confirmName !== 'string' || body.confirmName.trim() !== workspace.name) throw new HttpError(400, 'Type the workspace name exactly to delete it.')
+    if (typeof body.confirmName !== 'string' || body.confirmName.trim() !== workspace.name) throw new AppError('WORKSPACE_DELETE_CONFIRMATION_MISMATCH')
     await db`DELETE FROM workspaces WHERE id = ${workspaceId}`
     return json({ ok: true })
   }
@@ -429,10 +426,10 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     await requireRole(workspaceId, user.id, ['owner'])
     const body = await bodyOf(request)
     const role = body.role === 'editor' ? 'editor' : body.role === 'viewer' ? 'viewer' : null
-    if (!role) throw new HttpError(400, 'Member role must be editor or viewer.')
+    if (!role) throw new AppError('MEMBER_ROLE_INVALID')
     const [target] = await db`SELECT role FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${memberMatch[1]}`
-    if (!target) throw new HttpError(404, 'Member not found.')
-    if (target.role === 'owner') throw new HttpError(403, 'The owner role cannot be changed.')
+    if (!target) throw new AppError('MEMBER_NOT_FOUND')
+    if (target.role === 'owner') throw new AppError('OWNER_ROLE_IMMUTABLE')
     await db`UPDATE memberships SET role = ${role} WHERE workspace_id = ${workspaceId} AND user_id = ${memberMatch[1]}`
     return json({ ok: true, role })
   }
@@ -440,10 +437,10 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   if (method === 'DELETE' && memberMatch) {
     const actorRole = await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
     const targetId = memberMatch[1]
-    if (targetId !== user.id && actorRole !== 'owner') throw new HttpError(403, 'Only the workspace owner can remove other members.')
+    if (targetId !== user.id && actorRole !== 'owner') throw new AppError('OWNER_REQUIRED_TO_REMOVE_MEMBERS')
     const [target] = await db`SELECT role FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${targetId}`
-    if (!target) throw new HttpError(404, 'Member not found.')
-    if (target.role === 'owner') throw new HttpError(403, 'The owner cannot leave or be removed. Delete the workspace instead.')
+    if (!target) throw new AppError('MEMBER_NOT_FOUND')
+    if (target.role === 'owner') throw new AppError('OWNER_CANNOT_LEAVE')
     await db`DELETE FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${targetId}`
     return json({ ok: true })
   }
@@ -465,25 +462,22 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     enforceLimit(`invite:${user.id}`, 50, 60 * 60_000)
     const body = await bodyOf(request)
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-    if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new HttpError(400, 'Enter a valid invitation email address.')
+    if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new AppError('INVITE_EMAIL_INVALID')
     const role = body.role === 'viewer' ? 'viewer' : body.role === 'editor' ? 'editor' : null
-    if (!role) throw new HttpError(400, 'Invite role must be editor or viewer.')
+    if (!role) throw new AppError('INVITE_ROLE_INVALID')
     const [workspace] = await db`SELECT name FROM workspaces WHERE id = ${workspaceId}`
-    if (!workspace) throw new HttpError(404, 'Workspace not found.')
+    if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
     const [existingMember] = await db`SELECT m.user_id FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${workspaceId} AND lower(u.email) = ${email}`
-    if (existingMember) throw new HttpError(409, 'This account is already a workspace member.')
+    if (existingMember) throw new AppError('ALREADY_MEMBER')
     await db`DELETE FROM invites WHERE workspace_id = ${workspaceId} AND lower(email) = ${email} AND used_at IS NULL`
     const rawToken = randomBytes(32).toString('base64url')
     const id = randomUUID()
     await db`INSERT INTO invites (id, workspace_id, email, token_hash, role, expires_at, created_by) VALUES (${id}, ${workspaceId}, ${email}, ${tokenHash(rawToken)}, ${role}, ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)}, ${user.id})`
-    const publicWebUrl = process.env.PUBLIC_WEB_URL?.trim().replace(/\/+$/, '')
-    const inviteUrl = publicWebUrl
-      ? `${publicWebUrl}/invite?token=${encodeURIComponent(rawToken)}`
-      : `api-docs://invite?token=${encodeURIComponent(rawToken)}`
+    const inviteUrl = `${config.publicWebUrl}/invite?token=${encodeURIComponent(rawToken)}`
     let emailSent = false
-    if (process.env.SMTP_HOST?.trim()) {
+    if (config.smtp.host) {
       try { await sendInviteEmail(email, String(workspace.name), role, user.email, inviteUrl); emailSent = true }
-      catch (error) { console.error('Workspace invitation email delivery failed:', error) }
+      catch (error) { logger.error('Workspace invitation email delivery failed', { error }) }
     }
     return json({ id, token: rawToken, email, expiresInDays: 7, role, emailSent }, 201)
   }
@@ -521,7 +515,7 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   if (method === 'GET' && historyCommitMatch) {
     await requireRole(workspaceId, user.id, ['owner', 'editor', 'viewer'])
     const [row] = await db`SELECT id, parent_ids AS "parentIds", message, snapshot, created_at AS "createdAt" FROM commits WHERE workspace_id = ${workspaceId} AND id = ${historyCommitMatch[1]}`
-    if (!row) throw new HttpError(404, 'Commit not found.')
+    if (!row) throw new AppError('COMMIT_NOT_FOUND')
     return json({ commit: {
       id: String(row.id),
       parentIds: parseJson<string[]>(row.parentIds, []),
@@ -537,10 +531,10 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     const sourceId = restoreMatch[1]
     const result = await db.begin(async (tx) => {
       const [workspace] = await tx`SELECT head_commit_id AS "headCommitId" FROM workspaces WHERE id = ${workspaceId} FOR UPDATE`
-      if (!workspace) throw new HttpError(404, 'Workspace not found.')
-      if (workspace.headCommitId === sourceId) throw new HttpError(409, 'This version is already the latest.')
+      if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
+      if (workspace.headCommitId === sourceId) throw new AppError('VERSION_ALREADY_LATEST')
       const [source] = await tx`SELECT snapshot FROM commits WHERE workspace_id = ${workspaceId} AND id = ${sourceId}`
-      if (!source) throw new HttpError(404, 'Commit not found.')
+      if (!source) throw new AppError('COMMIT_NOT_FOUND')
       const snapshot = parseSnapshot(parseJson<unknown>(source.snapshot, []))
       const restoredId = randomUUID()
       const parents = workspace.headCommitId ? [workspace.headCommitId] : []
@@ -556,15 +550,15 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
   if (method === 'POST' && action === 'sync/push') {
     await requireRole(workspaceId, user.id, ['owner', 'editor'])
     const body = await bodyOf(request)
-    if (!Array.isArray(body.commits) || body.commits.length === 0 || body.commits.length > 100) throw new HttpError(400, 'Provide 1–100 commits to push.')
+    if (!Array.isArray(body.commits) || body.commits.length === 0 || body.commits.length > 100) throw new AppError('PUSH_COMMITS_COUNT_INVALID')
     const commits = body.commits as Record<string, unknown>[]
     for (const commit of commits) {
       const variables = commit.variables === undefined ? emptyWorkspaceVariables() : commit.variables
-      if (typeof commit.id !== 'string' || !Array.isArray(commit.parentIds) || typeof commit.message !== 'string' || !validateTree(commit.tree) || !validateWorkspaceVariables(variables)) throw new HttpError(400, 'A commit in the push is invalid or includes a secret value.')
+      if (typeof commit.id !== 'string' || !Array.isArray(commit.parentIds) || typeof commit.message !== 'string' || !validateTree(commit.tree) || !validateWorkspaceVariables(variables)) throw new AppError('PUSH_COMMIT_INVALID')
     }
     const result = await db.begin(async (tx) => {
       const [workspace] = await tx`SELECT head_commit_id AS "headCommitId" FROM workspaces WHERE id = ${workspaceId} FOR UPDATE`
-      if (!workspace) throw new HttpError(404, 'Workspace not found.')
+      if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
       let headId = workspace.headCommitId as string | null
       for (const commit of commits) {
         const parents = commit.parentIds as string[]
@@ -590,15 +584,14 @@ async function handle(request: Request, server: Bun.Server<SyncSocketData>): Pro
     return json({ headCommitId: result.headId })
   }
 
-  throw new HttpError(404, 'Endpoint not found.')
+  throw new AppError('ROUTE_NOT_FOUND')
 }
 
 async function initialize() {
-  const schema = await Bun.file(new URL('./schema.sql', import.meta.url)).text()
+  const schema = await Bun.file(new URL('../schema.sql', import.meta.url)).text()
   for (const statement of schema.split(';').map((part) => part.trim()).filter(Boolean)) await db.unsafe(statement)
-  const port = Number(process.env.PORT || 3001)
   Bun.serve({
-    port,
+    port: config.port,
     websocket: {
       data: {} as SyncSocketData,
       open(socket) { syncSockets.add(socket) },
@@ -606,16 +599,31 @@ async function initialize() {
       close(socket) { syncSockets.delete(socket) }
     },
     async fetch(request, server) {
-      try { return await handle(request, server) }
-      catch (error) {
-        if (error instanceof HttpError) return json({ error: error.message, details: error.details }, error.status)
-        if (isRecord(error) && error.code === '23505') return json({ error: 'This membership already exists.' }, 409)
-        console.error(error)
-        return json({ error: 'Internal server error.' }, 500)
+      const started = performance.now()
+      const requestId = resolveRequestId(request.headers.get('X-Request-Id'))
+      const locale = negotiateLocale(request.headers.get('Accept-Language'))
+      const origin = request.headers.get('Origin')
+      const path = new URL(request.url).pathname
+      let response: Response | undefined
+      try {
+        response = await handle(request, server)
+      } catch (error) {
+        const duplicate = isRecord(error) && error.code === '23505'
+        response = errorResponse(duplicate ? new AppError('ALREADY_MEMBER') : error, { requestId, locale, logger })
       }
+      if (!response) return undefined
+      logRequest({ method: request.method, path, status: response.status, durationMs: performance.now() - started, requestId })
+      return withResponseHeaders(response, { requestId, origin, allowedOrigins: config.corsOrigins, sensitive: isSensitivePath(path) })
     }
   })
-  console.log(`API server listening on http://localhost:${port}`)
+  logger.info('API server listening', { port: config.port, corsOrigins: config.corsOrigins.length })
+}
+
+function logRequest({ method, path, status, durationMs, requestId }: { method: string; path: string; status: number; durationMs: number; requestId: string }) {
+  const fields = { method, route: routeLabel(path), status, durationMs: Math.round(durationMs), requestId }
+  if (status >= 500) logger.error('request', fields)
+  else if (status >= 400) logger.warn('request', fields)
+  else logger.info('request', fields)
 }
 
 await initialize()
