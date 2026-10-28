@@ -12,6 +12,7 @@ import {
   findWorkspaceForMember,
   findWorkspaceSummary,
   insertWorkspace,
+  countWorkspaces,
   listWorkspacesPage as listWorkspaceRows,
   renameWorkspace as renameWorkspaceRow,
   type WorkspaceListRow,
@@ -36,7 +37,8 @@ export async function listWorkspacesPage(db: SQL, userId: string, limit: number,
   const after = cursorValues(cursor, ['t', 'i'])
   const rows = await listWorkspaceRows(db, { userId, after: after ? { sortAt: after.t, id: after.i } : null, limit: limit + 1 })
   const page = pageOf(rows, limit, (row) => encodeCursor({ t: row.sortAt, i: row.id }))
-  return { items: page.items.map(withoutSortAt), nextCursor: page.nextCursor }
+  const counts = await countWorkspaces(db, userId)
+  return { items: page.items.map(withoutSortAt), nextCursor: page.nextCursor, counts }
 }
 
 export async function renameWorkspace(ctx: AppContext, user: AuthUser, workspaceId: string, name: string) {

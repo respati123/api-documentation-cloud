@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
 import {
+  countWorkspaces,
   findWorkspaceForMember,
   findWorkspaceSummary,
   insertWorkspace,
@@ -75,6 +76,18 @@ describe.skipIf(!databaseEnabled)('workspaces repository', () => {
     await setWorkspaceHead(db, workspaceId, nextCommitId)
 
     expect(await findWorkspaceSummary(db, workspaceId)).toEqual({ id: workspaceId, name: 'After', headCommitId: nextCommitId })
+  })
+
+  test('countWorkspaces counts every membership and the ones the user owns', async () => {
+    const owner = await seedUser(db)
+    const other = await seedUser(db)
+    await seedWorkspace(db, owner.id)
+    await seedWorkspace(db, owner.id)
+    const shared = await seedWorkspace(db, other.id)
+    await insertMembership(db, { workspaceId: shared.workspaceId, userId: owner.id, role: 'viewer' })
+
+    expect(await countWorkspaces(db, owner.id)).toEqual({ total: 3, owned: 2 })
+    expect(await countWorkspaces(db, randomUUID())).toEqual({ total: 0, owned: 0 })
   })
 
   test('findWorkspaceSummary returns undefined for an unknown workspace', async () => {
