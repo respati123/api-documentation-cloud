@@ -2,7 +2,6 @@ import { Layers, LayoutGrid, LogOut, Menu, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SplitFlap } from '@/shared/components/split-flap'
-import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { Badge } from '@/shared/components/ui/badge'
 import {
   Breadcrumb,
@@ -124,7 +123,6 @@ export function AppShellView({
               )}
             </BreadcrumbList>
           </Breadcrumb>
-          <ThemeToggle />
           <Badge
             variant="outline"
             role="status"

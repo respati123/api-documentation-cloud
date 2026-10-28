@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Keeps dark: utilities inert. Without this, Tailwind follows the OS color scheme. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -64,7 +65,7 @@
     }
 }
 
-/* Light is the default. The .dark class on <html> switches to the dark tokens below. */
+/* One light palette. The portal has no dark theme. */
 :root {
     color-scheme: light;
     --background: #f7f5ef;
@@ -102,45 +103,6 @@
     --sidebar-border: #d8d1bf;
     --sidebar-ring: #8a5a0f;
 }
-
-/* Dark palette: matte near-black ground with ivory type and amber accent. */
-.dark {
-    color-scheme: dark;
-    --background: #0b0d0f;
-    --foreground: #f2efe6;
-    --card: #13171a;
-    --card-foreground: #f2efe6;
-    --popover: #13171a;
-    --popover-foreground: #f2efe6;
-    --primary: #f0b429;
-    --primary-foreground: #15110a;
-    --secondary: #1c2226;
-    --secondary-foreground: #f2efe6;
-    --muted: #171c20;
-    --muted-foreground: #9aa3a8;
-    --accent: #232a30;
-    --accent-foreground: #f2efe6;
-    --destructive: #e8756a;
-    --success: #5fb97a;
-    --warning: #f0b429;
-    --border: #2a3035;
-    --input: #69737c;
-    --ring: #f0b429;
-    --chart-1: #f0b429;
-    --chart-2: #5fb97a;
-    --chart-3: #d9d4c7;
-    --chart-4: #c4493f;
-    --chart-5: #9aa3a8;
-    --sidebar: #080a0c;
-    --sidebar-foreground: #f2efe6;
-    --sidebar-primary: #f0b429;
-    --sidebar-primary-foreground: #15110a;
-    --sidebar-accent: #1c2226;
-    --sidebar-accent-foreground: #f2efe6;
-    --sidebar-border: #2a3035;
-    --sidebar-ring: #f0b429;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;

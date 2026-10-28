@@ -1,7 +1,6 @@
 import { Circle, Folder } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ThemeToggle } from '@/shared/components/theme-toggle'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -50,9 +49,6 @@ export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMess
 
       <section className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <div className="mb-6 flex justify-end">
-            <ThemeToggle />
-          </div>
           <h2 className="text-2xl font-semibold">{t(AUTH_HEADING_TEXT[mode])}</h2>
           <p className="mt-2 mb-6 text-sm text-muted-foreground">{t(AUTH_SUBTITLE_TEXT[mode])}</p>
 

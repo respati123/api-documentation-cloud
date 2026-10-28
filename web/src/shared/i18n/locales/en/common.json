@@ -6,11 +6,5 @@
     "back": "Back to workspaces",
     "unexpected": "Something unexpected happened. Try again.",
     "invalidResponse": "The server sent an unexpected response."
-  },
-  "theme": {
-    "label": "Theme",
-    "system": "System",
-    "light": "Light",
-    "dark": "Dark"
   }
 }

@@ -6,11 +6,5 @@
     "back": "Kembali ke workspace",
     "unexpected": "Terjadi sesuatu yang tidak terduga. Coba lagi.",
     "invalidResponse": "Server mengirim respons yang tidak sesuai."
-  },
-  "theme": {
-    "label": "Tema",
-    "system": "Sistem",
-    "light": "Terang",
-    "dark": "Gelap"
   }
 }
