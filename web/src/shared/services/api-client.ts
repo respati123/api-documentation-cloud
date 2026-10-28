@@ -39,7 +39,7 @@ export async function apiCall<T = unknown>(path: string, options: ApiCallOptions
   const result: unknown = await response.json().catch(() => ({}))
   if (!response.ok)
     throw new ApiError(readErrorMessage(result) ?? `Request failed (${response.status}).`, response.status, readErrorBody(result))
-  return result as T
+  return unwrapData<T>(result)
 }
 
 export async function checkApiHealth(): Promise<boolean> {
@@ -64,4 +64,9 @@ function readErrorBody(value: unknown): { code?: string; requestId?: string; det
     requestId: typeof requestId === 'string' ? requestId : undefined,
     details,
   }
+}
+
+function unwrapData<T>(value: unknown): T {
+  if (typeof value === 'object' && value !== null && 'data' in value) return value.data as T
+  return value as T
 }

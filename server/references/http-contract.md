@@ -2,14 +2,51 @@
 
 Read this when you add or change a response, an error, input validation, CORS, or a header.
 
-## Success responses
+## Response base
 
-- Return the payload as-is: `{ workspaces: [...] }`, `{ workspace: {...} }`, `{ ok: true }`.
-- Do not wrap success payloads in `data` or any other envelope.
-- Keys are camelCase. Database columns are mapped in the repository, never exposed raw.
-- Status codes: `200` read or update, `201` created, `204` no body.
-- Build every success response with the helpers in `src/lib/http.ts`: `ok(payload)`, `created(payload)`, `noContent()`. Do not call `Response.json` in a route.
-- Mutations that return nothing (delete, logout, password reset, forgot password) answer `204`. A mutation that changes a resource returns the changed resource.
+Every JSON response has the same base. The base is written by the builders in `src/lib/http.ts` and `src/middleware/error-response.ts`, never by hand in a route.
+
+Success (`200`, `201`):
+
+```json
+{
+  "code": "OK",
+  "requestId": "2c1f0b7e-8a4d-4b1e-9d2f-6a0c3e8b7d10",
+  "data": { "workspaces": [ ] },
+  "meta": { "nextCursor": null }
+}
+```
+
+- `code`: `OK` for `200`, `CREATED` for `201`.
+- `requestId`: the request id from the `X-Request-Id` header.
+- `data`: the payload. Keys inside `data` are camelCase.
+- `meta`: optional. Only list endpoints that paginate include it, with `nextCursor`.
+
+Error (any `4xx` or `5xx`):
+
+```json
+{
+  "code": "WORKSPACE_NOT_FOUND",
+  "error": "Workspace tidak ditemukan.",
+  "details": null,
+  "requestId": "2c1f0b7e-8a4d-4b1e-9d2f-6a0c3e8b7d10"
+}
+```
+
+- `code`: stable `SCREAMING_SNAKE_CASE`. Clients branch on it.
+- `error`: the message in the language from `Accept-Language`. The server owns the text.
+- `details`: `null` unless the error carries data, such as validation issues (`[{ path, message }]`) or the remote snapshot of a sync conflict.
+- `requestId`: the same id as the response header and the log line.
+
+No content (`204`): no body. The `X-Request-Id` header is still set, so the response can be traced.
+
+Status codes: `200` read or changed resource, `201` created, `204` no body. Mutations that return nothing answer `204`. A mutation that changes a resource returns the changed resource.
+
+## Error mapping
+
+- Routes and services throw `AppError` with a code from `src/lib/errors/codes.ts`. The status comes from the code's definition, so a status is never typed by hand at a throw site.
+- The fetch wrapper in `src/index.ts` turns any thrown error into a response through `errorResponse`. A value that is not an `AppError` becomes `INTERNAL_ERROR` with status 500. The real error is logged with its stack, and the client never sees it.
+- A route does not translate errors itself.
 
 ### Status policy per endpoint kind
 
@@ -23,35 +60,6 @@ Read this when you add or change a response, an error, input validation, CORS, o
 | Resource does not exist or is not visible | error `404` with a code | pull of an unknown workspace |
 
 Responses that carry a secret (token, ticket, invite link) also set `Cache-Control: no-store`. The list lives in `src/middleware/response-headers.ts`.
-
-## Error responses
-
-Every error has this shape:
-
-```json
-{
-  "error": "Workspace not found.",
-  "code": "WORKSPACE_NOT_FOUND",
-  "requestId": "2c1f0b7e-8a4d-4b1e-9d2f-6a0c3e8b7d10"
-}
-```
-
-- `error`: the message the client shows. The server owns the text. Write it so a user can act on it. Do not include internal details.
-- `code`: stable `SCREAMING_SNAKE_CASE`. Clients may branch on it. Never rename a code once shipped.
-- `requestId`: the id from the `X-Request-Id` response header. Include it in every error so support can find the log line.
-- `details`: only for validation errors. A list of `{ path, message }`. Omit it everywhere else.
-
-Map errors in one place: `middleware/error-handler.ts`. Routes and services throw typed errors from `lib/errors.ts`:
-
-- `ValidationError` → 400
-- `UnauthorizedError` → 401
-- `ForbiddenError` → 403
-- `NotFoundError` → 404
-- `ConflictError` → 409
-- `RateLimitError` → 429
-- Anything else → 500 with `code: "INTERNAL_ERROR"` and the generic message `Something went wrong. Try again.`. The real error is logged, never sent.
-
-A service throws the error that matches the situation. The handler does not translate errors itself.
 
 ## Validation
 

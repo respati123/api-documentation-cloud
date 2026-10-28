@@ -6,7 +6,7 @@ describe('errorResponse', () => {
   test('maps an AppError to its status and the localized shape', async () => {
     const response = errorResponse(new AppError('WORKSPACE_NOT_FOUND'), { requestId: 'req-1', locale: 'id' })
     expect(response.status).toBe(404)
-    expect(await response.json()).toEqual({ error: 'Workspace tidak ditemukan.', code: 'WORKSPACE_NOT_FOUND', requestId: 'req-1' })
+    expect(await response.json()).toEqual({ code: 'WORKSPACE_NOT_FOUND', error: 'Workspace tidak ditemukan.', details: null, requestId: 'req-1' })
     expect(response.headers.get('Content-Language')).toBe('id')
     expect(response.headers.get('Vary')).toBe('Accept-Language')
   })
@@ -20,7 +20,7 @@ describe('errorResponse', () => {
     const response = errorResponse(new Error('connection to 10.0.0.5 refused'), { requestId: 'req-3', locale: 'en' })
     const body = await response.json()
     expect(response.status).toBe(500)
-    expect(body).toEqual({ error: 'Something went wrong. Try again.', code: 'INTERNAL_ERROR', requestId: 'req-3' })
+    expect(body).toEqual({ code: 'INTERNAL_ERROR', error: 'Something went wrong. Try again.', details: null, requestId: 'req-3' })
     expect(JSON.stringify(body)).not.toContain('10.0.0.5')
   })
 })

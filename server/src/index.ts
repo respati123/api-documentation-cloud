@@ -9,6 +9,7 @@ import { createLogger } from '@/lib/logger'
 import { routeLabel } from '@/lib/route-label'
 import { errorResponse } from '@/middleware/error-response'
 import { RateLimiter } from '@/middleware/rate-limit'
+import { runWithRequestId } from '@/lib/request-context'
 import { resolveRequestId } from '@/middleware/request-id'
 import { isSensitivePath, withResponseHeaders } from '@/middleware/response-headers'
 
@@ -603,7 +604,7 @@ async function initialize() {
       const path = new URL(request.url).pathname
       let response: Response | undefined
       try {
-        response = await handle(request, server)
+        response = await runWithRequestId(requestId, () => handle(request, server))
       } catch (error) {
         const duplicate = isRecord(error) && error.code === '23505'
         response = errorResponse(duplicate ? new AppError('ALREADY_MEMBER') : error, { requestId, locale, logger })

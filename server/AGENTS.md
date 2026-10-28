@@ -49,7 +49,7 @@ Install dependencies with `bun install` in this folder. The lockfile is `bun.loc
 - **TDD is required.** Write a failing test first, then the code that makes it pass, then refactor. See `references/testing.md`.
 - **Absolute imports only**, with the `@/` alias (`@/` points to `src/`). No `../` or `./` imports.
 - **Layers stay separate.** Routes call services. Services call repositories. Repositories run SQL. Nothing skips a layer.
-- **One response shape.** Successful responses are returned as-is. Every error uses `{ error, code, details?, requestId }`. The server owns the error text, and clients show it unchanged.
+- **One response base.** Every JSON response has `code`, `requestId`, and either `data` (success, `200` or `201`) or `error` and `details` (failure). `204` has no body. Responses are built only by `src/lib/http.ts` and `src/middleware/error-response.ts`. See `references/http-contract.md`.
 - **Error codes and messages are constants.** Codes live in one constant object. Each code has an Indonesian and an English message, and TypeScript fails the build if one is missing. The message language follows `Accept-Language`, with English as the default. See `references/http-contract.md`.
 - **Every error is traceable.** Each request gets a request id. Every error is logged with its stack and cause chain, the request id, and the route. See `references/observability.md`.
 - **Config comes from env and is validated at startup.** CORS origins come from `CORS_ORIGINS` in `.env`. The process refuses to start on a bad config.
