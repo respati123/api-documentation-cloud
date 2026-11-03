@@ -64,4 +64,14 @@ describe.skipIf(!databaseEnabled)('commits repository', () => {
     const rest = await listCommitsPage(db, { workspaceId, after: { sortAt: last.sortAt, id: last.id }, limit: 10 })
     expect(rest.map((row) => row.id)).toEqual([commitId])
   })
+
+  test('insertCommit stores the snapshot and parent ids as JSON objects and arrays, not JSON strings', async () => {
+    const author = await seedUser(db)
+    const { workspaceId, commitId } = await seedWorkspace(db, author.id)
+    const id = randomUUID()
+    await insertCommit(db, { id, workspaceId, authorId: author.id, parentIds: [commitId], message: 'Typed', snapshot })
+
+    const [row] = await db`SELECT jsonb_typeof(snapshot) AS snapshot_type, jsonb_typeof(parent_ids) AS parents_type FROM commits WHERE id = ${id}`
+    expect(row).toEqual({ snapshot_type: 'object', parents_type: 'array' })
+  })
 })
