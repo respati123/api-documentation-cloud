@@ -39,6 +39,10 @@ export const errorDefinitions = {
   WEBSOCKET_TICKET_INVALID: { status: 401 },
   WEBSOCKET_UNAVAILABLE: { status: 400 },
   SYNC_REMOTE_ADVANCED: { status: 409 },
+  BRANCH_NOT_FOUND: { status: 404 },
+  BRANCH_COLLECTION_NOT_FOUND: { status: 404 },
+  BRANCH_NAME_INVALID: { status: 400 },
+  BRANCH_NAME_TAKEN: { status: 409 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

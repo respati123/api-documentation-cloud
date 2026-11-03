@@ -42,5 +42,9 @@ export const en = {
   WEBSOCKET_TICKET_INVALID: 'The sync connection ticket is missing or expired.',
   WEBSOCKET_UNAVAILABLE: 'Could not open the sync notification connection.',
   SYNC_REMOTE_ADVANCED: 'The cloud version changed since your last pull. Pull and merge before pushing again.',
+  BRANCH_NOT_FOUND: 'Branch not found.',
+  BRANCH_COLLECTION_NOT_FOUND: 'That collection has no branches in this workspace.',
+  BRANCH_NAME_INVALID: 'Enter a branch name of up to 60 characters.',
+  BRANCH_NAME_TAKEN: 'A branch with this name already exists for this collection.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>
