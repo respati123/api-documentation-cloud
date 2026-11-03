@@ -50,7 +50,9 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
   }
 
   beforeAll(async () => {
-    const config = loadConfig({ ...process.env, DATABASE_URL: testUrl ?? '' })
+    // Mail is off here, so the tests do not depend on the developer's SMTP settings.
+    const base = loadConfig({ ...process.env, DATABASE_URL: testUrl ?? '' })
+    const config = { ...base, smtp: { ...base.smtp, host: undefined } }
     ctx = createAppContext({ db, config, logger: silent })
     app = createApp(ctx)
     corsApp = createApp(createAppContext({ db, config: { ...config, corsOrigins: ['http://localhost:13100', 'null'] }, logger: silent }))

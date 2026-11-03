@@ -25,7 +25,7 @@ export interface CommitRecord {
 
 // Ignores a commit whose id already exists, so a repeated push does not fail.
 export async function insertCommit(db: SQL, commit: { id: string; workspaceId: string; authorId: string; parentIds: string[]; message: string; snapshot: unknown }): Promise<void> {
-  await db`INSERT INTO commits (id, workspace_id, author_id, parent_ids, message, snapshot) VALUES (${commit.id}, ${commit.workspaceId}, ${commit.authorId}, ${JSON.stringify(commit.parentIds)}::jsonb, ${commit.message}, ${JSON.stringify(commit.snapshot)}::jsonb) ON CONFLICT (id) DO NOTHING`
+  await db`INSERT INTO commits (id, workspace_id, author_id, parent_ids, message, snapshot) VALUES (${commit.id}, ${commit.workspaceId}, ${commit.authorId}, ${JSON.stringify(commit.parentIds)}::text::jsonb, ${commit.message}, ${JSON.stringify(commit.snapshot)}::text::jsonb) ON CONFLICT (id) DO NOTHING`
 }
 
 // Newest first. `limit` is the number of rows to read. The caller asks for one more to learn whether a next page exists.
