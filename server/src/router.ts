@@ -10,6 +10,7 @@ import { handleMembers } from '@/routes/members'
 import { handlePublicRoutes } from '@/routes/public'
 import { handleSyncSocketUpgrade } from '@/routes/realtime-public'
 import { handleSyncTicket } from '@/routes/realtime-authed'
+import { handleBranches } from '@/routes/branches'
 import { handleSync } from '@/routes/sync'
 import { handleWorkspaceCollection } from '@/routes/workspace-collection'
 import { handleWorkspaceRecord } from '@/routes/workspace-record'
@@ -54,6 +55,8 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (membersResponse) return membersResponse
   const syncResponse = await handleSync(ctx, request, url, method, workspaceId, action, user)
   if (syncResponse) return syncResponse
+  const branchResponse = await handleBranches(ctx, request, url, method, workspaceId, action, user)
+  if (branchResponse) return branchResponse
 
   throw new AppError('ROUTE_NOT_FOUND')
 }

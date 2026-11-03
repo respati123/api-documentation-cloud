@@ -42,5 +42,9 @@ export const id = {
   WEBSOCKET_TICKET_INVALID: 'Tiket koneksi sinkronisasi tidak ada atau sudah kedaluwarsa.',
   WEBSOCKET_UNAVAILABLE: 'Tidak bisa membuka koneksi notifikasi sinkronisasi.',
   SYNC_REMOTE_ADVANCED: 'Versi cloud sudah berubah sejak tarikan terakhir. Tarik dan gabungkan dulu sebelum push lagi.',
+  BRANCH_NOT_FOUND: 'Branch tidak ditemukan.',
+  BRANCH_COLLECTION_NOT_FOUND: 'Collection itu tidak punya branch di workspace ini.',
+  BRANCH_NAME_INVALID: 'Isi nama branch hingga 60 karakter.',
+  BRANCH_NAME_TAKEN: 'Branch dengan nama ini sudah ada untuk collection ini.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>
