@@ -2,9 +2,11 @@ import type { AppContext } from '@/context'
 import type { AuthUser, WorkspaceChangeReason } from '@/models/workspace'
 import { listMemberIds } from '@/repositories/memberships.repository'
 
-export function isAllowedSyncOrigin(origin: string | null): boolean {
+// The portal's own origin is compared as a whole (scheme, host, port), so a look-alike host is refused.
+export function isAllowedSyncOrigin(origin: string | null, publicWebUrl: string): boolean {
   if (!origin || origin === 'null' || origin === 'file://') return true
   try {
+    if (origin === new URL(publicWebUrl).origin) return true
     const hostname = new URL(origin).hostname
     return hostname === 'localhost' || hostname === '127.0.0.1'
   } catch { return false }

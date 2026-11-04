@@ -53,10 +53,11 @@ export async function findCommitInWorkspace(db: SQL, workspaceId: string, commit
   return toRecord(row)
 }
 
-// Used by push to read the remote head. The head belongs to the workspace being pushed, so no workspace filter is needed.
-export async function findCommitById(db: SQL, commitId: string): Promise<CommitRecord | undefined> {
-  const [row] = await db`SELECT id, parent_ids AS "parentIds", message, snapshot, created_at AS "createdAt" FROM commits WHERE id = ${commitId}`
-  return toRecord(row)
+// True when this id is already a commit of another workspace or of another line (the workspace head or a different branch).
+// A repeat in the same line is not reported here.
+export async function commitIdUsedElsewhere(db: SQL, commit: { id: string; workspaceId: string; branchId: string | null }): Promise<boolean> {
+  const rows = await db`SELECT 1 FROM commits WHERE id = ${commit.id} AND (workspace_id <> ${commit.workspaceId} OR branch_id IS DISTINCT FROM ${commit.branchId}::text) LIMIT 1`
+  return rows.length > 0
 }
 
 function toRecord(row: { id: unknown; parentIds: unknown; message: unknown; snapshot: unknown; createdAt: Date } | undefined): CommitRecord | undefined {

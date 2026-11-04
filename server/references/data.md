@@ -41,3 +41,11 @@ Read this when you write SQL, change the schema, add a transaction, or add a lis
 ## Measure before you optimize
 
 Add a timing log for any query over 200 ms. Use `EXPLAIN (ANALYZE, BUFFERS)` on the query before changing it. Write the expected row count in the test for any list endpoint.
+
+## Collection branches
+
+Branches are off until the workspace owner turns them on with `POST /api/workspaces/:id/branches/enable`. Reading branches, pulling, reading history, and pushing never split a workspace.
+
+The first enable splits the head into one `main` branch per top-level collection, once. A workspace with branches refuses legacy pushes and restores with `WORKSPACE_USES_BRANCHES`.
+
+A commit id that already exists in another workspace, or in another line of the same workspace, is refused with `PUSH_COMMIT_INVALID`. The check runs before the insert, so a stored commit can never move a head into another workspace.

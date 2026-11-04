@@ -45,18 +45,23 @@ export async function insertWorkspace(db: SQL, workspace: { id: string; name: st
 export async function listWorkspacesPage(db: SQL, query: { userId: string; after: WorkspaceCursor | null; limit: number }): Promise<WorkspaceListRow[]> {
   const afterAt = query.after?.sortAt ?? null
   const afterId = query.after?.id ?? null
-  return db`SELECT * FROM (SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt", COALESCE(c.created_at, w.created_at)::text AS "sortAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE m.user_id = ${query.userId}) q WHERE ${afterAt}::text IS NULL OR (q."sortAt"::timestamptz, q.id) < (${afterAt}::timestamptz, ${afterId}::text) ORDER BY q."sortAt"::timestamptz DESC, q.id DESC LIMIT ${query.limit}`
+  return db`SELECT * FROM (SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt", COALESCE(c.created_at, w.created_at)::text AS "sortAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id AND c.workspace_id = w.id WHERE m.user_id = ${query.userId}) q WHERE ${afterAt}::text IS NULL OR (q."sortAt"::timestamptz, q.id) < (${afterAt}::timestamptz, ${afterId}::text) ORDER BY q."sortAt"::timestamptz DESC, q.id DESC LIMIT ${query.limit}`
 }
 
 export async function findWorkspaceForMember(db: SQL, workspaceId: string, userId: string): Promise<WorkspaceMemberRow | undefined> {
-  const [row] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE w.id = ${workspaceId} AND m.user_id = ${userId}`
+  const [row] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", w.created_at AS "createdAt", c.created_at AS "updatedAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id AND c.workspace_id = w.id WHERE w.id = ${workspaceId} AND m.user_id = ${userId}`
   return row
 }
 
 // The head commit's parents, message, and snapshot, for the pull response.
 export async function findWorkspaceSnapshotRow(db: SQL, workspaceId: string, userId: string): Promise<WorkspaceSnapshotRow | undefined> {
-  const [row] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", c.parent_ids AS "parentIds", c.message, c.snapshot, c.created_at AS "createdAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id WHERE w.id = ${workspaceId} AND m.user_id = ${userId}`
+  const [row] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", c.parent_ids AS "parentIds", c.message, c.snapshot, c.created_at AS "createdAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id AND c.workspace_id = w.id WHERE w.id = ${workspaceId} AND m.user_id = ${userId}`
   return row
+}
+
+export async function findWorkspaceOwnerId(db: SQL, workspaceId: string): Promise<string | undefined> {
+  const [row] = await db`SELECT owner_id AS "ownerId" FROM workspaces WHERE id = ${workspaceId}`
+  return row ? String(row.ownerId) : undefined
 }
 
 export async function findWorkspaceSummary(db: SQL, workspaceId: string): Promise<{ id: string; name: string; headCommitId: string | null } | undefined> {

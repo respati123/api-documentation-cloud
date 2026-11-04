@@ -5,7 +5,7 @@ import { AppError } from '@/lib/errors/app-error'
 import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagination'
 import { parseSnapshot } from '@/lib/validation'
 import type { AuthUser } from '@/models/workspace'
-import { findCommitById } from '@/repositories/commits.repository'
+import { findCommitInWorkspace } from '@/repositories/commits.repository'
 import { hasMemberWithEmail, insertMembership } from '@/repositories/memberships.repository'
 import {
   deleteInvite as deleteInviteRow,
@@ -61,7 +61,7 @@ export async function acceptInvite(ctx: AppContext, user: AuthUser, rawToken: st
     await markInviteUsed(tx, invite.id)
     const workspace = await findWorkspaceSummary(tx, invite.workspaceId)
     if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
-    const commit = workspace.headCommitId ? await findCommitById(tx, workspace.headCommitId) : undefined
+    const commit = workspace.headCommitId ? await findCommitInWorkspace(tx, workspace.id, workspace.headCommitId) : undefined
     return { ...workspace, role: invite.role, ...parseSnapshot(commit?.snapshot ?? []) }
   })
   if (!accepted) throw new AppError('INVITE_INVALID')

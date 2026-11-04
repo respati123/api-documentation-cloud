@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
-import { findCommitById, findCommitInWorkspace, insertCommit, listCommitsPage } from '@/repositories/commits.repository'
+import { commitIdUsedElsewhere, findCommitInWorkspace, insertCommit, listCommitsPage } from '@/repositories/commits.repository'
 import { databaseEnabled, openTestDatabase, seedUser, seedWorkspace } from '@/testing/database'
 
 const snapshot = { tree: [], variables: { globals: [], environments: [] } }
@@ -47,7 +47,8 @@ describe.skipIf(!databaseEnabled)('commits repository', () => {
     const second = await seedWorkspace(db, author.id)
 
     expect(await findCommitInWorkspace(db, second.workspaceId, first.commitId)).toBeUndefined()
-    expect(await findCommitById(db, first.commitId)).toBeDefined()
+    expect(await commitIdUsedElsewhere(db, { id: first.commitId, workspaceId: second.workspaceId, branchId: null })).toBe(true)
+    expect(await commitIdUsedElsewhere(db, { id: first.commitId, workspaceId: first.workspaceId, branchId: null })).toBe(false)
   })
 
   test('listCommitsPage returns the newest commit first and resumes after a cursor', async () => {

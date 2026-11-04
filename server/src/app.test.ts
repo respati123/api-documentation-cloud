@@ -432,10 +432,141 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     const headCommitId = (pulled.json.data as { workspace: { headCommitId: string } }).workspace.headCommitId
 
     const listed = await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })
-    expect((listed.json.data as { branches: unknown[] }).branches.length).toBe(1)
+    expect((listed.json.data as { branches: unknown[] }).branches.length).toBe(0)
+
+    const enabled = await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    expect(enabled.status).toBe(200)
+    expect((enabled.json.data as { branches: unknown[] }).branches.length).toBe(1)
 
     const legacy = await pushCommit(owner, workspaceId, [headCommitId], 'Legacy edit')
     expect(legacy.status).toBe(409)
     expect(legacy.json.code).toBe('WORKSPACE_USES_BRANCHES')
+  })
+
+  test('listing branches does not split a workspace, so a legacy push still lands', async () => {
+    const owner = await signUp('branch-list')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Listed', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }], variables: { globals: [], environments: [] } },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    const pulled = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    const headCommitId = (pulled.json.data as { workspace: { headCommitId: string } }).workspace.headCommitId
+
+    await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })
+    const legacy = await pushCommit(owner, workspaceId, [headCommitId], 'Still legacy')
+    expect(legacy.status).toBe(201)
+  })
+
+  test('only the owner can enable branches, and a branch cannot be created before that', async () => {
+    const owner = await signUp('branch-enable')
+    const editor = await signUp('branch-enable-editor')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Enable', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }], variables: { globals: [], environments: [] } },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await inviteAndAccept(owner, workspaceId, editor, 'editor')
+
+    const byEditor = await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: editor.token })
+    expect(byEditor.status).toBe(403)
+    expect(byEditor.json.code).toBe('ROLE_NOT_ALLOWED')
+
+    const early = await call('POST', `/api/workspaces/${workspaceId}/branches`, { token: owner.token, body: { collectionKey: 'users', name: 'early' } })
+    expect(early.status).toBe(409)
+    expect(early.json.code).toBe('BRANCHES_NOT_ENABLED')
+  })
+
+  test('a push that reuses a commit id from another workspace is refused, and that workspace stays private', async () => {
+    const victim = await signUp('c1-victim')
+    const attacker = await signUp('c1-attacker')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    const secretPush = await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    expect(secretPush.status).toBe(201)
+
+    const mine = await createWorkspace(attacker, 'Mine')
+    const stolen = await call('POST', `/api/workspaces/${mine.workspaceId}/sync/push`, {
+      token: attacker.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [mine.headCommitId], message: 'steal', tree: [] }] },
+    })
+    expect(stolen.status).toBe(400)
+    expect(stolen.json.code).toBe('PUSH_COMMIT_INVALID')
+
+    const pulled = await call('GET', `/api/workspaces/${mine.workspaceId}/sync/pull`, { token: attacker.token })
+    const workspace = (pulled.json.data as { workspace: { headCommitId: string; tree: unknown[] } }).workspace
+    expect(workspace.headCommitId).toBe(mine.headCommitId)
+    expect(workspace.tree).toEqual([])
+  })
+
+  test('a head that points at a commit of another workspace is not read as this workspace’s content', async () => {
+    const victim = await signUp('c1-legacy-victim')
+    const owner = await signUp('c1-legacy-owner')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    const mine = await createWorkspace(owner, 'Mine')
+    await db`UPDATE workspaces SET head_commit_id = ${secretCommitId} WHERE id = ${mine.workspaceId}`
+
+    const pulled = await call('GET', `/api/workspaces/${mine.workspaceId}/sync/pull`, { token: owner.token })
+    const workspace = (pulled.json.data as { workspace: { tree: unknown[] } }).workspace
+    expect(workspace.tree).toEqual([])
+  })
+
+  test('a conflict does not name a commit of another workspace', async () => {
+    const victim = await signUp('c1-conflict-victim')
+    const owner = await signUp('c1-conflict-owner')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    const mine = await createWorkspace(owner, 'Mine')
+    await db`UPDATE workspaces SET head_commit_id = ${secretCommitId} WHERE id = ${mine.workspaceId}`
+
+    const stale = await call('POST', `/api/workspaces/${mine.workspaceId}/sync/push`, {
+      token: owner.token,
+      body: { commits: [{ id: randomUUID(), parentIds: [], message: 'local', tree: [] }] },
+    })
+    expect(stale.status).toBe(409)
+    expect(stale.json.code).toBe('SYNC_REMOTE_ADVANCED')
+    expect((stale.json.details as { remote: unknown }).remote).toBeNull()
+  })
+
+  test('joining through an invite does not return a head that belongs to another workspace', async () => {
+    const victim = await signUp('c1-invite-victim')
+    const owner = await signUp('c1-invite-owner')
+    const invitee = await signUp('c1-invitee')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    const mine = await createWorkspace(owner, 'Mine')
+    await db`UPDATE workspaces SET head_commit_id = ${secretCommitId} WHERE id = ${mine.workspaceId}`
+
+    const accepted = await inviteAndAccept(owner, mine.workspaceId, invitee, 'viewer')
+    expect(JSON.stringify(accepted.json)).not.toContain('secret-folder')
+  })
+
+  test('creating a workspace tells the owner’s open sockets that the workspace list changed', async () => {
+    const owner = await signUp('create-event')
+    const sent: string[] = []
+    const socket = { data: { userId: owner.user.id }, send: (message: string) => void sent.push(message) }
+    ctx.syncSockets.add(socket as never)
+    try {
+      await createWorkspace(owner, 'Announced')
+      expect(sent.map((message) => (JSON.parse(message) as { type: string }).type)).toContain('workspace.changed')
+    } finally {
+      ctx.syncSockets.delete(socket as never)
+    }
   })
 })

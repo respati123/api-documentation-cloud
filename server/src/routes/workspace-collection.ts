@@ -5,6 +5,7 @@ import { bodyOf } from '@/lib/http-body'
 import { created, ok } from '@/lib/http'
 import { decodeCursor, readLimit } from '@/lib/pagination'
 import { emptyWorkspaceVariables, validateTree, validateWorkspaceVariables } from '@/lib/validation'
+import { broadcastWorkspaceChange } from '@/services/events'
 import { createWorkspace, listWorkspacesPage } from '@/services/workspaces'
 
 export async function handleWorkspaceCollection(ctx: AppContext, request: Request, url: URL, method: string, path: string, user: AuthUser): Promise<Response | undefined> {
@@ -20,7 +21,10 @@ export async function handleWorkspaceCollection(ctx: AppContext, request: Reques
     const variables = body.variables === undefined ? emptyWorkspaceVariables() : body.variables
     if (!validateTree(tree)) throw new AppError('WORKSPACE_TREE_INVALID')
     if (!validateWorkspaceVariables(variables)) throw new AppError('WORKSPACE_VARIABLES_INVALID')
-    return created({ workspace: await createWorkspace(db, user, String(body.name || ''), tree, variables) })
+    const workspace = await createWorkspace(db, user, String(body.name || ''), tree, variables)
+    // The owner's other open apps show the new workspace without a sign-in.
+    await broadcastWorkspaceChange(ctx, workspace.id, 'members')
+    return created({ workspace })
   }
   return undefined
 }
