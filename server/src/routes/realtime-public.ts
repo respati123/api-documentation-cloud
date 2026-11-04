@@ -8,7 +8,7 @@ import { tokenHash } from '@/services/auth'
 export async function handleSyncSocketUpgrade(ctx: AppContext, request: Request, url: URL, method: string, path: string, server: Bun.Server<SyncSocketData>): Promise<Response | undefined> {
   const { syncSocketTickets } = ctx
   if (method === 'GET' && path === '/api/sync/events') {
-    if (!isAllowedSyncOrigin(request.headers.get('origin'))) throw new AppError('WEBSOCKET_ORIGIN_NOT_ALLOWED')
+    if (!isAllowedSyncOrigin(request.headers.get('origin'), ctx.config.publicWebUrl)) throw new AppError('WEBSOCKET_ORIGIN_NOT_ALLOWED')
     const ticket = url.searchParams.get('ticket')
     const ticketKey = ticket ? tokenHash(ticket) : ''
     const ticketData = ticketKey ? syncSocketTickets.get(ticketKey) : undefined
