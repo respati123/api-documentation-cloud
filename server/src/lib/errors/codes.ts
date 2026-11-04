@@ -48,6 +48,7 @@ export const errorDefinitions = {
   VARIABLES_REVISION_CONFLICT: { status: 409 },
   CSRF_ORIGIN_REFUSED: { status: 403 },
   SESSION_NOT_FOUND: { status: 404 },
+  DESKTOP_KEY_INVALID: { status: 400 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

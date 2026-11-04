@@ -51,5 +51,6 @@ export const id = {
   VARIABLES_REVISION_CONFLICT: 'Variabel workspace sudah berubah sejak kamu membacanya. Baca lagi, lalu simpan.',
   CSRF_ORIGIN_REFUSED: 'Permintaan ini datang dari halaman yang tidak boleh bertindak atas sesi kamu.',
   SESSION_NOT_FOUND: 'Sesi itu tidak ditemukan.',
+  DESKTOP_KEY_INVALID: 'Kunci sign-in dari aplikasi desktop tidak valid.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>
