@@ -438,4 +438,84 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     expect(legacy.status).toBe(409)
     expect(legacy.json.code).toBe('WORKSPACE_USES_BRANCHES')
   })
+
+  test('a push that reuses a commit id from another workspace is refused, and that workspace stays private', async () => {
+    const victim = await signUp('c1-victim')
+    const attacker = await signUp('c1-attacker')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    const secretPush = await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    expect(secretPush.status).toBe(201)
+
+    const mine = await createWorkspace(attacker, 'Mine')
+    const stolen = await call('POST', `/api/workspaces/${mine.workspaceId}/sync/push`, {
+      token: attacker.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [mine.headCommitId], message: 'steal', tree: [] }] },
+    })
+    expect(stolen.status).toBe(400)
+    expect(stolen.json.code).toBe('PUSH_COMMIT_INVALID')
+
+    const pulled = await call('GET', `/api/workspaces/${mine.workspaceId}/sync/pull`, { token: attacker.token })
+    const workspace = (pulled.json.data as { workspace: { headCommitId: string; tree: unknown[] } }).workspace
+    expect(workspace.headCommitId).toBe(mine.headCommitId)
+    expect(workspace.tree).toEqual([])
+  })
+
+  test('a head that points at a commit of another workspace is not read as this workspace’s content', async () => {
+    const victim = await signUp('c1-legacy-victim')
+    const owner = await signUp('c1-legacy-owner')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    const mine = await createWorkspace(owner, 'Mine')
+    await db`UPDATE workspaces SET head_commit_id = ${secretCommitId} WHERE id = ${mine.workspaceId}`
+
+    const pulled = await call('GET', `/api/workspaces/${mine.workspaceId}/sync/pull`, { token: owner.token })
+    const workspace = (pulled.json.data as { workspace: { tree: unknown[] } }).workspace
+    expect(workspace.tree).toEqual([])
+  })
+
+  test('a conflict does not name a commit of another workspace', async () => {
+    const victim = await signUp('c1-conflict-victim')
+    const owner = await signUp('c1-conflict-owner')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    const mine = await createWorkspace(owner, 'Mine')
+    await db`UPDATE workspaces SET head_commit_id = ${secretCommitId} WHERE id = ${mine.workspaceId}`
+
+    const stale = await call('POST', `/api/workspaces/${mine.workspaceId}/sync/push`, {
+      token: owner.token,
+      body: { commits: [{ id: randomUUID(), parentIds: [], message: 'local', tree: [] }] },
+    })
+    expect(stale.status).toBe(409)
+    expect(stale.json.code).toBe('SYNC_REMOTE_ADVANCED')
+    expect((stale.json.details as { remote: unknown }).remote).toBeNull()
+  })
+
+  test('joining through an invite does not return a head that belongs to another workspace', async () => {
+    const victim = await signUp('c1-invite-victim')
+    const owner = await signUp('c1-invite-owner')
+    const invitee = await signUp('c1-invitee')
+    const victimWorkspace = await createWorkspace(victim, 'Victim')
+    const secretCommitId = randomUUID()
+    await call('POST', `/api/workspaces/${victimWorkspace.workspaceId}/sync/push`, {
+      token: victim.token,
+      body: { commits: [{ id: secretCommitId, parentIds: [victimWorkspace.headCommitId], message: 'secret', tree: [{ id: 'secret-folder', kind: 'folder', name: 'Secret folder', children: [] }] }] },
+    })
+    const mine = await createWorkspace(owner, 'Mine')
+    await db`UPDATE workspaces SET head_commit_id = ${secretCommitId} WHERE id = ${mine.workspaceId}`
+
+    const accepted = await inviteAndAccept(owner, mine.workspaceId, invitee, 'viewer')
+    expect(JSON.stringify(accepted.json)).not.toContain('secret-folder')
+  })
 })

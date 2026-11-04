@@ -4,7 +4,7 @@ import { AppError } from '@/lib/errors/app-error'
 import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagination'
 import { parseSnapshot, validateTree } from '@/lib/validation'
 import type { AuthUser, Role } from '@/models/workspace'
-import { findCommitById, findCommitInWorkspace, insertCommit, listCommitsPage, type CommitListRow } from '@/repositories/commits.repository'
+import { commitIdUsedElsewhere, findCommitInWorkspace, insertCommit, listCommitsPage, type CommitListRow } from '@/repositories/commits.repository'
 import { countBranches, findBranch, insertBranch, listBranches, lockBranch, setBranchHead, type BranchRecord } from '@/repositories/branches.repository'
 import { lockWorkspaceHead } from '@/repositories/workspaces.repository'
 import { requireRole } from '@/services/access'
@@ -115,8 +115,9 @@ export async function pushBranch(db: SQL, workspaceId: string, branchId: string,
     for (const commit of commits) {
       if (!isCollectionTree(commit.tree, branch.collectionKey)) throw new AppError('PUSH_COMMIT_INVALID')
       const parents = commit.parentIds as string[]
-      if (headId && !parents.includes(headId)) return { conflict: await remoteConflict(tx, headId) }
+      if (headId && !parents.includes(headId)) return { conflict: await remoteConflict(tx, workspaceId, headId) }
       if (!headId && parents.length > 0) return { conflict: null }
+      if (await commitIdUsedElsewhere(tx, { id: commit.id, workspaceId, branchId })) throw new AppError('PUSH_COMMIT_INVALID')
       await insertCommit(tx, { id: commit.id, workspaceId, authorId: user.id, parentIds: parents, message: commit.message, snapshot: { tree: commit.tree }, branchId })
       headId = commit.id
       await setBranchHead(tx, branchId, headId)
@@ -127,8 +128,8 @@ export async function pushBranch(db: SQL, workspaceId: string, branchId: string,
   return result.headId
 }
 
-async function remoteConflict(tx: SQL, headId: string) {
-  const remote = await findCommitById(tx, headId)
+async function remoteConflict(tx: SQL, workspaceId: string, headId: string) {
+  const remote = await findCommitInWorkspace(tx, workspaceId, headId)
   if (!remote) return null
   return { id: remote.id, parentIds: remote.parentIds, message: remote.message, createdAt: remote.createdAt, ...parseSnapshot(remote.snapshot) }
 }

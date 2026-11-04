@@ -76,6 +76,21 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
     }
   })
 
+  test('a branch push that reuses a commit id from another workspace is refused, and the branch head does not move', async () => {
+    const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
+    const other = await seedLegacyWorkspace(db, owner)
+    const mine = await seedLegacyWorkspace(db, owner)
+    await ensureCollectionBranches(db, mine.workspaceId)
+    const branch = (await listBranches(db, mine.workspaceId)).find((item) => item.collectionKey === 'users')
+    if (!branch) throw new Error('The users branch was not created.')
+
+    await expectAppError(
+      pushBranch(db, mine.workspaceId, branch.id, owner, [{ id: other.headId, parentIds: [branch.headCommitId ?? ''], message: 'steal', tree: [folder('users', 'Users')] }]),
+      'PUSH_COMMIT_INVALID',
+    )
+    expect((await findBranch(db, mine.workspaceId, branch.id))?.headCommitId).toBe(branch.headCommitId)
+  })
+
   test('a new branch starts at its collection’s main head and a name is unique per collection', async () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
     const { workspaceId } = await seedLegacyWorkspace(db, owner)
