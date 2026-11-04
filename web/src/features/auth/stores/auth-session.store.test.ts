@@ -9,28 +9,28 @@ beforeEach(() => {
 })
 
 describe('auth session store', () => {
-  test('saves the token and user id to session storage', () => {
-    useAuthSessionStore.getState().saveSession('token-1', user)
+  test('saving the user marks the session signed in, and keeps no token on the page', () => {
+    useAuthSessionStore.getState().saveSession(user)
 
-    expect(useAuthSessionStore.getState().token).toBe('token-1')
+    expect(useAuthSessionStore.getState().signedIn).toBe(true)
     expect(useAuthSessionStore.getState().userId).toBe('user-1')
-    expect(window.sessionStorage.getItem('api-documentation-cloud-session')).toBe('token-1')
-    expect(window.sessionStorage.getItem('api-documentation-cloud-user-id')).toBe('user-1')
-  })
-
-  test('clearing the session removes both values', () => {
-    useAuthSessionStore.getState().saveSession('token-1', user)
-    useAuthSessionStore.getState().clearSession()
-
     expect(useAuthSessionStore.getState().token).toBe('')
     expect(window.sessionStorage.getItem('api-documentation-cloud-session')).toBeNull()
+  })
+
+  test('clearing the session signs out and clears the user id', () => {
+    useAuthSessionStore.getState().saveSession(user)
+    useAuthSessionStore.getState().clearSession()
+
+    expect(useAuthSessionStore.getState().signedIn).toBe(false)
+    expect(useAuthSessionStore.getState().userId).toBe('')
   })
 
   test('marks an expired session so the sign-in page can explain it', () => {
     useAuthSessionStore.getState().clearSession({ expired: true })
     expect(useAuthSessionStore.getState().sessionExpired).toBe(true)
 
-    useAuthSessionStore.getState().saveSession('token-2', user)
+    useAuthSessionStore.getState().saveSession(user)
     expect(useAuthSessionStore.getState().sessionExpired).toBe(false)
   })
 })

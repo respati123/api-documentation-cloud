@@ -1,45 +1,33 @@
 import { create } from 'zustand'
 import type { CloudUser } from '@/shared/models/user.model'
 
-const tokenStorageKey = 'api-documentation-cloud-session'
-const userIdStorageKey = 'api-documentation-cloud-user-id'
-
+// The session is an HttpOnly cookie that the browser sends by itself, so the page never holds a token.
+// token stays empty. It is kept only so service signatures do not change. Check signedIn for a session.
 interface AuthSessionState {
   token: string
+  signedIn: boolean
   userId: string
   sessionExpired: boolean
-  saveSession: (token: string, user: CloudUser) => void
+  saveSession: (user: CloudUser) => void
   clearSession: (options?: { expired?: boolean }) => void
 }
 
+// Tokens kept in sessionStorage by earlier versions are removed, so no old token stays on the page.
+removeLegacyTokens()
+
 export const useAuthSessionStore = create<AuthSessionState>((set) => ({
-  token: readStorage(tokenStorageKey),
-  userId: readStorage(userIdStorageKey),
+  token: '',
+  signedIn: false,
+  userId: '',
   sessionExpired: false,
-  saveSession: (token, user) => {
-    writeStorage(tokenStorageKey, token)
-    writeStorage(userIdStorageKey, user.id)
-    set({ token, userId: user.id, sessionExpired: false })
-  },
-  clearSession: (options) => {
-    writeStorage(tokenStorageKey, '')
-    writeStorage(userIdStorageKey, '')
-    set({ token: '', userId: '', sessionExpired: options?.expired ?? false })
-  },
+  saveSession: (user) => set({ signedIn: true, userId: user.id, sessionExpired: false }),
+  clearSession: (options) => set({ signedIn: false, userId: '', sessionExpired: options?.expired ?? false }),
 }))
 
-function readStorage(key: string): string {
+function removeLegacyTokens() {
   try {
-    return window.sessionStorage.getItem(key) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-function writeStorage(key: string, value: string) {
-  try {
-    if (value) window.sessionStorage.setItem(key, value)
-    else window.sessionStorage.removeItem(key)
+    window.sessionStorage.removeItem('api-documentation-cloud-session')
+    window.sessionStorage.removeItem('api-documentation-cloud-user-id')
   } catch {
     return
   }

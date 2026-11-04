@@ -12,11 +12,12 @@ import { workspaceDetailKeys } from './workspace-detail.keys'
 export function useWorkspaceActivityViewModel(workspaceId: string, commits: CloudCommit[], enabled: boolean) {
   const { t } = useTranslation()
   const token = useAuthSessionStore((state) => state.token)
+  const signedIn = useAuthSessionStore((state) => state.signedIn)
   const [chosenCommitId, setChosenCommitId] = useState('')
   const [chosenChangeId, setChosenChangeId] = useState('')
   const selectedCommit = commits.find((commit) => commit.id === chosenCommitId) ?? commits[0] ?? null
   const parentId = selectedCommit?.parentIds[0]
-  const active = enabled && token !== '' && selectedCommit !== null
+  const active = enabled && signedIn && selectedCommit !== null
 
   const currentQuery = useQuery({
     queryKey: workspaceDetailKeys.commit(token, workspaceId, selectedCommit?.id ?? ''),

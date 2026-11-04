@@ -747,4 +747,97 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     const after = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
     expect((after.json.data as { workspace: { usesBranches: boolean } }).workspace.usesBranches).toBe(true)
   })
+
+  // Raw requests, for the cookie tests: the helper above does not expose response headers.
+  async function raw(method: string, path: string, { cookie, origin, body }: { cookie?: string; origin?: string; body?: unknown } = {}) {
+    const headers: Record<string, string> = { 'CF-Connecting-IP': `test-${randomUUID()}` }
+    if (body !== undefined) headers['Content-Type'] = 'application/json'
+    if (cookie) headers.Cookie = cookie
+    if (origin) headers.Origin = origin
+    const response = await app.fetch(new Request(`http://api.test${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }))
+    if (!response) throw new Error('The route did not answer.')
+    const json = response.status === 204 ? {} : ((await response.json().catch(() => ({}))) as Record<string, unknown>)
+    return { status: response.status, json, setCookie: response.headers.get('set-cookie') ?? '', allowCredentials: response.headers.get('access-control-allow-credentials') }
+  }
+
+  async function webLogin(label: string) {
+    const email = `${label}-${randomUUID()}@test.dev`
+    await raw('POST', '/api/auth/register', { body: { email, password } })
+    const login = await raw('POST', '/api/auth/login', { body: { email, password } })
+    const cookie = login.setCookie.split(';')[0]
+    return { email, cookie }
+  }
+
+  test('login sets an HttpOnly session cookie that lasts 30 days', async () => {
+    const email = `cookie-attrs-${randomUUID()}@test.dev`
+    await raw('POST', '/api/auth/register', { body: { email, password } })
+    const fresh = await raw('POST', '/api/auth/login', { body: { email, password } })
+    expect(fresh.setCookie).toContain('apidocs_session=')
+    expect(fresh.setCookie).toContain('HttpOnly')
+    expect(fresh.setCookie).toContain('SameSite=Lax')
+    expect(fresh.setCookie).toContain('Path=/')
+    expect(fresh.setCookie).toContain('Max-Age=2592000')
+  })
+
+  test('a request with only the session cookie is signed in', async () => {
+    const { cookie } = await webLogin('cookie-me')
+    const me = await raw('GET', '/api/me', { cookie })
+    expect(me.status).toBe(200)
+    expect(JSON.stringify(me.json)).toContain('cookie-me')
+  })
+
+  test('a cookie-signed write from an origin that is not allowed is refused, and from an allowed origin it works', async () => {
+    const { cookie } = await webLogin('cookie-csrf')
+    const refused = await raw('POST', '/api/workspaces', { cookie, origin: 'https://evil.example', body: { name: 'Nope', tree: [] } })
+    expect(refused.status).toBe(403)
+    const allowed = await raw('POST', '/api/workspaces', { cookie, origin: 'http://localhost:5174', body: { name: 'Yes', tree: [] } })
+    expect(allowed.status).toBe(201)
+  })
+
+  test('a cookie-signed write with no Origin header is refused', async () => {
+    const { cookie } = await webLogin('cookie-no-origin')
+    const refused = await raw('POST', '/api/workspaces', { cookie, body: { name: 'Nope', tree: [] } })
+    expect(refused.status).toBe(403)
+  })
+
+  test('logout ends the cookie session and clears the cookie', async () => {
+    const { cookie } = await webLogin('cookie-logout')
+    const out = await raw('POST', '/api/auth/logout', { cookie, origin: 'http://localhost:5174' })
+    expect(out.status).toBe(204)
+    expect(out.setCookie).toContain('Max-Age=0')
+    expect((await raw('GET', '/api/me', { cookie })).status).toBe(401)
+  })
+
+  test('sessions are listed per device, and a desktop session is marked as one', async () => {
+    const owner = await signUp('sessions-owner')
+    const webSignIn = await raw('POST', '/api/auth/login', { body: { email: owner.user.email, password } })
+    const cookie = webSignIn.setCookie.split(';')[0]
+    const approved = await call('POST', '/api/desktop-login/approve', { token: owner.token })
+    const code = (approved.json.data as { code: string }).code
+    const exchanged = await raw('POST', '/api/desktop-login/exchange', { body: { code } })
+    expect(exchanged.status).toBe(200)
+
+    const listed = await raw('GET', '/api/me/sessions', { cookie })
+    const clients = (listed.json.data as { sessions: Array<{ client: string }> }).sessions.map((item) => item.client)
+    expect(clients).toContain('web')
+    expect(clients).toContain('desktop')
+    expect(JSON.stringify(listed.json)).not.toMatch(/token_hash|tokenHash/)
+  })
+
+  test('a user can revoke their own session, and cannot revoke another user’s', async () => {
+    const { cookie: mine } = await webLogin('revoke-mine')
+    const { cookie: theirs } = await webLogin('revoke-theirs')
+    const theirList = (await raw('GET', '/api/me/sessions', { cookie: theirs })).json.data as { sessions: Array<{ id: string; current: boolean }> }
+    const theirSession = theirList.sessions.find((item) => item.current)
+    if (!theirSession) throw new Error('No current session in the list.')
+
+    expect((await raw('DELETE', `/api/me/sessions/${theirSession.id}`, { cookie: mine, origin: 'http://localhost:5174' })).status).toBe(404)
+    expect((await raw('DELETE', `/api/me/sessions/${theirSession.id}`, { cookie: theirs, origin: 'http://localhost:5174' })).status).toBe(204)
+    expect((await raw('GET', '/api/me', { cookie: theirs })).status).toBe(401)
+  })
+
+  test('CORS allows credentials for an allowed origin, so the portal can send its cookie', async () => {
+    const response = await corsApp.fetch(new Request('http://api.test/api/me', { headers: { Origin: 'http://localhost:13100' } }))
+    expect(response?.headers.get('access-control-allow-credentials')).toBe('true')
+  })
 })

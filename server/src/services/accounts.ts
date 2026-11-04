@@ -3,6 +3,7 @@ import type { SQL } from 'bun'
 import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { createSession, tokenHash } from '@/services/auth'
+import type { SessionClient } from '@/repositories/sessions.repository'
 import { sendPasswordResetEmail } from '@/services/mail'
 import { deleteSessionsForUser } from '@/repositories/sessions.repository'
 import { deleteUnusedResets, insertReset, lockActiveReset, markResetUsed } from '@/repositories/password-resets.repository'
@@ -15,17 +16,17 @@ export interface SessionResult {
 
 const resetLifetimeMs = 60 * 60_000
 
-export async function registerAccount(db: SQL, email: string, password: string): Promise<SessionResult> {
+export async function registerAccount(db: SQL, email: string, password: string, session: { client: SessionClient; device: string }): Promise<SessionResult> {
   const id = randomUUID()
   const passwordHash = await Bun.password.hash(password, { algorithm: 'argon2id' })
   if (!await insertUser(db, { id, email, passwordHash })) throw new AppError('EMAIL_TAKEN')
-  return { token: await createSession(db, id), user: { id, email } }
+  return { token: await createSession(db, id, session.client, session.device), user: { id, email } }
 }
 
-export async function loginAccount(db: SQL, email: string, password: string): Promise<SessionResult> {
+export async function loginAccount(db: SQL, email: string, password: string, session: { client: SessionClient; device: string }): Promise<SessionResult> {
   const account = await findUserByEmail(db, email)
   if (!account || !await Bun.password.verify(password, account.passwordHash)) throw new AppError('INVALID_CREDENTIALS')
-  return { token: await createSession(db, account.id), user: { id: account.id, email: account.email } }
+  return { token: await createSession(db, account.id, session.client, session.device), user: { id: account.id, email: account.email } }
 }
 
 // An unknown email gets the same answer as a known one, so the caller cannot tell which emails have accounts.
@@ -64,12 +65,12 @@ export async function resetPassword(db: SQL, rawToken: string, password: string)
 }
 
 // A desktop login code works once and expires after its own short lifetime.
-export async function exchangeDesktopCode(ctx: AppContext, code: string): Promise<SessionResult> {
+export async function exchangeDesktopCode(ctx: AppContext, code: string, device: string): Promise<SessionResult> {
   const key = tokenHash(code)
   const entry = ctx.desktopLoginCodes.get(key)
   ctx.desktopLoginCodes.delete(key)
   if (!entry || entry.expiresAt <= Date.now()) throw new AppError('DESKTOP_CODE_INVALID')
   const user = await findUserById(ctx.db, entry.userId)
   if (!user) throw new AppError('ACCOUNT_NOT_FOUND')
-  return { token: await createSession(ctx.db, user.id), user }
+  return { token: await createSession(ctx.db, user.id, 'desktop', device), user }
 }

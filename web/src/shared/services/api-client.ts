@@ -44,6 +44,8 @@ export async function apiPage<T = unknown>(path: string, options: ApiCallOptions
 async function send(path: string, options: ApiCallOptions): Promise<unknown> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method ?? 'GET',
+    // The session lives in an HttpOnly cookie, so the browser must send it with every request.
+    credentials: 'include',
     headers: {
       ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
       'Accept-Language': i18next.resolvedLanguage ?? i18next.language,

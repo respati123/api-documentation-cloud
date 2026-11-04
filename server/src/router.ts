@@ -12,6 +12,8 @@ import { handleSyncSocketUpgrade } from '@/routes/realtime-public'
 import { handleSyncTicket } from '@/routes/realtime-authed'
 import { handleBranches } from '@/routes/branches'
 import { handleWorkspaceVariables } from '@/routes/workspace-variables'
+import { handleSessions } from '@/routes/sessions'
+import { refusesCookieWrite, trustedOrigins } from '@/services/auth'
 import { handleSync } from '@/routes/sync'
 import { handleWorkspaceCollection } from '@/routes/workspace-collection'
 import { handleWorkspaceRecord } from '@/routes/workspace-record'
@@ -27,6 +29,9 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   // A browser sends the preflight without credentials, so it is answered before any session check.
   if (method === 'OPTIONS') return preflightResponse(request.headers.get('Origin'), ctx.config.corsOrigins)
 
+  // A write that carries only the session cookie must come from a trusted origin.
+  if (refusesCookieWrite(request, trustedOrigins(ctx.config.corsOrigins, ctx.config.publicWebUrl))) throw new AppError('CSRF_ORIGIN_REFUSED')
+
   if (method === 'GET' && path === '/api/sync/events') {
     if (!server) throw new AppError('WEBSOCKET_UNAVAILABLE')
     return handleSyncSocketUpgrade(ctx, request, url, method, path, server)
@@ -34,6 +39,9 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
 
   const publicResponse = await handlePublicRoutes(ctx, request, method, path)
   if (publicResponse) return publicResponse
+
+  const sessionsResponse = await handleSessions(ctx, request, method, path)
+  if (sessionsResponse) return sessionsResponse
 
   const user = await currentUser(ctx.db, request)
   const ticketResponse = await handleSyncTicket(ctx, method, path, user)

@@ -17,6 +17,7 @@ const EMPTY_TREE: ApiNode[] = []
 export function useWorkspaceDetailViewModel(workspaceId: string, tab: WorkspaceTab) {
   const { t } = useTranslation('workspace')
   const token = useAuthSessionStore((state) => state.token)
+  const signedIn = useAuthSessionStore((state) => state.signedIn)
   const userId = useAuthSessionStore((state) => state.userId)
   const snapshotQuery = useQuery({
     queryKey: workspaceDetailKeys.detail(token, workspaceId),
@@ -26,7 +27,7 @@ export function useWorkspaceDetailViewModel(workspaceId: string, tab: WorkspaceT
       if (!snapshot?.usesBranches) return snapshot
       return { ...snapshot, tree: await workspaceDetailService.branchTree(token, workspaceId) }
     },
-    enabled: token !== '' && workspaceId !== '',
+    enabled: signedIn && workspaceId !== '',
     staleTime: 30_000,
   })
   const history = useWorkspaceHistoryList(workspaceId, tab === 'overview' || tab === 'activity')
