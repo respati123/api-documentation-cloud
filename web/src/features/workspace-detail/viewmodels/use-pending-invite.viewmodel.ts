@@ -12,6 +12,7 @@ import { workspaceDetailService } from '../services/workspace-detail.service'
 export function usePendingInviteViewModel(navigate: (route: AppRoute, replace?: boolean) => void) {
   const { t } = useTranslation()
   const token = useAuthSessionStore((state) => state.token)
+  const signedIn = useAuthSessionStore((state) => state.signedIn)
   const queryClient = useQueryClient()
   const showNotice = useNoticeStore((state) => state.show)
   const [pendingToken, setPendingToken] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
@@ -30,11 +31,11 @@ export function usePendingInviteViewModel(navigate: (route: AppRoute, replace?: 
   const acceptInvite = accept.mutate
 
   useEffect(() => {
-    if (!token || !pendingToken || attempted.current) return
+    if (!signedIn || !pendingToken || attempted.current) return
     attempted.current = true
     showNotice({ kind: 'info', message: t(WORKSPACE_TEXT.invite.accepting) })
     acceptInvite(pendingToken)
-  }, [token, pendingToken, acceptInvite, showNotice, t])
+  }, [signedIn, pendingToken, acceptInvite, showNotice, t])
 
   return { pendingToken, hasPendingInvite: pendingToken !== '' }
 }

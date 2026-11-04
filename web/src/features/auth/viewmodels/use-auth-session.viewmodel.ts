@@ -5,9 +5,10 @@ import { authService } from '../services/auth.service'
 import { useAuthSessionStore } from '../stores/auth-session.store'
 import { shouldEndSession } from '../utils/session-errors'
 
+// The current user is read from the session cookie, so the key does not depend on any token.
 export const authKeys = {
   all: ['auth'] as const,
-  currentUser: (token: string) => [...authKeys.all, 'current-user', token] as const,
+  currentUser: () => [...authKeys.all, 'current-user'] as const,
 }
 
 export type SessionStatus = 'anonymous' | 'checking' | 'authenticated'
@@ -20,12 +21,13 @@ export function useAuthSessionViewModel(): {
 } {
   const queryClient = useQueryClient()
   const token = useAuthSessionStore((state) => state.token)
+  const saveSession = useAuthSessionStore((state) => state.saveSession)
   const clearSession = useAuthSessionStore((state) => state.clearSession)
 
+  // Asks the server whether this browser has a session. A missing or expired cookie answers 401, which is anonymous, not an error.
   const currentUser = useQuery({
-    queryKey: authKeys.currentUser(token),
-    queryFn: () => authService.currentUser(token),
-    enabled: token !== '',
+    queryKey: authKeys.currentUser(),
+    queryFn: () => authService.currentUser(''),
     staleTime: 5 * 60_000,
     retry: false,
   })
@@ -35,11 +37,15 @@ export function useAuthSessionViewModel(): {
     if (sessionEnded) clearSession({ expired: true })
   }, [sessionEnded, clearSession])
 
-  const status: SessionStatus =
-    token === '' ? 'anonymous' : currentUser.isPending ? 'checking' : currentUser.isSuccess ? 'authenticated' : 'anonymous'
+  useEffect(() => {
+    if (currentUser.isSuccess && currentUser.data) saveSession(currentUser.data)
+  }, [currentUser.isSuccess, currentUser.data, saveSession])
+
+  const status: SessionStatus = currentUser.isPending ? 'checking' : currentUser.isSuccess ? 'authenticated' : 'anonymous'
 
   async function signOut() {
-    if (token) await authService.logout(token).catch(() => undefined)
+    // The server ends this browser's session and clears its cookie. Other devices keep their sessions.
+    await authService.logout('').catch(() => undefined)
     clearSession()
     queryClient.removeQueries({ queryKey: authKeys.all })
   }

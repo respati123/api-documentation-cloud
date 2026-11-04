@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { useAuthSessionStore } from '@/features/auth'
 import { workspacesService } from '../services/workspaces.service'
 
 export const workspacesKeys = {
@@ -8,12 +9,13 @@ export const workspacesKeys = {
 
 // Pages are loaded on demand. `workspaces` holds every page loaded so far.
 export function useWorkspacesQuery(token: string) {
+  const signedIn = useAuthSessionStore((state) => state.signedIn)
   const query = useInfiniteQuery({
     queryKey: workspacesKeys.list(token),
     queryFn: ({ pageParam }) => workspacesService.listPage(token, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    enabled: token !== '',
+    enabled: signedIn,
     staleTime: 30_000,
   })
 

@@ -39,8 +39,8 @@ export function useAuthPageViewModel() {
       setNotice(null)
       if (variables.mode === 'login' || variables.mode === 'register') {
         if (!result) return
-        queryClient.setQueryData(authKeys.currentUser(result.token), result.user)
-        saveSession(result.token, result.user)
+        queryClient.setQueryData(authKeys.currentUser(), result.user)
+        saveSession(result.user)
         return
       }
       if (variables.mode === 'forgot') {

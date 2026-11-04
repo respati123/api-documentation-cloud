@@ -15,12 +15,13 @@ export type LiveStatus = 'connecting' | 'live' | 'offline'
 export function useWorkspaceLiveSync(workspaceId: string): LiveStatus {
   const { t } = useTranslation()
   const token = useAuthSessionStore((state) => state.token)
+  const signedIn = useAuthSessionStore((state) => state.signedIn)
   const queryClient = useQueryClient()
   const showNotice = useNoticeStore((state) => state.show)
   const [status, setStatus] = useState<LiveStatus>('connecting')
 
   useEffect(() => {
-    if (!token || !workspaceId) return
+    if (!signedIn || !workspaceId) return
     let disposed = false
     let socket: WebSocket | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -65,7 +66,7 @@ export function useWorkspaceLiveSync(workspaceId: string): LiveStatus {
       clearTimeout(timer)
       socket?.close()
     }
-  }, [token, workspaceId, queryClient, showNotice, t])
+  }, [signedIn, token, workspaceId, queryClient, showNotice, t])
 
   return status
 }
