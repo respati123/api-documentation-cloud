@@ -421,4 +421,21 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
 
     expect(response.json.requestId).toBe('trace-me-1')
   })
+  test('a workspace with branches refuses legacy pushes, so a whole-tree commit cannot land beside branch commits', async () => {
+    const owner = await signUp('branch-guard')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Guarded', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }], variables: { globals: [], environments: [] } },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    const pulled = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    const headCommitId = (pulled.json.data as { workspace: { headCommitId: string } }).workspace.headCommitId
+
+    const listed = await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })
+    expect((listed.json.data as { branches: unknown[] }).branches.length).toBe(1)
+
+    const legacy = await pushCommit(owner, workspaceId, [headCommitId], 'Legacy edit')
+    expect(legacy.status).toBe(409)
+    expect(legacy.json.code).toBe('WORKSPACE_USES_BRANCHES')
+  })
 })
