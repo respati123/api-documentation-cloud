@@ -49,5 +49,7 @@ export const id = {
   WORKSPACE_USES_BRANCHES: 'Workspace ini sinkron per branch collection. Perbarui app desktop, lalu sinkron lagi.',
   BRANCHES_NOT_ENABLED: 'Branch collection belum diaktifkan untuk workspace ini. Owner harus mengaktifkannya dulu.',
   VARIABLES_REVISION_CONFLICT: 'Variabel workspace sudah berubah sejak kamu membacanya. Baca lagi, lalu simpan.',
+  CSRF_ORIGIN_REFUSED: 'Permintaan ini datang dari halaman yang tidak boleh bertindak atas sesi kamu.',
+  SESSION_NOT_FOUND: 'Sesi itu tidak ditemukan.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>

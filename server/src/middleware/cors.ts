@@ -3,7 +3,11 @@ const allowedHeaders = 'Authorization, Content-Type, Accept-Language, X-Request-
 
 export function corsHeaders(origin: string | null, allowedOrigins: readonly string[]): Headers {
   const headers = new Headers({ Vary: 'Origin' })
-  if (origin && allowedOrigins.includes(origin)) headers.set('Access-Control-Allow-Origin', origin)
+  if (origin && allowedOrigins.includes(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin)
+    // The portal sends its session cookie, so the browser needs this to send it and to read the response.
+    headers.set('Access-Control-Allow-Credentials', 'true')
+  }
   return headers
 }
 

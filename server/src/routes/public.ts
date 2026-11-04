@@ -1,9 +1,15 @@
 import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
-import { clientAddress, currentUser, endSession, enforceLimit } from '@/services/auth'
+import { clearedSessionCookie, clientAddress, currentUser, deviceLabel, endSession, enforceLimit, isSecureOrigin, sessionCookie } from '@/services/auth'
 import { created, noContent, ok } from '@/lib/http'
 import { exchangeDesktopCode, loginAccount, registerAccount, requestPasswordReset, resetPassword } from '@/services/accounts'
+
+// Adds a Set-Cookie header to a response that was built by ok() or created().
+function withCookie(response: Response, cookie: string): Response {
+  response.headers.append('Set-Cookie', cookie)
+  return response
+}
 
 export async function handlePublicRoutes(ctx: AppContext, request: Request, method: string, path: string): Promise<Response | undefined> {
   const { db, limiter } = ctx
@@ -14,7 +20,8 @@ export async function handlePublicRoutes(ctx: AppContext, request: Request, meth
     const password = typeof body.password === 'string' ? body.password : ''
     if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new AppError('EMAIL_INVALID')
     if (password.length < 10 || password.length > 256) throw new AppError('PASSWORD_LENGTH_INVALID')
-    return created(await registerAccount(db, email, password))
+    const session = await registerAccount(db, email, password, { client: 'web', device: deviceLabel(request) })
+    return withCookie(created(session), sessionCookie(session.token, isSecureOrigin(ctx.config.publicWebUrl)))
   }
 
   if (method === 'POST' && path === '/api/auth/login') {
@@ -23,7 +30,8 @@ export async function handlePublicRoutes(ctx: AppContext, request: Request, meth
     const password = typeof body.password === 'string' ? body.password : ''
     enforceLimit(limiter, `login:${clientAddress(request)}`, 30, 15 * 60_000)
     if (email) enforceLimit(limiter, `login-email:${email}`, 10, 15 * 60_000)
-    return ok(await loginAccount(db, email, password))
+    const session = await loginAccount(db, email, password, { client: 'web', device: deviceLabel(request) })
+    return withCookie(ok(session), sessionCookie(session.token, isSecureOrigin(ctx.config.publicWebUrl)))
   }
 
   if (method === 'POST' && path === '/api/auth/forgot-password') {
@@ -51,12 +59,13 @@ export async function handlePublicRoutes(ctx: AppContext, request: Request, meth
     const body = await bodyOf(request)
     const code = typeof body.code === 'string' ? body.code.trim() : ''
     if (!code) throw new AppError('DESKTOP_CODE_REQUIRED')
-    return ok(await exchangeDesktopCode(ctx, code))
+    const device = typeof body.deviceName === 'string' ? body.deviceName.trim().slice(0, 120) : ''
+    return ok(await exchangeDesktopCode(ctx, code, device || 'Desktop app'))
   }
 
   if (method === 'POST' && path === '/api/auth/logout') {
     await endSession(db, request)
-    return noContent()
+    return withCookie(noContent(), clearedSessionCookie(isSecureOrigin(ctx.config.publicWebUrl)))
   }
   return undefined
 }

@@ -46,6 +46,8 @@ export const errorDefinitions = {
   WORKSPACE_USES_BRANCHES: { status: 409 },
   BRANCHES_NOT_ENABLED: { status: 409 },
   VARIABLES_REVISION_CONFLICT: { status: 409 },
+  CSRF_ORIGIN_REFUSED: { status: 403 },
+  SESSION_NOT_FOUND: { status: 404 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 
