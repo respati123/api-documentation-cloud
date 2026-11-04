@@ -25,7 +25,7 @@ function toRecord(row: BranchRow): BranchRecord {
 }
 
 export async function listBranches(db: SQL, workspaceId: string): Promise<BranchRecord[]> {
-  const rows: BranchRow[] = await db`SELECT id, workspace_id AS "workspaceId", collection_key AS "collectionKey", name, head_commit_id AS "headCommitId", created_by AS "createdBy", created_at AS "createdAt" FROM collection_branches WHERE workspace_id = ${workspaceId} ORDER BY collection_key, created_at, id`
+  const rows: BranchRow[] = await db`SELECT id, workspace_id AS "workspaceId", collection_key AS "collectionKey", name, head_commit_id AS "headCommitId", created_by AS "createdBy", created_at AS "createdAt" FROM collection_branches WHERE workspace_id = ${workspaceId} AND deleted_at IS NULL ORDER BY collection_key, created_at, id`
   return rows.map(toRecord)
 }
 
@@ -35,13 +35,13 @@ export async function countBranches(db: SQL, workspaceId: string): Promise<numbe
 }
 
 export async function findBranch(db: SQL, workspaceId: string, branchId: string): Promise<BranchRecord | undefined> {
-  const [row]: BranchRow[] = await db`SELECT id, workspace_id AS "workspaceId", collection_key AS "collectionKey", name, head_commit_id AS "headCommitId", created_by AS "createdBy", created_at AS "createdAt" FROM collection_branches WHERE workspace_id = ${workspaceId} AND id = ${branchId}`
+  const [row]: BranchRow[] = await db`SELECT id, workspace_id AS "workspaceId", collection_key AS "collectionKey", name, head_commit_id AS "headCommitId", created_by AS "createdBy", created_at AS "createdAt" FROM collection_branches WHERE workspace_id = ${workspaceId} AND id = ${branchId} AND deleted_at IS NULL`
   return row ? toRecord(row) : undefined
 }
 
 // Locks the branch row, so two pushes to the same branch cannot both advance its head.
 export async function lockBranch(db: SQL, workspaceId: string, branchId: string): Promise<BranchRecord | undefined> {
-  const [row]: BranchRow[] = await db`SELECT id, workspace_id AS "workspaceId", collection_key AS "collectionKey", name, head_commit_id AS "headCommitId", created_by AS "createdBy", created_at AS "createdAt" FROM collection_branches WHERE workspace_id = ${workspaceId} AND id = ${branchId} FOR UPDATE`
+  const [row]: BranchRow[] = await db`SELECT id, workspace_id AS "workspaceId", collection_key AS "collectionKey", name, head_commit_id AS "headCommitId", created_by AS "createdBy", created_at AS "createdAt" FROM collection_branches WHERE workspace_id = ${workspaceId} AND id = ${branchId} AND deleted_at IS NULL FOR UPDATE`
   return row ? toRecord(row) : undefined
 }
 
@@ -54,4 +54,10 @@ export async function insertBranch(
 
 export async function setBranchHead(db: SQL, branchId: string, commitId: string): Promise<void> {
   await db`UPDATE collection_branches SET head_commit_id = ${commitId} WHERE id = ${branchId}`
+}
+
+// Marks every live branch of a collection as deleted. The branches and their commits stay in the database.
+export async function softDeleteCollectionBranches(db: SQL, workspaceId: string, collectionKey: string): Promise<number> {
+  const rows = await db`UPDATE collection_branches SET deleted_at = now() WHERE workspace_id = ${workspaceId} AND collection_key = ${collectionKey} AND deleted_at IS NULL RETURNING id`
+  return rows.length
 }

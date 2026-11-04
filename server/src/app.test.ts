@@ -701,4 +701,37 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     const byViewer = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: viewer.token, body: { collectionKey: 'billing' } })
     expect(byViewer.status).toBe(403)
   })
+
+  test('deleting a collection hides its branches and keeps their history, and the collection can be added again', async () => {
+    const owner = await signUp('branch-delete-owner')
+    const editor = await signUp('branch-delete-editor')
+    const viewer = await signUp('branch-delete-viewer')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Delete', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }, { id: 'orders', kind: 'folder', name: 'Orders', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    await inviteAndAccept(owner, workspaceId, editor, 'editor')
+    await inviteAndAccept(owner, workspaceId, viewer, 'viewer')
+    const before = (await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })).json.data as { branches: Array<{ id: string; collectionKey: string }> }
+    const usersBranch = before.branches.find((item) => item.collectionKey === 'users')
+    if (!usersBranch) throw new Error('The users branch is missing.')
+
+    expect((await call('DELETE', `/api/workspaces/${workspaceId}/branches/collections/users`, { token: viewer.token })).status).toBe(403)
+    expect((await call('DELETE', `/api/workspaces/${workspaceId}/branches/collections/missing`, { token: editor.token })).json.code).toBe('BRANCH_COLLECTION_NOT_FOUND')
+
+    const deleted = await call('DELETE', `/api/workspaces/${workspaceId}/branches/collections/users`, { token: editor.token })
+    expect(deleted.status).toBe(200)
+
+    const after = (await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })).json.data as { branches: Array<{ collectionKey: string }> }
+    expect(after.branches.map((item) => item.collectionKey)).toEqual(['orders'])
+    const pulled = await call('GET', `/api/workspaces/${workspaceId}/branches/${usersBranch.id}/pull`, { token: owner.token })
+    expect(pulled.json.code).toBe('BRANCH_NOT_FOUND')
+    const kept = await db`SELECT count(*)::int AS n FROM commits WHERE branch_id = ${usersBranch.id}`
+    expect(kept[0].n).toBeGreaterThan(0)
+
+    const readded = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: owner.token, body: { collectionKey: 'users' } })
+    expect(readded.status).toBe(201)
+  })
 })
