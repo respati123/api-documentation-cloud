@@ -45,6 +45,7 @@ export const errorDefinitions = {
   BRANCH_NAME_TAKEN: { status: 409 },
   WORKSPACE_USES_BRANCHES: { status: 409 },
   BRANCHES_NOT_ENABLED: { status: 409 },
+  VARIABLES_REVISION_CONFLICT: { status: 409 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

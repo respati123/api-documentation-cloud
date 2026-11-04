@@ -569,4 +569,84 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
       ctx.syncSockets.delete(socket as never)
     }
   })
+
+  test('variables are read and written at workspace level, with a revision, and a stale write is refused', async () => {
+    const owner = await signUp('vars-owner')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Vars', tree: [], variables: { globals: [{ id: 'g1', name: 'host', value: 'first', secret: false }], environments: [] } },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+
+    const read = await call('GET', `/api/workspaces/${workspaceId}/variables`, { token: owner.token })
+    expect(read.status).toBe(200)
+    expect(read.json.data).toMatchObject({ revision: 0, variables: { globals: [{ name: 'host', value: 'first' }] } })
+
+    const saved = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 'g1', name: 'host', value: 'second', secret: false }], environments: [] } },
+    })
+    expect(saved.status).toBe(200)
+    expect((saved.json.data as { revision: number }).revision).toBe(1)
+
+    const stale = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 'g1', name: 'host', value: 'third', secret: false }], environments: [] } },
+    })
+    expect(stale.status).toBe(409)
+    expect(stale.json.code).toBe('VARIABLES_REVISION_CONFLICT')
+    expect((stale.json.details as { revision: number }).revision).toBe(1)
+  })
+
+  test('a secret variable is saved only without its value, because the cloud never stores secrets', async () => {
+    const owner = await signUp('vars-secret')
+    const created = await call('POST', '/api/workspaces', { token: owner.token, body: { name: 'Secrets', tree: [] } })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+
+    const filled = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 's1', name: 'token', value: 'device-secret', secret: true }], environments: [] } },
+    })
+    expect(filled.status).toBe(400)
+
+    const empty = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 's1', name: 'token', value: '', secret: true }], environments: [] } },
+    })
+    expect(empty.status).toBe(200)
+    const read = await call('GET', `/api/workspaces/${workspaceId}/variables`, { token: owner.token })
+    expect(JSON.stringify(read.json)).not.toContain('device-secret')
+  })
+
+  test('only an owner or editor can write variables, and a viewer can read them', async () => {
+    const owner = await signUp('vars-roles-owner')
+    const viewer = await signUp('vars-roles-viewer')
+    const created = await call('POST', '/api/workspaces', { token: owner.token, body: { name: 'Roles', tree: [] } })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await inviteAndAccept(owner, workspaceId, viewer, 'viewer')
+
+    expect((await call('GET', `/api/workspaces/${workspaceId}/variables`, { token: viewer.token })).status).toBe(200)
+    const refused = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: viewer.token,
+      body: { baseRevision: 0, variables: { globals: [], environments: [] } },
+    })
+    expect(refused.status).toBe(403)
+    expect(refused.json.code).toBe('ROLE_NOT_ALLOWED')
+  })
+
+  test('variables can be saved after collection branches are turned on', async () => {
+    const owner = await signUp('vars-branches')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Branched', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+
+    const saved = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 'g2', name: 'region', value: 'id', secret: false }], environments: [] } },
+    })
+    expect(saved.status).toBe(200)
+  })
 })
