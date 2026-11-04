@@ -23,10 +23,11 @@ describe.skipIf(!enabled)('runMigrations against PostgreSQL', () => {
     if (directory) await rm(directory, { recursive: true, force: true })
   })
 
+  const real = new URL('../migrations/', import.meta.url)
+
   // The shared test database may already hold the real migrations, so the temporary folder carries them too.
   async function writeFiles(a: string, b: string) {
     directory = directory || (await mkdtemp(join(tmpdir(), 'migrations-')))
-    const real = new URL('../migrations/', import.meta.url)
     for (const name of await readdir(real)) await copyFile(new URL(name, real), join(directory, name))
     await writeFile(join(directory, '9101_create_a.sql'), a)
     await writeFile(join(directory, '9102_create_b.sql'), b)
@@ -35,6 +36,8 @@ describe.skipIf(!enabled)('runMigrations against PostgreSQL', () => {
 
   test('applies pending migrations once and does nothing on the second run', async () => {
     const url = await writeFiles('CREATE TABLE IF NOT EXISTS migration_test_a (id TEXT);', 'CREATE TABLE IF NOT EXISTS migration_test_b (id TEXT);')
+    // The database may be empty or already migrated. After this, only the two test files are pending.
+    await runMigrations(db, real, quietLog)
 
     expect(await runMigrations(db, url, quietLog)).toBe(2)
     expect(await runMigrations(db, url, quietLog)).toBe(0)
