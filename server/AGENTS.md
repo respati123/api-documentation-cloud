@@ -17,12 +17,13 @@ server/
 │   ├── middleware/           request id, auth, rate limit, CORS, error handling
 │   └── lib/                  http helpers, logger, errors, validation helpers
 ├── migrations/               numbered SQL files, applied once each
-├── tests/                    integration tests against a real PostgreSQL
 ├── shared/                   sync and merge logic copied from the desktop app
 └── Dockerfile
 ```
 
 The split is done for every folder above. Application SQL lives in `repositories/` (the migration runner in `migrate.ts` is the exception), and transactions live in `services/`. `testing/` holds the shared database helpers for the repository tests.
+
+Tests sit next to the code as `*.test.ts`. There is no `tests/` folder. Database tests run only when `TEST_DATABASE_URL` is set, and never against `DATABASE_URL`.
 
 ## Commands
 

@@ -26,17 +26,26 @@ export async function sendPasswordResetEmail(config: AppConfig, to: string, rese
   })
 }
 
+// The invite link opens the portal. After signing in there, the workspace shows in the desktop app on its next sign-in.
+export function inviteMessage(invite: { workspaceName: string; role: 'editor' | 'viewer'; inviterEmail: string; inviteUrl: string }) {
+  const safeWorkspaceName = escapeHtml(invite.workspaceName)
+  const safeRole = escapeHtml(invite.role)
+  const safeInviterEmail = escapeHtml(invite.inviterEmail)
+  const safeInviteUrl = escapeHtml(invite.inviteUrl)
+  return {
+    text: `${invite.inviterEmail} invited you to join ${invite.workspaceName} with the ${invite.role} role.\n\nThis invitation expires in 7 days. Open this link to accept it, then sign in:\n${invite.inviteUrl}\n\nThe workspace then appears in the API Documentation desktop app the next time you sign in there.`,
+    html: `<p><strong>${safeInviterEmail}</strong> invited you to join <strong>${safeWorkspaceName}</strong> with the <strong>${safeRole}</strong> role.</p><p>This invitation expires in 7 days.</p><p><a href="${safeInviteUrl}">Open invitation</a></p><p>After you sign in, the workspace appears in the API Documentation desktop app the next time you sign in there.</p>`,
+  }
+}
+
 export async function sendInviteEmail(config: AppConfig, to: string, workspaceName: string, role: 'editor' | 'viewer', inviterEmail: string, inviteUrl: string): Promise<void> {
   const transporter = createMailer(config)
-  const safeWorkspaceName = escapeHtml(workspaceName)
-  const safeRole = escapeHtml(role)
-  const safeInviterEmail = escapeHtml(inviterEmail)
-  const safeInviteUrl = escapeHtml(inviteUrl)
+  const message = inviteMessage({ workspaceName, role, inviterEmail, inviteUrl })
   await transporter.sendMail({
     from: config.smtp.from,
     to,
     subject: `Invitation to ${workspaceName}`,
-    text: `${inviterEmail} invited you to join ${workspaceName} with the ${role} role.\n\nThis invitation expires in 7 days. Open the API Documentation desktop app and use this invitation link:\n${inviteUrl}`,
-    html: `<p><strong>${safeInviterEmail}</strong> invited you to join <strong>${safeWorkspaceName}</strong> with the <strong>${safeRole}</strong> role.</p><p>This invitation expires in 7 days.</p><p><a href="${safeInviteUrl}">Open invitation in API Documentation</a></p><p>If the link does not open the app, copy this link into the app's invitation field:<br><code>${safeInviteUrl}</code></p>`
+    text: message.text,
+    html: message.html,
   })
 }
