@@ -106,7 +106,8 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
               commitsHasMore={vm.commitsHasMore}
               commitsLoadingMore={vm.commitsLoadingMore}
               onLoadMoreCommits={vm.loadMoreCommits}
-              canRestore={workspace.role !== 'viewer'}
+              // Restore works on the workspace head, which a branch workspace does not move. It is hidden until branch restore exists.
+              canRestore={workspace.role !== 'viewer' && !workspace.usesBranches}
               selectedCommit={vm.activity.selectedCommit}
               latestCommitId={vm.activity.latestCommitId}
               onSelectCommit={vm.activity.selectCommit}

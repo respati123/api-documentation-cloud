@@ -38,6 +38,8 @@ export type ApiNode = RequestNode | FolderNode
 
 export type WorkspaceSnapshot = CloudWorkspaceRef & {
   tree: ApiNode[]
+  // True once the workspace syncs by collection branches. Its tree then comes from the branch heads, and history and restore are per branch.
+  usesBranches?: boolean
   variables?: { globals: unknown[]; environments: unknown[] }
   parentIds?: string[]
   message?: string
