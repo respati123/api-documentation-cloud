@@ -46,5 +46,6 @@ export const en = {
   BRANCH_COLLECTION_NOT_FOUND: 'That collection has no branches in this workspace.',
   BRANCH_NAME_INVALID: 'Enter a branch name of up to 60 characters.',
   BRANCH_NAME_TAKEN: 'A branch with this name already exists for this collection.',
+  WORKSPACE_USES_BRANCHES: 'This workspace syncs by collection branches. Update the desktop app, then sync again.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>

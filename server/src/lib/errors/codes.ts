@@ -43,6 +43,7 @@ export const errorDefinitions = {
   BRANCH_COLLECTION_NOT_FOUND: { status: 404 },
   BRANCH_NAME_INVALID: { status: 400 },
   BRANCH_NAME_TAKEN: { status: 409 },
+  WORKSPACE_USES_BRANCHES: { status: 409 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

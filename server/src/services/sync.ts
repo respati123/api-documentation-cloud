@@ -6,6 +6,7 @@ import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagin
 import { emptyWorkspaceVariables, parseJson, parseSnapshot, sanitizeWorkspaceVariables } from '@/lib/validation'
 import type { AuthUser, WorkspaceVariables } from '@/models/workspace'
 import { findCommitById, findCommitInWorkspace, insertCommit, listCommitsPage, type CommitListRow, type CommitRecord } from '@/repositories/commits.repository'
+import { countBranches } from '@/repositories/branches.repository'
 import { findWorkspaceSnapshotRow, lockWorkspaceHead, setWorkspaceHead } from '@/repositories/workspaces.repository'
 import { broadcastWorkspaceUpdate } from '@/services/events'
 
@@ -34,6 +35,7 @@ export async function restoreCommit(ctx: AppContext, workspaceId: string, user: 
   const restored = await ctx.db.begin(async (tx) => {
     const workspace = await lockWorkspaceHead(tx, workspaceId)
     if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
+    if ((await countBranches(tx, workspaceId)) > 0) throw new AppError('WORKSPACE_USES_BRANCHES')
     if (workspace.headCommitId === sourceId) throw new AppError('VERSION_ALREADY_LATEST')
     const source = await findCommitInWorkspace(tx, workspaceId, sourceId)
     if (!source) throw new AppError('COMMIT_NOT_FOUND')
@@ -68,6 +70,7 @@ export async function pushCommits(ctx: AppContext, workspaceId: string, user: Au
   const result = await ctx.db.begin(async (tx) => {
     const workspace = await lockWorkspaceHead(tx, workspaceId)
     if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
+    if ((await countBranches(tx, workspaceId)) > 0) throw new AppError('WORKSPACE_USES_BRANCHES')
     let headId = workspace.headCommitId
     for (const commit of commits) {
       const parents = commit.parentIds as string[]
