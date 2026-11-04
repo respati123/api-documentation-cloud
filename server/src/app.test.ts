@@ -734,4 +734,17 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     const readded = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: owner.token, body: { collectionKey: 'users' } })
     expect(readded.status).toBe(201)
   })
+
+  test('a pull says whether the workspace syncs by collection branches', async () => {
+    const owner = await signUp('uses-branches')
+    const created = await call('POST', '/api/workspaces', { token: owner.token, body: { name: 'Flag', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] } })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+
+    const before = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    expect((before.json.data as { workspace: { usesBranches: boolean } }).workspace.usesBranches).toBe(false)
+
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    const after = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    expect((after.json.data as { workspace: { usesBranches: boolean } }).workspace.usesBranches).toBe(true)
+  })
 })
