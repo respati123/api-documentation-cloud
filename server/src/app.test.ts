@@ -556,4 +556,17 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     const accepted = await inviteAndAccept(owner, mine.workspaceId, invitee, 'viewer')
     expect(JSON.stringify(accepted.json)).not.toContain('secret-folder')
   })
+
+  test('creating a workspace tells the owner’s open sockets that the workspace list changed', async () => {
+    const owner = await signUp('create-event')
+    const sent: string[] = []
+    const socket = { data: { userId: owner.user.id }, send: (message: string) => void sent.push(message) }
+    ctx.syncSockets.add(socket as never)
+    try {
+      await createWorkspace(owner, 'Announced')
+      expect(sent.map((message) => (JSON.parse(message) as { type: string }).type)).toContain('workspace.changed')
+    } finally {
+      ctx.syncSockets.delete(socket as never)
+    }
+  })
 })
