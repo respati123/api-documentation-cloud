@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { randomUUID } from 'node:crypto'
+import { generateKeyPairSync, randomUUID } from 'node:crypto'
 import { SQL } from 'bun'
 import { loadConfig } from '@/config'
 import { createApp } from '@/app'
@@ -9,6 +9,7 @@ import { runMigrations } from '@/migrate'
 import type { AppContext } from '@/context'
 import { insertReset } from '@/repositories/password-resets.repository'
 import { tokenHash } from '@/services/auth'
+import { openDesktopBox } from '@/services/desktop-box'
 
 // HTTP tests through the real router, middleware, and PostgreSQL. Skipped unless TEST_DATABASE_URL is set, and refused when it matches DATABASE_URL.
 const testUrl = process.env.TEST_DATABASE_URL
@@ -839,5 +840,29 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
   test('CORS allows credentials for an allowed origin, so the portal can send its cookie', async () => {
     const response = await corsApp.fetch(new Request('http://api.test/api/me', { headers: { Origin: 'http://localhost:13100' } }))
     expect(response?.headers.get('access-control-allow-credentials')).toBe('true')
+  })
+
+  test('approving with a desktop public key returns a box only that desktop can open, and it signs in as the user', async () => {
+    const owner = await signUp('box-owner')
+    const pair = generateKeyPairSync('x25519')
+    const publicKey = pair.publicKey.export({ format: 'der', type: 'spki' }).subarray(12).toString('base64url')
+
+    const approved = await call('POST', '/api/desktop-login/approve', { token: owner.token, body: { publicKey, deviceName: 'Test desktop' } })
+    expect(approved.status).toBe(201)
+    const data = approved.json.data as { box?: string; code?: string }
+    expect(data.code).toBeUndefined()
+    if (!data.box) throw new Error('No box in the answer.')
+
+    const token = openDesktopBox(pair.privateKey, data.box)
+    const me = await call('GET', '/api/me', { token })
+    expect(me.status).toBe(200)
+    expect(JSON.stringify(me.json)).toContain(owner.user.email)
+  })
+
+  test('approving with a public key that is not valid is refused before any session is created', async () => {
+    const owner = await signUp('box-bad-key')
+    const refused = await call('POST', '/api/desktop-login/approve', { token: owner.token, body: { publicKey: 'not-a-key' } })
+    expect(refused.status).toBe(400)
+    expect(refused.json.code).toBe('DESKTOP_KEY_INVALID')
   })
 })

@@ -46,7 +46,7 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   const user = await currentUser(ctx.db, request)
   const ticketResponse = await handleSyncTicket(ctx, method, path, user)
   if (ticketResponse) return ticketResponse
-  const desktopResponse = await handleDesktopApprove(ctx, method, path, user)
+  const desktopResponse = await handleDesktopApprove(ctx, request, method, path, user)
   if (desktopResponse) return desktopResponse
   const collectionResponse = await handleWorkspaceCollection(ctx, request, url, method, path, user)
   if (collectionResponse) return collectionResponse

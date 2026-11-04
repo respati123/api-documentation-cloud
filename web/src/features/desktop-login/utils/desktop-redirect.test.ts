@@ -1,17 +1,17 @@
 import { describe, expect, test } from 'vitest'
-import { isDesktopLoopbackRedirect } from './desktop-redirect'
+import { isDesktopSignInRedirect } from '@/features/desktop-login/utils/desktop-redirect'
 
-describe('isDesktopLoopbackRedirect', () => {
-  test('accepts the loopback callback the desktop app sends', () => {
-    expect(isDesktopLoopbackRedirect('http://127.0.0.1:51234/callback')).toBe(true)
-    expect(isDesktopLoopbackRedirect('http://localhost:4000/callback')).toBe(true)
+describe('isDesktopSignInRedirect', () => {
+  test('accepts exactly the desktop sign-in address', () => {
+    expect(isDesktopSignInRedirect('api-docs://auth/finish')).toBe(true)
   })
 
-  test('rejects other hosts, paths, schemes, and query strings', () => {
-    expect(isDesktopLoopbackRedirect('https://example.com:4000/callback')).toBe(false)
-    expect(isDesktopLoopbackRedirect('http://127.0.0.1:4000/other')).toBe(false)
-    expect(isDesktopLoopbackRedirect('http://127.0.0.1/callback')).toBe(false)
-    expect(isDesktopLoopbackRedirect('http://127.0.0.1:4000/callback?x=1')).toBe(false)
-    expect(isDesktopLoopbackRedirect('not a url')).toBe(false)
+  test('refuses any other address, so a crafted link cannot send a sign-in box elsewhere', () => {
+    expect(isDesktopSignInRedirect('api-docs://auth/other')).toBe(false)
+    expect(isDesktopSignInRedirect('api-docs://auth/finish?x=1')).toBe(false)
+    expect(isDesktopSignInRedirect('api-docs://invite/finish')).toBe(false)
+    expect(isDesktopSignInRedirect('https://evil.example/finish')).toBe(false)
+    expect(isDesktopSignInRedirect('http://127.0.0.1:38459/callback')).toBe(false)
+    expect(isDesktopSignInRedirect('not a url')).toBe(false)
   })
 })

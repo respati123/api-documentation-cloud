@@ -51,5 +51,6 @@ export const en = {
   VARIABLES_REVISION_CONFLICT: 'The workspace variables changed since you read them. Read them again, then save.',
   CSRF_ORIGIN_REFUSED: 'This request came from a page that is not allowed to act for your session.',
   SESSION_NOT_FOUND: 'That session was not found.',
+  DESKTOP_KEY_INVALID: 'The desktop app sent a sign-in key that is not valid.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>
