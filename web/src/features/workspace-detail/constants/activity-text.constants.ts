@@ -4,6 +4,8 @@ export const ACTIVITY_TEXT = {
   empty: {
     title: 'activity:empty.title',
     detail: 'activity:empty.detail',
+    branchTitle: 'activity:empty.branchTitle',
+    branchDetail: 'activity:empty.branchDetail',
   },
   history: {
     title: 'activity:history.title',

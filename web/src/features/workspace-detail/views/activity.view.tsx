@@ -29,6 +29,8 @@ export interface ActivityViewProps {
   commitsLoadingMore: boolean
   onLoadMoreCommits: () => void
   canRestore: boolean
+  // A branch workspace's head no longer moves, so its commit list would be stale. The list is not shown for it.
+  usesBranches: boolean
   selectedCommit: CloudCommit | null
   latestCommitId: string
   onSelectCommit: (commitId: string) => void
@@ -46,6 +48,7 @@ export function ActivityView({
   commitsLoadingMore,
   onLoadMoreCommits,
   canRestore,
+  usesBranches,
   selectedCommit,
   latestCommitId,
   onSelectCommit,
@@ -57,6 +60,11 @@ export function ActivityView({
   onRestore,
 }: ActivityViewProps) {
   const { t, i18n } = useTranslation('activity')
+  if (usesBranches) {
+    return (
+      <EmptyState title={t(ACTIVITY_TEXT.empty.branchTitle)} detail={t(ACTIVITY_TEXT.empty.branchDetail)} testId="activity-empty-state" />
+    )
+  }
   if (!commits.length) {
     return <EmptyState title={t(ACTIVITY_TEXT.empty.title)} detail={t(ACTIVITY_TEXT.empty.detail)} testId="activity-empty-state" />
   }
