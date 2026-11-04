@@ -571,6 +571,30 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     }
   })
 
+  test('a joined member hears about the join on an open socket, and can list and pull the workspace right away', async () => {
+    const owner = await signUp('join-owner')
+    const invitee = await signUp('join-invitee')
+    const { workspaceId } = await createWorkspace(owner, 'Joined')
+    const sent: string[] = []
+    const socket = { data: { userId: invitee.user.id }, send: (message: string) => void sent.push(message) }
+    ctx.syncSockets.add(socket as never)
+    try {
+      const accepted = await inviteAndAccept(owner, workspaceId, invitee, 'viewer')
+      expect(accepted.status).toBeLessThan(300)
+      const reasons = sent.map((message) => (JSON.parse(message) as { reason?: string }).reason)
+      expect(reasons).toContain('members')
+
+      const list = await call('GET', '/api/workspaces', { token: invitee.token })
+      const listed = (list.json.data as { workspaces: { id: string }[] }).workspaces.map((item) => item.id)
+      expect(listed).toContain(workspaceId)
+
+      const pulled = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: invitee.token })
+      expect(pulled.status).toBe(200)
+    } finally {
+      ctx.syncSockets.delete(socket as never)
+    }
+  })
+
   test('variables are read and written at workspace level, with a revision, and a stale write is refused', async () => {
     const owner = await signUp('vars-owner')
     const created = await call('POST', '/api/workspaces', {
