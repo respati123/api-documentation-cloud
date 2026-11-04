@@ -649,4 +649,56 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     })
     expect(saved.status).toBe(200)
   })
+
+  test('a branch push tells open sockets that the workspace changed', async () => {
+    const owner = await signUp('branch-push-event')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Pushed', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    const listed = await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })
+    const users = (listed.json.data as { branches: Array<{ id: string; collectionKey: string; headCommitId: string }> }).branches.find((item) => item.collectionKey === 'users')
+    if (!users) throw new Error('The users branch is missing.')
+
+    const sent: string[] = []
+    const socket = { data: { userId: owner.user.id }, send: (message: string) => void sent.push(message) }
+    ctx.syncSockets.add(socket as never)
+    try {
+      const pushed = await call('POST', `/api/workspaces/${workspaceId}/branches/${users.id}/push`, {
+        token: owner.token,
+        body: { commits: [{ id: randomUUID(), parentIds: [users.headCommitId], message: 'Edit users', tree: [{ id: 'users', kind: 'folder', name: 'Users v2', children: [] }] }] },
+      })
+      expect(pushed.status).toBe(201)
+      expect(sent.map((message) => (JSON.parse(message) as { type: string }).type)).toContain('workspace.changed')
+    } finally {
+      ctx.syncSockets.delete(socket as never)
+    }
+  })
+
+  test('an editor can add a branch for a new collection, and a collection that already has one is refused', async () => {
+    const owner = await signUp('branch-add-owner')
+    const editor = await signUp('branch-add-editor')
+    const viewer = await signUp('branch-add-viewer')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Added', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    await inviteAndAccept(owner, workspaceId, editor, 'editor')
+    await inviteAndAccept(owner, workspaceId, viewer, 'viewer')
+
+    const added = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: editor.token, body: { collectionKey: 'orders' } })
+    expect(added.status).toBe(201)
+    expect((added.json.data as { branch: { collectionKey: string; name: string; headCommitId: string | null } }).branch).toMatchObject({ collectionKey: 'orders', name: 'main', headCommitId: null })
+
+    const again = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: editor.token, body: { collectionKey: 'orders' } })
+    expect(again.status).toBe(409)
+    expect(again.json.code).toBe('BRANCH_NAME_TAKEN')
+
+    const byViewer = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: viewer.token, body: { collectionKey: 'billing' } })
+    expect(byViewer.status).toBe(403)
+  })
 })

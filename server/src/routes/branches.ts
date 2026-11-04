@@ -4,7 +4,8 @@ import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
 import { created, ok } from '@/lib/http'
 import { decodeCursor, readLimit } from '@/lib/pagination'
-import { branchHistoryPage, createBranch, enableCollectionBranches, listBranchesFor, pullBranch, pushBranch, type BranchPushCommit } from '@/services/branches'
+import { addCollectionBranch, branchHistoryPage, createBranch, enableCollectionBranches, listBranchesFor, pullBranch, pushBranch, type BranchPushCommit } from '@/services/branches'
+import { broadcastWorkspaceChange } from '@/services/events'
 
 const maxPushCommits = 100
 
@@ -26,6 +27,12 @@ export async function handleBranches(
   if (method === 'POST' && action === 'branches/enable') {
     await enableCollectionBranches(db, workspaceId, user)
     return ok({ branches: await listBranchesFor(db, workspaceId, user) })
+  }
+
+  if (method === 'POST' && action === 'branches/collections') {
+    const body = await bodyOf(request)
+    if (typeof body.collectionKey !== 'string') throw new AppError('BRANCH_NAME_INVALID')
+    return created({ branch: await addCollectionBranch(db, workspaceId, user, body.collectionKey) })
   }
 
   if (method === 'POST' && action === 'branches') {
@@ -55,7 +62,10 @@ export async function handleBranches(
       if (typeof commit.id !== 'string' || !Array.isArray(commit.parentIds) || typeof commit.message !== 'string') throw new AppError('PUSH_COMMIT_INVALID')
       return { id: commit.id, parentIds: commit.parentIds as unknown[], message: commit.message, tree: commit.tree }
     })
-    return created({ headCommitId: await pushBranch(db, workspaceId, branchId, user, commits) })
+    const headCommitId = await pushBranch(db, workspaceId, branchId, user, commits)
+    // A branch push does not move the workspace head, so the event only says that the workspace changed.
+    await broadcastWorkspaceChange(ctx, workspaceId, 'settings')
+    return created({ headCommitId })
   }
 
   return undefined

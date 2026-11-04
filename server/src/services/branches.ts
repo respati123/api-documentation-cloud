@@ -62,6 +62,19 @@ export async function enableCollectionBranches(db: SQL, workspaceId: string, use
   await ensureCollectionBranches(db, workspaceId)
 }
 
+// Adds a main branch for a collection that has none yet, so its first commit can be pushed.
+export async function addCollectionBranch(db: SQL, workspaceId: string, user: AuthUser, collectionKey: string): Promise<BranchRecord> {
+  await requireRole(db, workspaceId, user.id, writerRoles)
+  if (!collectionKey.trim()) throw new AppError('BRANCH_NAME_INVALID')
+  if ((await countBranches(db, workspaceId)) === 0) throw new AppError('BRANCHES_NOT_ENABLED')
+  if ((await listBranches(db, workspaceId)).some((branch) => branch.collectionKey === collectionKey)) throw new AppError('BRANCH_NAME_TAKEN')
+  const id = randomUUID()
+  await insertBranch(db, { id, workspaceId, collectionKey, name: mainName, headCommitId: null, createdBy: user.id })
+  const created = await findBranch(db, workspaceId, id)
+  if (!created) throw new AppError('BRANCH_NOT_FOUND')
+  return created
+}
+
 export async function listBranchesFor(db: SQL, workspaceId: string, user: AuthUser): Promise<BranchRecord[]> {
   await requireRole(db, workspaceId, user.id, readerRoles)
   return listBranches(db, workspaceId)
