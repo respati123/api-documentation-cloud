@@ -23,7 +23,13 @@ const snapshotSchema = z.looseObject({
   createdAt: z.string(),
   updatedAt: z.optional(z.nullable(z.string())),
   tree: z.array(apiNodeSchema),
+  usesBranches: z.optional(z.boolean()),
 })
+
+const branchListSchema = z.object({
+  branches: z.array(z.object({ id: z.string(), collectionKey: z.string(), name: z.string(), headCommitId: z.nullable(z.string()) })),
+})
+const branchPullSchema = z.object({ tree: z.array(apiNodeSchema) })
 
 const pullResponseSchema = z.object({ workspace: z.nullable(snapshotSchema) })
 const historyResponseSchema = z.object({ commits: z.array(cloudCommitSchema) })
@@ -42,6 +48,17 @@ export const workspaceDetailService = {
     const workspace = result.workspace
     if (!workspace) return null
     return { ...workspace, updatedAt: workspace.updatedAt ?? null }
+  },
+
+  // The collections of a workspace that syncs by branches. Each branch holds one collection, so the tree is the branch heads in order.
+  branchTree: async (token: string, workspaceId: string): Promise<ApiNode[]> => {
+    const { branches } = z.parse(branchListSchema, await apiCall(`/api/workspaces/${workspaceId}/branches`, { token }))
+    const pulls = await Promise.all(
+      branches.map(async (branch) =>
+        z.parse(branchPullSchema, await apiCall(`/api/workspaces/${workspaceId}/branches/${branch.id}/pull`, { token })),
+      ),
+    )
+    return pulls.flatMap((pull) => pull.tree)
   },
 
   historyPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudCommit>> => {

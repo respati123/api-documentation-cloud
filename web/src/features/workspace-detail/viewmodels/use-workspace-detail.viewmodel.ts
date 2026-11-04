@@ -20,7 +20,12 @@ export function useWorkspaceDetailViewModel(workspaceId: string, tab: WorkspaceT
   const userId = useAuthSessionStore((state) => state.userId)
   const snapshotQuery = useQuery({
     queryKey: workspaceDetailKeys.detail(token, workspaceId),
-    queryFn: () => workspaceDetailService.pull(token, workspaceId),
+    queryFn: async () => {
+      const snapshot = await workspaceDetailService.pull(token, workspaceId)
+      // A workspace that syncs by branches keeps its head unchanged, so its collections come from the branch heads.
+      if (!snapshot?.usesBranches) return snapshot
+      return { ...snapshot, tree: await workspaceDetailService.branchTree(token, workspaceId) }
+    },
     enabled: token !== '' && workspaceId !== '',
     staleTime: 30_000,
   })

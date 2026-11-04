@@ -569,4 +569,182 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
       ctx.syncSockets.delete(socket as never)
     }
   })
+
+  test('variables are read and written at workspace level, with a revision, and a stale write is refused', async () => {
+    const owner = await signUp('vars-owner')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Vars', tree: [], variables: { globals: [{ id: 'g1', name: 'host', value: 'first', secret: false }], environments: [] } },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+
+    const read = await call('GET', `/api/workspaces/${workspaceId}/variables`, { token: owner.token })
+    expect(read.status).toBe(200)
+    expect(read.json.data).toMatchObject({ revision: 0, variables: { globals: [{ name: 'host', value: 'first' }] } })
+
+    const saved = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 'g1', name: 'host', value: 'second', secret: false }], environments: [] } },
+    })
+    expect(saved.status).toBe(200)
+    expect((saved.json.data as { revision: number }).revision).toBe(1)
+
+    const stale = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 'g1', name: 'host', value: 'third', secret: false }], environments: [] } },
+    })
+    expect(stale.status).toBe(409)
+    expect(stale.json.code).toBe('VARIABLES_REVISION_CONFLICT')
+    expect((stale.json.details as { revision: number }).revision).toBe(1)
+  })
+
+  test('a secret variable is saved only without its value, because the cloud never stores secrets', async () => {
+    const owner = await signUp('vars-secret')
+    const created = await call('POST', '/api/workspaces', { token: owner.token, body: { name: 'Secrets', tree: [] } })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+
+    const filled = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 's1', name: 'token', value: 'device-secret', secret: true }], environments: [] } },
+    })
+    expect(filled.status).toBe(400)
+
+    const empty = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 's1', name: 'token', value: '', secret: true }], environments: [] } },
+    })
+    expect(empty.status).toBe(200)
+    const read = await call('GET', `/api/workspaces/${workspaceId}/variables`, { token: owner.token })
+    expect(JSON.stringify(read.json)).not.toContain('device-secret')
+  })
+
+  test('only an owner or editor can write variables, and a viewer can read them', async () => {
+    const owner = await signUp('vars-roles-owner')
+    const viewer = await signUp('vars-roles-viewer')
+    const created = await call('POST', '/api/workspaces', { token: owner.token, body: { name: 'Roles', tree: [] } })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await inviteAndAccept(owner, workspaceId, viewer, 'viewer')
+
+    expect((await call('GET', `/api/workspaces/${workspaceId}/variables`, { token: viewer.token })).status).toBe(200)
+    const refused = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: viewer.token,
+      body: { baseRevision: 0, variables: { globals: [], environments: [] } },
+    })
+    expect(refused.status).toBe(403)
+    expect(refused.json.code).toBe('ROLE_NOT_ALLOWED')
+  })
+
+  test('variables can be saved after collection branches are turned on', async () => {
+    const owner = await signUp('vars-branches')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Branched', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+
+    const saved = await call('PUT', `/api/workspaces/${workspaceId}/variables`, {
+      token: owner.token,
+      body: { baseRevision: 0, variables: { globals: [{ id: 'g2', name: 'region', value: 'id', secret: false }], environments: [] } },
+    })
+    expect(saved.status).toBe(200)
+  })
+
+  test('a branch push tells open sockets that the workspace changed', async () => {
+    const owner = await signUp('branch-push-event')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Pushed', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    const listed = await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })
+    const users = (listed.json.data as { branches: Array<{ id: string; collectionKey: string; headCommitId: string }> }).branches.find((item) => item.collectionKey === 'users')
+    if (!users) throw new Error('The users branch is missing.')
+
+    const sent: string[] = []
+    const socket = { data: { userId: owner.user.id }, send: (message: string) => void sent.push(message) }
+    ctx.syncSockets.add(socket as never)
+    try {
+      const pushed = await call('POST', `/api/workspaces/${workspaceId}/branches/${users.id}/push`, {
+        token: owner.token,
+        body: { commits: [{ id: randomUUID(), parentIds: [users.headCommitId], message: 'Edit users', tree: [{ id: 'users', kind: 'folder', name: 'Users v2', children: [] }] }] },
+      })
+      expect(pushed.status).toBe(201)
+      expect(sent.map((message) => (JSON.parse(message) as { type: string }).type)).toContain('workspace.changed')
+    } finally {
+      ctx.syncSockets.delete(socket as never)
+    }
+  })
+
+  test('an editor can add a branch for a new collection, and a collection that already has one is refused', async () => {
+    const owner = await signUp('branch-add-owner')
+    const editor = await signUp('branch-add-editor')
+    const viewer = await signUp('branch-add-viewer')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Added', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    await inviteAndAccept(owner, workspaceId, editor, 'editor')
+    await inviteAndAccept(owner, workspaceId, viewer, 'viewer')
+
+    const added = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: editor.token, body: { collectionKey: 'orders' } })
+    expect(added.status).toBe(201)
+    expect((added.json.data as { branch: { collectionKey: string; name: string; headCommitId: string | null } }).branch).toMatchObject({ collectionKey: 'orders', name: 'main', headCommitId: null })
+
+    const again = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: editor.token, body: { collectionKey: 'orders' } })
+    expect(again.status).toBe(409)
+    expect(again.json.code).toBe('BRANCH_NAME_TAKEN')
+
+    const byViewer = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: viewer.token, body: { collectionKey: 'billing' } })
+    expect(byViewer.status).toBe(403)
+  })
+
+  test('deleting a collection hides its branches and keeps their history, and the collection can be added again', async () => {
+    const owner = await signUp('branch-delete-owner')
+    const editor = await signUp('branch-delete-editor')
+    const viewer = await signUp('branch-delete-viewer')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Delete', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }, { id: 'orders', kind: 'folder', name: 'Orders', children: [] }] },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    await inviteAndAccept(owner, workspaceId, editor, 'editor')
+    await inviteAndAccept(owner, workspaceId, viewer, 'viewer')
+    const before = (await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })).json.data as { branches: Array<{ id: string; collectionKey: string }> }
+    const usersBranch = before.branches.find((item) => item.collectionKey === 'users')
+    if (!usersBranch) throw new Error('The users branch is missing.')
+
+    expect((await call('DELETE', `/api/workspaces/${workspaceId}/branches/collections/users`, { token: viewer.token })).status).toBe(403)
+    expect((await call('DELETE', `/api/workspaces/${workspaceId}/branches/collections/missing`, { token: editor.token })).json.code).toBe('BRANCH_COLLECTION_NOT_FOUND')
+
+    const deleted = await call('DELETE', `/api/workspaces/${workspaceId}/branches/collections/users`, { token: editor.token })
+    expect(deleted.status).toBe(200)
+
+    const after = (await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })).json.data as { branches: Array<{ collectionKey: string }> }
+    expect(after.branches.map((item) => item.collectionKey)).toEqual(['orders'])
+    const pulled = await call('GET', `/api/workspaces/${workspaceId}/branches/${usersBranch.id}/pull`, { token: owner.token })
+    expect(pulled.json.code).toBe('BRANCH_NOT_FOUND')
+    const kept = await db`SELECT count(*)::int AS n FROM commits WHERE branch_id = ${usersBranch.id}`
+    expect(kept[0].n).toBeGreaterThan(0)
+
+    const readded = await call('POST', `/api/workspaces/${workspaceId}/branches/collections`, { token: owner.token, body: { collectionKey: 'users' } })
+    expect(readded.status).toBe(201)
+  })
+
+  test('a pull says whether the workspace syncs by collection branches', async () => {
+    const owner = await signUp('uses-branches')
+    const created = await call('POST', '/api/workspaces', { token: owner.token, body: { name: 'Flag', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }] } })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+
+    const before = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    expect((before.json.data as { workspace: { usesBranches: boolean } }).workspace.usesBranches).toBe(false)
+
+    await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    const after = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    expect((after.json.data as { workspace: { usesBranches: boolean } }).workspace.usesBranches).toBe(true)
+  })
 })

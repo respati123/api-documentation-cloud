@@ -14,7 +14,9 @@ export async function pullWorkspace(db: SQL, workspaceId: string, userId: string
   const row = await findWorkspaceSnapshotRow(db, workspaceId, userId)
   if (!row) throw new AppError('WORKSPACE_NOT_FOUND')
   const { snapshot, parentIds, ...workspace } = row
-  return { ...workspace, parentIds: parseJson<string[]>(parentIds, []), ...parseSnapshot(parseJson<unknown>(snapshot, [])) }
+  // A client that still syncs through the head uses this to see that the collections now sync by branch.
+  const usesBranches = (await countBranches(db, workspaceId)) > 0
+  return { ...workspace, parentIds: parseJson<string[]>(parentIds, []), usesBranches, ...parseSnapshot(parseJson<unknown>(snapshot, [])) }
 }
 
 export async function historyPage(db: SQL, workspaceId: string, limit: number, cursor: CursorKeys | null) {

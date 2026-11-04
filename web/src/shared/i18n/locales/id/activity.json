@@ -1,7 +1,9 @@
 {
   "empty": {
     "title": "Belum ada commit di cloud",
-    "detail": "Dorong commit dari aplikasi desktop untuk memulai riwayat workspace bersama."
+    "detail": "Dorong commit dari aplikasi desktop untuk memulai riwayat workspace bersama.",
+    "branchTitle": "Riwayat per collection",
+    "branchDetail": "Workspace ini sinkron per branch collection. Riwayat workspace hanya menampilkan head lama, jadi belum ditampilkan di sini."
   },
   "history": {
     "title": "Riwayat commit",

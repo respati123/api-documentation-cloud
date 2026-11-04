@@ -1,7 +1,9 @@
 {
   "empty": {
     "title": "No cloud commits yet",
-    "detail": "Push a commit from the desktop app to start a shared workspace history."
+    "detail": "Push a commit from the desktop app to start a shared workspace history.",
+    "branchTitle": "History is per collection",
+    "branchDetail": "This workspace syncs by collection branches. The workspace history shows only the old head, so it is not listed here yet."
   },
   "history": {
     "title": "Commit history",

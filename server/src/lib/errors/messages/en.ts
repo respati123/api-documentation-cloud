@@ -48,5 +48,6 @@ export const en = {
   BRANCH_NAME_TAKEN: 'A branch with this name already exists for this collection.',
   WORKSPACE_USES_BRANCHES: 'This workspace syncs by collection branches. Update the desktop app, then sync again.',
   BRANCHES_NOT_ENABLED: 'Collection branches are not on for this workspace. The owner turns them on first.',
+  VARIABLES_REVISION_CONFLICT: 'The workspace variables changed since you read them. Read them again, then save.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>

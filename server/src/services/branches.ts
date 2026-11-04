@@ -5,7 +5,7 @@ import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagin
 import { parseSnapshot, validateTree } from '@/lib/validation'
 import type { AuthUser, Role } from '@/models/workspace'
 import { commitIdUsedElsewhere, findCommitInWorkspace, insertCommit, listCommitsPage, type CommitListRow } from '@/repositories/commits.repository'
-import { countBranches, findBranch, insertBranch, listBranches, lockBranch, setBranchHead, type BranchRecord } from '@/repositories/branches.repository'
+import { countBranches, findBranch, insertBranch, listBranches, lockBranch, setBranchHead, softDeleteCollectionBranches, type BranchRecord } from '@/repositories/branches.repository'
 import { findWorkspaceOwnerId, lockWorkspaceHead } from '@/repositories/workspaces.repository'
 import { requireRole } from '@/services/access'
 
@@ -60,6 +60,25 @@ async function ensureCollectionBranches(db: SQL, workspaceId: string): Promise<v
 export async function enableCollectionBranches(db: SQL, workspaceId: string, user: AuthUser): Promise<void> {
   await requireRole(db, workspaceId, user.id, ['owner'])
   await ensureCollectionBranches(db, workspaceId)
+}
+
+// Deletes a collection from the workspace. Its branches stay in the database, so the history is kept, but nothing lists or uses them.
+export async function deleteCollectionBranch(db: SQL, workspaceId: string, user: AuthUser, collectionKey: string): Promise<void> {
+  await requireRole(db, workspaceId, user.id, writerRoles)
+  if ((await softDeleteCollectionBranches(db, workspaceId, collectionKey)) === 0) throw new AppError('BRANCH_COLLECTION_NOT_FOUND')
+}
+
+// Adds a main branch for a collection that has none yet, so its first commit can be pushed.
+export async function addCollectionBranch(db: SQL, workspaceId: string, user: AuthUser, collectionKey: string): Promise<BranchRecord> {
+  await requireRole(db, workspaceId, user.id, writerRoles)
+  if (!collectionKey.trim()) throw new AppError('BRANCH_NAME_INVALID')
+  if ((await countBranches(db, workspaceId)) === 0) throw new AppError('BRANCHES_NOT_ENABLED')
+  if ((await listBranches(db, workspaceId)).some((branch) => branch.collectionKey === collectionKey)) throw new AppError('BRANCH_NAME_TAKEN')
+  const id = randomUUID()
+  await insertBranch(db, { id, workspaceId, collectionKey, name: mainName, headCommitId: null, createdBy: user.id })
+  const created = await findBranch(db, workspaceId, id)
+  if (!created) throw new AppError('BRANCH_NOT_FOUND')
+  return created
 }
 
 export async function listBranchesFor(db: SQL, workspaceId: string, user: AuthUser): Promise<BranchRecord[]> {
