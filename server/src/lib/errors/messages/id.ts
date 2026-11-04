@@ -47,5 +47,6 @@ export const id = {
   BRANCH_NAME_INVALID: 'Isi nama branch hingga 60 karakter.',
   BRANCH_NAME_TAKEN: 'Branch dengan nama ini sudah ada untuk collection ini.',
   WORKSPACE_USES_BRANCHES: 'Workspace ini sinkron per branch collection. Perbarui app desktop, lalu sinkron lagi.',
+  BRANCHES_NOT_ENABLED: 'Branch collection belum diaktifkan untuk workspace ini. Owner harus mengaktifkannya dulu.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>

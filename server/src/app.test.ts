@@ -432,11 +432,49 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     const headCommitId = (pulled.json.data as { workspace: { headCommitId: string } }).workspace.headCommitId
 
     const listed = await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })
-    expect((listed.json.data as { branches: unknown[] }).branches.length).toBe(1)
+    expect((listed.json.data as { branches: unknown[] }).branches.length).toBe(0)
+
+    const enabled = await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: owner.token })
+    expect(enabled.status).toBe(200)
+    expect((enabled.json.data as { branches: unknown[] }).branches.length).toBe(1)
 
     const legacy = await pushCommit(owner, workspaceId, [headCommitId], 'Legacy edit')
     expect(legacy.status).toBe(409)
     expect(legacy.json.code).toBe('WORKSPACE_USES_BRANCHES')
+  })
+
+  test('listing branches does not split a workspace, so a legacy push still lands', async () => {
+    const owner = await signUp('branch-list')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Listed', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }], variables: { globals: [], environments: [] } },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    const pulled = await call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    const headCommitId = (pulled.json.data as { workspace: { headCommitId: string } }).workspace.headCommitId
+
+    await call('GET', `/api/workspaces/${workspaceId}/branches`, { token: owner.token })
+    const legacy = await pushCommit(owner, workspaceId, [headCommitId], 'Still legacy')
+    expect(legacy.status).toBe(201)
+  })
+
+  test('only the owner can enable branches, and a branch cannot be created before that', async () => {
+    const owner = await signUp('branch-enable')
+    const editor = await signUp('branch-enable-editor')
+    const created = await call('POST', '/api/workspaces', {
+      token: owner.token,
+      body: { name: 'Enable', tree: [{ id: 'users', kind: 'folder', name: 'Users', children: [] }], variables: { globals: [], environments: [] } },
+    })
+    const workspaceId = (created.json.data as { workspace: { id: string } }).workspace.id
+    await inviteAndAccept(owner, workspaceId, editor, 'editor')
+
+    const byEditor = await call('POST', `/api/workspaces/${workspaceId}/branches/enable`, { token: editor.token })
+    expect(byEditor.status).toBe(403)
+    expect(byEditor.json.code).toBe('ROLE_NOT_ALLOWED')
+
+    const early = await call('POST', `/api/workspaces/${workspaceId}/branches`, { token: owner.token, body: { collectionKey: 'users', name: 'early' } })
+    expect(early.status).toBe(409)
+    expect(early.json.code).toBe('BRANCHES_NOT_ENABLED')
   })
 
   test('a push that reuses a commit id from another workspace is refused, and that workspace stays private', async () => {

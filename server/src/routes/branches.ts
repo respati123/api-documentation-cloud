@@ -4,7 +4,7 @@ import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
 import { created, ok } from '@/lib/http'
 import { decodeCursor, readLimit } from '@/lib/pagination'
-import { branchHistoryPage, createBranch, listBranchesFor, pullBranch, pushBranch, type BranchPushCommit } from '@/services/branches'
+import { branchHistoryPage, createBranch, enableCollectionBranches, listBranchesFor, pullBranch, pushBranch, type BranchPushCommit } from '@/services/branches'
 
 const maxPushCommits = 100
 
@@ -20,6 +20,11 @@ export async function handleBranches(
   const { db } = ctx
 
   if (method === 'GET' && action === 'branches') {
+    return ok({ branches: await listBranchesFor(db, workspaceId, user) })
+  }
+
+  if (method === 'POST' && action === 'branches/enable') {
+    await enableCollectionBranches(db, workspaceId, user)
     return ok({ branches: await listBranchesFor(db, workspaceId, user) })
   }
 

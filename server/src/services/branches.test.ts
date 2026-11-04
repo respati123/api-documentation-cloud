@@ -7,7 +7,7 @@ import { insertCommit, listCommitsPage } from '@/repositories/commits.repository
 import { insertMembership } from '@/repositories/memberships.repository'
 import { findBranch, listBranches } from '@/repositories/branches.repository'
 import { insertWorkspace } from '@/repositories/workspaces.repository'
-import { branchHistoryPage, createBranch, ensureCollectionBranches, listBranchesFor, pullBranch, pushBranch } from '@/services/branches'
+import { branchHistoryPage, createBranch, enableCollectionBranches, listBranchesFor, pullBranch, pushBranch } from '@/services/branches'
 import { databaseEnabled, openTestDatabase, seedUser } from '@/testing/database'
 import type { AuthUser, TreeNode } from '@/models/workspace'
 
@@ -29,6 +29,13 @@ async function seedLegacyWorkspace(db: SQL, owner: AuthUser) {
     snapshot: { tree: [folder('users', 'Users'), folder('orders', 'Orders')], variables },
   })
   return { workspaceId, headId }
+}
+
+// The same workspace after its owner turns collection branches on.
+async function enabledWorkspace(db: SQL, owner: AuthUser) {
+  const seeded = await seedLegacyWorkspace(db, owner)
+  await enableCollectionBranches(db, seeded.workspaceId, owner)
+  return seeded
 }
 
 async function userWithRole(db: SQL, workspaceId: string, role: 'editor' | 'viewer') {
@@ -58,12 +65,12 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
     await db.close()
   })
 
-  test('the first use splits the head into one main branch per collection, and only once', async () => {
+  test('enabling splits the head into one main branch per collection, and only once', async () => {
     const owner = await seedUser(db)
     const { workspaceId } = await seedLegacyWorkspace(db, { id: owner.id, email: owner.email })
 
-    await ensureCollectionBranches(db, workspaceId)
-    await ensureCollectionBranches(db, workspaceId)
+    await enableCollectionBranches(db, workspaceId, { id: owner.id, email: owner.email })
+    await enableCollectionBranches(db, workspaceId, { id: owner.id, email: owner.email })
 
     const branches = await listBranches(db, workspaceId)
     expect(branches.map((branch) => [branch.collectionKey, branch.name]).sort()).toEqual([
@@ -80,7 +87,7 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
     const other = await seedLegacyWorkspace(db, owner)
     const mine = await seedLegacyWorkspace(db, owner)
-    await ensureCollectionBranches(db, mine.workspaceId)
+    await enableCollectionBranches(db, mine.workspaceId, owner)
     const branch = (await listBranches(db, mine.workspaceId)).find((item) => item.collectionKey === 'users')
     if (!branch) throw new Error('The users branch was not created.')
 
@@ -93,7 +100,7 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
 
   test('a new branch starts at its collection’s main head and a name is unique per collection', async () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
-    const { workspaceId } = await seedLegacyWorkspace(db, owner)
+    const { workspaceId } = await enabledWorkspace(db, owner)
     const main = (await listBranchesFor(db, workspaceId, owner)).find((branch) => branch.collectionKey === 'users' && branch.name === 'main')
     if (!main) throw new Error('main branch missing')
 
@@ -107,7 +114,7 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
 
   test('a push moves only its own branch, and the workspace head is left alone', async () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
-    const { workspaceId, headId } = await seedLegacyWorkspace(db, owner)
+    const { workspaceId, headId } = await enabledWorkspace(db, owner)
     const usersMain = (await listBranchesFor(db, workspaceId, owner)).find((branch) => branch.collectionKey === 'users' && branch.name === 'main')
     const ordersMain = (await listBranchesFor(db, workspaceId, owner)).find((branch) => branch.collectionKey === 'orders' && branch.name === 'main')
     if (!usersMain || !ordersMain) throw new Error('main branches missing')
@@ -123,7 +130,7 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
 
   test('a push from an old head is refused, and the remote head is returned', async () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
-    const { workspaceId } = await seedLegacyWorkspace(db, owner)
+    const { workspaceId } = await enabledWorkspace(db, owner)
     const ordersMain = (await listBranchesFor(db, workspaceId, owner)).find((branch) => branch.collectionKey === 'orders' && branch.name === 'main')
     if (!ordersMain) throw new Error('main branch missing')
     await pushBranch(db, workspaceId, ordersMain.id, owner, [{ id: randomUUID(), parentIds: [ordersMain.headCommitId], message: 'First', tree: [folder('orders', 'Orders v2')] }])
@@ -137,7 +144,7 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
 
   test('a push must carry only its own collection', async () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
-    const { workspaceId } = await seedLegacyWorkspace(db, owner)
+    const { workspaceId } = await enabledWorkspace(db, owner)
     const usersMain = (await listBranchesFor(db, workspaceId, owner)).find((branch) => branch.collectionKey === 'users' && branch.name === 'main')
     if (!usersMain) throw new Error('main branch missing')
 
@@ -149,7 +156,7 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
 
   test('a viewer can read a branch but cannot create or push one', async () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
-    const { workspaceId } = await seedLegacyWorkspace(db, owner)
+    const { workspaceId } = await enabledWorkspace(db, owner)
     const viewer = await userWithRole(db, workspaceId, 'viewer')
     const usersMain = (await listBranchesFor(db, workspaceId, owner)).find((branch) => branch.collectionKey === 'users' && branch.name === 'main')
     if (!usersMain) throw new Error('main branch missing')
@@ -163,9 +170,41 @@ describe.skipIf(!databaseEnabled)('collection branches', () => {
     )
   })
 
-  test('branch commits stay out of the workspace history', async () => {
+  test('listing branches or reading one does not split a workspace, so legacy pushes still work', async () => {
+    const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
+    const { workspaceId, headId } = await seedLegacyWorkspace(db, owner)
+    const viewer = await userWithRole(db, workspaceId, 'viewer')
+
+    expect(await listBranchesFor(db, workspaceId, viewer)).toEqual([])
+    expect(await listBranchesFor(db, workspaceId, owner)).toEqual([])
+    expect(await listBranches(db, workspaceId)).toEqual([])
+    await expectAppError(pullBranch(db, workspaceId, randomUUID(), viewer), 'BRANCH_NOT_FOUND')
+    const head = await db`SELECT head_commit_id AS "headCommitId" FROM workspaces WHERE id = ${workspaceId}`
+    expect(head[0].headCommitId).toBe(headId)
+  })
+
+  test('only the owner can enable branches', async () => {
     const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
     const { workspaceId } = await seedLegacyWorkspace(db, owner)
+    const editor = await userWithRole(db, workspaceId, 'editor')
+    const viewer = await userWithRole(db, workspaceId, 'viewer')
+
+    await expectAppError(enableCollectionBranches(db, workspaceId, editor), 'ROLE_NOT_ALLOWED')
+    await expectAppError(enableCollectionBranches(db, workspaceId, viewer), 'ROLE_NOT_ALLOWED')
+    expect(await listBranches(db, workspaceId)).toEqual([])
+  })
+
+  test('creating a branch before branches are enabled is refused', async () => {
+    const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
+    const { workspaceId } = await seedLegacyWorkspace(db, owner)
+
+    await expectAppError(createBranch(db, workspaceId, owner, { collectionKey: 'users', name: 'early' }), 'BRANCHES_NOT_ENABLED')
+    expect(await listBranches(db, workspaceId)).toEqual([])
+  })
+
+  test('branch commits stay out of the workspace history', async () => {
+    const owner = { id: (await seedUser(db)).id, email: 'owner@test.dev' }
+    const { workspaceId } = await enabledWorkspace(db, owner)
     const usersMain = (await listBranchesFor(db, workspaceId, owner)).find((branch) => branch.collectionKey === 'users' && branch.name === 'main')
     if (!usersMain) throw new Error('main branch missing')
     await pushBranch(db, workspaceId, usersMain.id, owner, [{ id: randomUUID(), parentIds: [usersMain.headCommitId], message: 'Branch only', tree: [folder('users', 'U')] }])

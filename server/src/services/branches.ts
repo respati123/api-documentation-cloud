@@ -6,7 +6,7 @@ import { parseSnapshot, validateTree } from '@/lib/validation'
 import type { AuthUser, Role } from '@/models/workspace'
 import { commitIdUsedElsewhere, findCommitInWorkspace, insertCommit, listCommitsPage, type CommitListRow } from '@/repositories/commits.repository'
 import { countBranches, findBranch, insertBranch, listBranches, lockBranch, setBranchHead, type BranchRecord } from '@/repositories/branches.repository'
-import { lockWorkspaceHead } from '@/repositories/workspaces.repository'
+import { findWorkspaceOwnerId, lockWorkspaceHead } from '@/repositories/workspaces.repository'
 import { requireRole } from '@/services/access'
 
 const readerRoles: Role[] = ['owner', 'editor', 'viewer']
@@ -26,25 +26,26 @@ function isCollectionTree(tree: unknown, collectionKey: string): boolean {
   return validateTree(tree) && tree.length === 1 && tree[0].id === collectionKey
 }
 
-// The first time a workspace uses branches, its current head is split into one main branch per top-level node.
-// The split is attributed to the owner, so a viewer who lists branches does not become the author of the split.
-export async function ensureCollectionBranches(db: SQL, workspaceId: string): Promise<void> {
+// Splits the current head into one main branch per top-level node. Runs once; later calls change nothing.
+// The split is attributed to the owner.
+async function ensureCollectionBranches(db: SQL, workspaceId: string): Promise<void> {
   await db.begin(async (tx) => {
     const workspace = await lockWorkspaceHead(tx, workspaceId)
     if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
     if ((await countBranches(tx, workspaceId)) > 0) return
-    const [owner] = await tx`SELECT owner_id AS "ownerId" FROM workspaces WHERE id = ${workspaceId}`
+    const ownerId = await findWorkspaceOwnerId(tx, workspaceId)
+    if (!ownerId) throw new AppError('WORKSPACE_NOT_FOUND')
     const head = workspace.headCommitId ? await findCommitInWorkspace(tx, workspaceId, workspace.headCommitId) : undefined
     const nodes = head ? parseSnapshot(head.snapshot).tree : []
     for (const node of nodes) {
       const branchId = randomUUID()
       const collectionKey = String(node.id)
-      await insertBranch(tx, { id: branchId, workspaceId, collectionKey, name: mainName, headCommitId: null, createdBy: String(owner.ownerId) })
+      await insertBranch(tx, { id: branchId, workspaceId, collectionKey, name: mainName, headCommitId: null, createdBy: ownerId })
       const commitId = randomUUID()
       await insertCommit(tx, {
         id: commitId,
         workspaceId,
-        authorId: String(owner.ownerId),
+        authorId: ownerId,
         parentIds: head ? [head.id] : [],
         message: `Split ${collectionKey} into its own branch`,
         snapshot: { tree: [node] },
@@ -55,9 +56,14 @@ export async function ensureCollectionBranches(db: SQL, workspaceId: string): Pr
   })
 }
 
+// Only the owner can turn branches on. Reading never splits a workspace, so a read by any member cannot change how it syncs.
+export async function enableCollectionBranches(db: SQL, workspaceId: string, user: AuthUser): Promise<void> {
+  await requireRole(db, workspaceId, user.id, ['owner'])
+  await ensureCollectionBranches(db, workspaceId)
+}
+
 export async function listBranchesFor(db: SQL, workspaceId: string, user: AuthUser): Promise<BranchRecord[]> {
   await requireRole(db, workspaceId, user.id, readerRoles)
-  await ensureCollectionBranches(db, workspaceId)
   return listBranches(db, workspaceId)
 }
 
@@ -65,7 +71,7 @@ export async function createBranch(db: SQL, workspaceId: string, user: AuthUser,
   await requireRole(db, workspaceId, user.id, writerRoles)
   const name = input.name.trim()
   if (!name || name.length > maxNameLength) throw new AppError('BRANCH_NAME_INVALID')
-  await ensureCollectionBranches(db, workspaceId)
+  if ((await countBranches(db, workspaceId)) === 0) throw new AppError('BRANCHES_NOT_ENABLED')
   const branches = await listBranches(db, workspaceId)
   const sameCollection = branches.filter((branch) => branch.collectionKey === input.collectionKey)
   const main = sameCollection.find((branch) => branch.name === mainName)
@@ -83,7 +89,6 @@ export async function createBranch(db: SQL, workspaceId: string, user: AuthUser,
 // The collection as it is at the branch head.
 export async function pullBranch(db: SQL, workspaceId: string, branchId: string, user: AuthUser) {
   await requireRole(db, workspaceId, user.id, readerRoles)
-  await ensureCollectionBranches(db, workspaceId)
   const branch = await findBranch(db, workspaceId, branchId)
   if (!branch) throw new AppError('BRANCH_NOT_FOUND')
   const head = branch.headCommitId ? await findCommitInWorkspace(db, workspaceId, branch.headCommitId) : undefined
@@ -96,7 +101,6 @@ export async function pullBranch(db: SQL, workspaceId: string, branchId: string,
 
 export async function branchHistoryPage(db: SQL, workspaceId: string, branchId: string, user: AuthUser, limit: number, cursor: CursorKeys | null) {
   await requireRole(db, workspaceId, user.id, readerRoles)
-  await ensureCollectionBranches(db, workspaceId)
   if (!(await findBranch(db, workspaceId, branchId))) throw new AppError('BRANCH_NOT_FOUND')
   const after = cursorValues(cursor, ['t', 'i'])
   const rows = await listCommitsPage(db, { workspaceId, branchId, after: after ? { sortAt: after.t, id: after.i } : null, limit: limit + 1 })
@@ -107,7 +111,6 @@ export async function branchHistoryPage(db: SQL, workspaceId: string, branchId: 
 // Accepts commits that start from the branch head. Commits accepted before a conflict stay saved, as the workspace push does.
 export async function pushBranch(db: SQL, workspaceId: string, branchId: string, user: AuthUser, commits: BranchPushCommit[]): Promise<string | null> {
   await requireRole(db, workspaceId, user.id, writerRoles)
-  await ensureCollectionBranches(db, workspaceId)
   const result = await db.begin(async (tx) => {
     const branch = await lockBranch(tx, workspaceId, branchId)
     if (!branch) throw new AppError('BRANCH_NOT_FOUND')

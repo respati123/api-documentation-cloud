@@ -59,6 +59,11 @@ export async function findWorkspaceSnapshotRow(db: SQL, workspaceId: string, use
   return row
 }
 
+export async function findWorkspaceOwnerId(db: SQL, workspaceId: string): Promise<string | undefined> {
+  const [row] = await db`SELECT owner_id AS "ownerId" FROM workspaces WHERE id = ${workspaceId}`
+  return row ? String(row.ownerId) : undefined
+}
+
 export async function findWorkspaceSummary(db: SQL, workspaceId: string): Promise<{ id: string; name: string; headCommitId: string | null } | undefined> {
   const [row] = await db`SELECT id, name, head_commit_id AS "headCommitId" FROM workspaces WHERE id = ${workspaceId}`
   return row
