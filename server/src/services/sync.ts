@@ -3,11 +3,12 @@ import type { SQL } from 'bun'
 import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagination'
-import { emptyWorkspaceVariables, parseJson, parseSnapshot, sanitizeWorkspaceVariables } from '@/lib/validation'
+import { emptyWorkspaceVariables, parseJson, parseSnapshot, sanitizeWorkspaceVariables, validateTree } from '@/lib/validation'
 import type { AuthUser, WorkspaceVariables } from '@/models/workspace'
 import { commitIdUsedElsewhere, findCommitInWorkspace, insertCommit, listCommitsPage, type CommitListRow, type CommitRecord } from '@/repositories/commits.repository'
 import { countBranches } from '@/repositories/branches.repository'
 import { findWorkspaceSnapshotRow, lockWorkspaceHead, setWorkspaceHead } from '@/repositories/workspaces.repository'
+import { type ChangeSummary, summarizeChanges } from '@/services/change-summary'
 import { broadcastWorkspaceUpdate } from '@/services/events'
 
 export async function pullWorkspace(db: SQL, workspaceId: string, userId: string) {
@@ -84,14 +85,23 @@ export async function pushCommits(ctx: AppContext, workspaceId: string, user: Au
       headId = commit.id
       await setWorkspaceHead(tx, workspaceId, headId)
     }
-    return { headId }
+    return { headId, previousId: workspace.headCommitId }
   })
   if ('conflict' in result) throw new AppError('SYNC_REMOTE_ADVANCED', { details: { remote: result.conflict } })
   if (result.headId) {
     const lastCommit = commits[commits.length - 1]
-    await broadcastWorkspaceUpdate(ctx, workspaceId, result.headId, lastCommit.message, user, commits.length)
+    // The commits are saved already, so a failure to list what changed must not fail the push. The event goes out without the list.
+    const changes = await changeSummaryFor(ctx, workspaceId, result.previousId, lastCommit.tree).catch(() => [])
+    await broadcastWorkspaceUpdate(ctx, workspaceId, result.headId, lastCommit.message, user, commits.length, changes)
   }
   return result.headId
+}
+
+// What the push changed: the tree before its first commit against the tree after its last one.
+async function changeSummaryFor(ctx: AppContext, workspaceId: string, previousId: string | null, tree: unknown): Promise<ChangeSummary[]> {
+  if (!validateTree(tree)) return []
+  const previous = previousId ? await findCommitInWorkspace(ctx.db, workspaceId, previousId) : undefined
+  return summarizeChanges(previous ? parseSnapshot(previous.snapshot).tree : [], tree)
 }
 
 async function remoteConflict(tx: SQL, workspaceId: string, headId: string) {

@@ -1,6 +1,7 @@
 import type { AppContext } from '@/context'
 import type { AuthUser, WorkspaceChangeReason } from '@/models/workspace'
 import { listMemberIds } from '@/repositories/memberships.repository'
+import { type ChangeSummary, maxChangeSummary } from '@/services/change-summary'
 
 // The portal's own origin is compared as a whole (scheme, host, port), so a look-alike host is refused.
 export function isAllowedSyncOrigin(origin: string | null, publicWebUrl: string): boolean {
@@ -22,7 +23,9 @@ export async function sendToMembers(ctx: AppContext, workspaceId: string, event:
   }
 }
 
-export async function broadcastWorkspaceUpdate(ctx: AppContext, workspaceId: string, headId: string, message: string, actor: AuthUser, commitCount: number) {
+// changes lists the items the push changed, at most maxChangeSummary of them. changeTotal counts all of them.
+// Both are optional for readers: an older app ignores them.
+export async function broadcastWorkspaceUpdate(ctx: AppContext, workspaceId: string, headId: string, message: string, actor: AuthUser, commitCount: number, changes: ChangeSummary[] = []) {
   await sendToMembers(ctx, workspaceId, JSON.stringify({
     type: 'workspace.updated',
     workspaceId,
@@ -30,7 +33,9 @@ export async function broadcastWorkspaceUpdate(ctx: AppContext, workspaceId: str
     message,
     actorId: actor.id,
     actorEmail: actor.email,
-    commitCount
+    commitCount,
+    changes: changes.slice(0, maxChangeSummary),
+    changeTotal: changes.length,
   }))
 }
 
