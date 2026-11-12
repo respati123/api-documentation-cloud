@@ -24,7 +24,10 @@ const baseProps: TeamViewProps = {
   onChangeRole: vi.fn(),
   onRemoveMember: vi.fn(),
   onCopyLink: vi.fn(),
+  projectRoles: { roleOf: () => null, canAssign: false, savingMemberId: null, onAssign: vi.fn(), error: null },
 }
+
+const editor = { id: 'u-2', email: 'dev@example.com', role: 'editor' as const, joinedAt: '2026-01-01T00:00:00.000Z' }
 
 afterEach(() => {
   cleanup()
@@ -56,5 +59,18 @@ describe('TeamView', () => {
 
     fireEvent.click(screen.getByTestId('team-members-load-more'))
     expect(onLoadMoreMembers).toHaveBeenCalledTimes(1)
+  })
+
+  test('shows the project role of a member as a badge when the viewer cannot assign roles', () => {
+    render(<TeamView {...baseProps} members={[editor]} projectRoles={{ ...baseProps.projectRoles, roleOf: () => 'tech_lead' }} />)
+
+    expect(screen.getByText('Tech lead')).toBeInTheDocument()
+    expect(screen.queryByTestId('team-project-role-u-2')).not.toBeInTheDocument()
+  })
+
+  test('gives a role picker to someone who can assign project roles', () => {
+    render(<TeamView {...baseProps} members={[editor]} projectRoles={{ ...baseProps.projectRoles, canAssign: true }} />)
+
+    expect(screen.getByTestId('team-project-role-u-2')).toBeInTheDocument()
   })
 })

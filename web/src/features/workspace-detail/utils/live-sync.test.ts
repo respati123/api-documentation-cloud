@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { parseSyncEvent, reconnectDelay, socketUrl } from './live-sync'
+import { parseSyncEvent } from '@/features/workspace-detail/utils/live-sync'
+import { reconnectDelay, socketUrl } from '@/shared/realtime/realtime-url'
 
 describe('parseSyncEvent', () => {
   const event = {

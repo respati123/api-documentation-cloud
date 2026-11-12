@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/shared/components/ui/button'
+import { Button } from '@/shared/components/primitives/button'
 import { PAGINATION_TEXT } from '@/shared/constants/pagination-text.constants'
 
 export function LoadMoreButton({

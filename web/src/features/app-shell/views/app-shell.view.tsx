@@ -1,27 +1,26 @@
-import { Layers, LayoutGrid, LogOut, Menu, Plus } from 'lucide-react'
+import { Building2, KeyRound, Layers, LayoutGrid, LogOut, Menu, ShieldCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LanguageSwitcher } from '@/shared/components/language-switcher'
-import { LoadMoreButton } from '@/shared/components/load-more-button'
-import { SplitFlap } from '@/shared/components/split-flap'
-import { Badge } from '@/shared/components/ui/badge'
+import { NotificationsMenu } from '@/features/notifications'
+import { LanguageMenu } from '@/shared/components/language-menu'
+import { Badge } from '@/shared/components/primitives/badge'
+import { Button } from '@/shared/components/primitives/button'
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/shared/components/ui/breadcrumb'
-import { Button } from '@/shared/components/ui/button'
-import { ScrollArea } from '@/shared/components/ui/scroll-area'
-import { Separator } from '@/shared/components/ui/separator'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/shared/components/ui/sheet'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/components/primitives/dropdown-menu'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/shared/components/primitives/sheet'
 import { appVersion } from '@/shared/config/app-version'
 import type { CloudUser } from '@/shared/models/user.model'
 import type { CloudWorkspaceRef } from '@/shared/models/workspace.model'
-import { SHELL_PAGE_TITLE, SHELL_TEXT, WORKSPACE_TAB_TEXT } from '../constants/app-shell-text.constants'
-import type { AppRoute, WorkspaceTab } from '../models/route.model'
+import { SHELL_TEXT } from '../constants/app-shell-text.constants'
+import type { AppRoute } from '../models/route.model'
+import { readRoute } from '../utils/route'
 
 export interface AppShellViewProps {
   route: AppRoute
@@ -43,46 +42,33 @@ export function AppShellView({
   route,
   user,
   workspaces,
-  apiOnline,
   mobileNavOpen,
   onMobileNavOpenChange,
   onNavigate,
-  hasMoreWorkspaces,
-  isLoadingMoreWorkspaces,
-  onLoadMoreWorkspaces,
-  onCreateWorkspace,
   onSignOut,
   children,
 }: AppShellViewProps) {
   const { t } = useTranslation('shell')
-  const selectedWorkspace = route.page === 'workspace' ? workspaces.find((workspace) => workspace.id === route.workspaceId) : undefined
-  const apiLabel = apiOnline === null ? t(SHELL_TEXT.api.checking) : apiOnline ? t(SHELL_TEXT.api.connected) : t(SHELL_TEXT.api.unavailable)
-  const pageTitle = route.page === 'workspace' ? (selectedWorkspace?.name ?? t(SHELL_TEXT.page.workspace)) : t(SHELL_PAGE_TITLE[route.page])
   const navigation = (
     <ShellNavigation
       route={route}
       user={user}
       workspaces={workspaces}
-      selectedWorkspaceId={selectedWorkspace?.id}
       onNavigate={(next) => {
         onMobileNavOpenChange(false)
         onNavigate(next)
       }}
-      hasMoreWorkspaces={hasMoreWorkspaces}
-      isLoadingMoreWorkspaces={isLoadingMoreWorkspaces}
-      onLoadMoreWorkspaces={onLoadMoreWorkspaces}
-      onCreateWorkspace={onCreateWorkspace}
       onSignOut={onSignOut}
     />
   )
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">{navigation}</aside>
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">{navigation}</aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-border px-4 py-3 md:px-6">
+        <div className="px-4 pt-4 md:hidden">
           <Sheet open={mobileNavOpen} onOpenChange={onMobileNavOpenChange}>
-            <SheetTrigger render={<Button variant="ghost" size="sm" className="md:hidden" data-testid="cloud-mobile-menu-button" />}>
+            <SheetTrigger render={<Button variant="outline" size="sm" data-testid="cloud-mobile-menu-button" />}>
               <Menu data-icon="inline-start" />
               {t(SHELL_TEXT.nav.menu)}
             </SheetTrigger>
@@ -94,62 +80,8 @@ export function AppShellView({
               {navigation}
             </SheetContent>
           </Sheet>
-          <Breadcrumb className="min-w-0 flex-1">
-            <BreadcrumbList className="flex-nowrap overflow-hidden">
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  render={
-                    <Button variant="link" className="h-auto p-0 text-muted-foreground" onClick={() => onNavigate({ page: 'overview' })} />
-                  }
-                >
-                  {t(SHELL_TEXT.breadcrumb.root)}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem className="min-w-0">
-                {route.page === 'workspace' && route.tab && route.tab !== 'overview' ? (
-                  <BreadcrumbLink
-                    className="truncate"
-                    render={
-                      <Button
-                        variant="link"
-                        className="h-auto p-0 text-muted-foreground"
-                        onClick={() => onNavigate({ page: 'workspace', workspaceId: route.workspaceId, tab: 'overview' })}
-                      />
-                    }
-                  >
-                    {pageTitle}
-                  </BreadcrumbLink>
-                ) : (
-                  <BreadcrumbPage className="truncate whitespace-nowrap">{pageTitle}</BreadcrumbPage>
-                )}
-              </BreadcrumbItem>
-              {route.page === 'workspace' && route.tab && route.tab !== 'overview' && (
-                <>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage className="whitespace-nowrap">{t(WORKSPACE_TAB_TEXT[route.tab as WorkspaceTab])}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              )}
-            </BreadcrumbList>
-          </Breadcrumb>
-          <LanguageSwitcher />
-          <Badge
-            variant="outline"
-            role="status"
-            className="shrink-0 gap-2"
-            data-testid="cloud-api-status"
-            data-state={apiOnline === false ? 'offline' : 'online'}
-          >
-            <span
-              aria-hidden="true"
-              className={apiOnline === false ? 'size-2 rounded-full bg-destructive' : 'size-2 rounded-full bg-success'}
-            />
-            <SplitFlap value={apiLabel} className="text-xs max-sm:sr-only" />
-          </Badge>
-        </header>
-        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+        </div>
+        <main className="min-w-0 flex-1 px-4 py-6 md:px-8 lg:px-10">{children}</main>
       </div>
     </div>
   )
@@ -159,23 +91,13 @@ function ShellNavigation({
   route,
   user,
   workspaces,
-  selectedWorkspaceId,
   onNavigate,
-  hasMoreWorkspaces,
-  isLoadingMoreWorkspaces,
-  onLoadMoreWorkspaces,
-  onCreateWorkspace,
   onSignOut,
 }: {
   route: AppRoute
   user: CloudUser
   workspaces: CloudWorkspaceRef[]
-  selectedWorkspaceId: string | undefined
   onNavigate: (route: AppRoute) => void
-  hasMoreWorkspaces: boolean
-  isLoadingMoreWorkspaces: boolean
-  onLoadMoreWorkspaces: () => void
-  onCreateWorkspace: () => void
   onSignOut: () => void
 }) {
   const { t } = useTranslation('shell')
@@ -207,7 +129,7 @@ function ShellNavigation({
         <p className="px-2 text-xs text-muted-foreground">{t(SHELL_TEXT.nav.groupWorkspace)}</p>
         <Button
           variant="ghost"
-          className="justify-start"
+          className={route.page === 'overview' ? 'justify-start bg-primary/10 text-primary' : 'justify-start'}
           aria-current={route.page === 'overview' ? 'page' : undefined}
           data-testid="cloud-nav-overview"
           onClick={() => onNavigate({ page: 'overview' })}
@@ -217,7 +139,7 @@ function ShellNavigation({
         </Button>
         <Button
           variant="ghost"
-          className="justify-start"
+          className={route.page === 'workspaces' ? 'justify-start bg-primary/10 text-primary' : 'justify-start'}
           aria-current={route.page === 'workspaces' ? 'page' : undefined}
           data-testid="cloud-nav-workspaces"
           onClick={() => onNavigate({ page: 'workspaces' })}
@@ -229,64 +151,64 @@ function ShellNavigation({
           </Badge>
         </Button>
       </div>
-      <Separator />
-      <div className="flex items-center justify-between gap-2 px-2">
-        <p className="text-xs text-muted-foreground">{t(SHELL_TEXT.nav.yourWorkspaces)}</p>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t(SHELL_TEXT.nav.createWorkspace)}
-          data-testid="cloud-create-workspace-button"
-          onClick={onCreateWorkspace}
-        >
-          <Plus />
-        </Button>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="grid gap-1 pr-2">
-          {workspaces.length ? (
-            workspaces.map((workspace) => (
-              <Button
-                key={workspace.id}
-                variant="ghost"
-                className="h-auto justify-start gap-2 py-2"
-                title={workspace.name}
-                aria-current={selectedWorkspaceId === workspace.id ? 'page' : undefined}
-                onClick={() => onNavigate({ page: 'workspace', workspaceId: workspace.id, tab: 'overview' })}
+      <div className="mt-auto grid gap-3 border-t border-border pt-3">
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  className="h-auto min-w-0 flex-1 justify-start gap-3 px-2 py-2"
+                  data-testid="cloud-account-menu-button"
+                />
+              }
+            >
+              <span
+                aria-hidden="true"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground"
               >
-                <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-md bg-secondary text-xs font-semibold">
-                  {workspace.name.trim().slice(0, 1).toUpperCase()}
-                </span>
-                <span className="truncate">{workspace.name}</span>
-              </Button>
-            ))
-          ) : (
-            <p className="px-2 text-xs text-muted-foreground">{t(SHELL_TEXT.nav.emptyWorkspaces)}</p>
-          )}
-          <LoadMoreButton
-            hasMore={hasMoreWorkspaces}
-            isLoading={isLoadingMoreWorkspaces}
-            onLoadMore={onLoadMoreWorkspaces}
-            testId="cloud-nav-load-more"
-          />
+                {initials || 'A'}
+              </span>
+              <span className="grid min-w-0 text-left">
+                <span className="truncate text-sm font-medium">{accountName}</span>
+                <span className="truncate text-xs font-normal text-muted-foreground">{user.email}</span>
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="top">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>{t(SHELL_TEXT.account.settings)}</DropdownMenuLabel>
+                <LanguageMenu />
+                <DropdownMenuItem data-testid="cloud-mcp-settings" onClick={() => onNavigate({ page: 'mcp' })}>
+                  <KeyRound />
+                  {t(SHELL_TEXT.account.mcp)}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              {user.isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>{t(SHELL_TEXT.account.admin)}</DropdownMenuLabel>
+                    <DropdownMenuItem data-testid="cloud-admin-mcp" onClick={() => onNavigate({ page: 'admin-mcp' })}>
+                      <ShieldCheck />
+                      {t(SHELL_TEXT.account.adminMcp)}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem data-testid="cloud-admin-workspaces" onClick={() => onNavigate({ page: 'admin-workspaces' })}>
+                      <Building2 />
+                      {t(SHELL_TEXT.account.adminWorkspaces)}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem data-testid="cloud-sign-out-button" onClick={onSignOut}>
+                <LogOut />
+                {t(SHELL_TEXT.account.signOut)}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <NotificationsMenu onOpenLink={(link) => onNavigate(readRoute(link))} />
         </div>
-      </ScrollArea>
-      <Separator />
-      <div className="grid gap-3 px-2">
-        <div className="flex items-center gap-3">
-          <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold">
-            {initials || 'A'}
-          </span>
-          <span className="grid min-w-0">
-            <span className="truncate text-sm font-medium">{accountName}</span>
-            <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-          </span>
-        </div>
-        <Button variant="outline" size="sm" data-testid="cloud-sign-out-button" onClick={onSignOut}>
-          <LogOut data-icon="inline-start" />
-          {t(SHELL_TEXT.account.signOut)}
-        </Button>
-        <p data-testid="cloud-app-version" className="text-xs text-muted-foreground">
+        <p data-testid="cloud-app-version" className="px-2 text-xs text-muted-foreground">
           {t(SHELL_TEXT.nav.version, { version: appVersion })}
         </p>
       </div>

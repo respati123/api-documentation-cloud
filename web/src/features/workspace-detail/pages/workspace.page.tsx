@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { type AppRoute, SHELL_TEXT, type WorkspaceTab } from '@/features/app-shell'
+import { ProjectsView } from '@/features/projects'
+import { Button } from '@/shared/components/primitives/button'
 import { EmptyState, ErrorState, LoadingState } from '@/shared/components/state-views'
-import { Button } from '@/shared/components/ui/button'
 import { WORKSPACE_TEXT } from '../constants/workspace-detail-text.constants'
 import { useWorkspacePageViewModel } from '../viewmodels/use-workspace-page.viewmodel'
 import { ActivityView } from '../views/activity.view'
@@ -144,6 +145,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
                 vm.actions.removeMember.mutate({ memberId: member.id, email: member.email, workspaceName: workspace.name })
               }
               onCopyLink={() => void vm.inviteDialog.copyLink()}
+              projectRoles={vm.projectRoles}
             />
           )}
           {vm.activeTab === 'settings' && vm.isOwner && (
@@ -154,6 +156,9 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
             />
           )}
         </>
+      )}
+      {vm.detailStatus === 'ready' && vm.activeTab === 'projects' && (
+        <ProjectsView {...vm.projects} onManageTeam={() => vm.selectTab('team')} />
       )}
       <InviteDialogView
         isOpen={vm.inviteDialog.isOpen}

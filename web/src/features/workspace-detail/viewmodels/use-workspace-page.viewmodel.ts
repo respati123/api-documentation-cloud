@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { type AppRoute, WORKSPACE_TABS, type WorkspaceTab } from '@/features/app-shell'
+import { useProjectRolesViewModel, useProjectsViewModel } from '@/features/projects'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { TEAM_TEXT } from '../constants/team-text.constants'
 import { useInviteDialogViewModel } from './use-invite-dialog.viewmodel'
@@ -20,6 +21,13 @@ export function useWorkspacePageViewModel(workspaceId: string, tab: WorkspaceTab
   const inviteDialog = useInviteDialogViewModel(workspaceId)
   const activity = useWorkspaceActivityViewModel(workspaceId, detail.commits, activeTab === 'activity')
   const liveStatus = useWorkspaceLiveSync(workspaceId)
+  const projects = useProjectsViewModel(
+    workspaceId,
+    detail.workspace?.name ?? '',
+    detail.workspace?.role !== 'viewer',
+    activeTab === 'projects',
+  )
+  const projectRoles = useProjectRolesViewModel(workspaceId, detail.workspace?.role === 'owner', activeTab === 'team')
 
   return {
     ...detail,
@@ -36,5 +44,7 @@ export function useWorkspacePageViewModel(workspaceId: string, tab: WorkspaceTab
     inviteDialog,
     activity,
     liveStatus,
+    projects,
+    projectRoles,
   }
 }

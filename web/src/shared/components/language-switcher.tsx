@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Tabs, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/shared/components/primitives/tabs'
 import { LANGUAGE_CODE_LABEL, LANGUAGE_NAME_TEXT, LANGUAGE_TEXT } from '@/shared/constants/language-text.constants'
 import { supportedLanguages } from '@/shared/i18n'
 

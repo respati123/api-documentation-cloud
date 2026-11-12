@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
-import { EmptyState, LoadingState } from '@/shared/components/state-views'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/primitives/alert'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,11 +11,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/shared/components/ui/alert-dialog'
-import { Badge } from '@/shared/components/ui/badge'
-import { Button } from '@/shared/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { ScrollArea } from '@/shared/components/ui/scroll-area'
+} from '@/shared/components/primitives/alert-dialog'
+import { Badge } from '@/shared/components/primitives/badge'
+import { Button } from '@/shared/components/primitives/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/primitives/card'
+import { ScrollArea } from '@/shared/components/primitives/scroll-area'
+import { EmptyState, LoadingState } from '@/shared/components/state-views'
 import type { CloudCommit } from '@/shared/models/cloud-workspace.model'
 import { cn } from '@/shared/utils/cn'
 import { formatDate } from '@/shared/utils/format'

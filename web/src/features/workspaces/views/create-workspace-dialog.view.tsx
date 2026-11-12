@@ -1,10 +1,10 @@
 import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, AlertDescription } from '@/shared/components/ui/alert'
-import { Button } from '@/shared/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
-import { Input } from '@/shared/components/ui/input'
-import { Label } from '@/shared/components/ui/label'
+import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
+import { Button } from '@/shared/components/primitives/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/components/primitives/dialog'
+import { Input } from '@/shared/components/primitives/input'
+import { Label } from '@/shared/components/primitives/label'
 import { WORKSPACES_TEXT } from '../constants/workspaces-text.constants'
 
 export interface CreateWorkspaceDialogViewProps {

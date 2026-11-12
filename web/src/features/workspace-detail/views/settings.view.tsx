@@ -1,9 +1,9 @@
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/shared/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Input } from '@/shared/components/ui/input'
-import { Label } from '@/shared/components/ui/label'
+import { Button } from '@/shared/components/primitives/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/components/primitives/card'
+import { Input } from '@/shared/components/primitives/input'
+import { Label } from '@/shared/components/primitives/label'
 import { SETTINGS_TEXT } from '../constants/settings-text.constants'
 
 export interface WorkspaceSettingsViewProps {

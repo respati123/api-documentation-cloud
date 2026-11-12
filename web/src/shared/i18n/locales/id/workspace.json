@@ -7,6 +7,7 @@
     "label": "Bagian workspace",
     "overview": "Ringkasan",
     "docs": "Dokumentasi API",
+    "projects": "Proyek",
     "activity": "Aktivitas",
     "team": "Tim",
     "settings": "Pengaturan"
@@ -27,6 +28,7 @@
     "members": "Anggota tim",
     "latestChange": "Perubahan terakhir",
     "latestVersion": "Versi terbaru",
+    "changes": "Perubahan terbaru",
     "notAvailable": "Tidak tersedia",
     "dateUnavailable": "Tanggal tidak tersedia",
     "collectionsTitle": "Koleksi",
@@ -45,7 +47,16 @@
     "syncNote": "Tampilan browser ini menunjukkan versi terbaru yang didorong ke cloud. Ubah dan sinkronkan draft lokal dari aplikasi desktop.",
     "created": "Dibuat {{date}}",
     "workspaceId": "ID workspace",
-    "manageTeam": "Kelola tim"
+    "manageTeam": "Kelola tim",
+    "contentsTitle": "Koleksi dan endpoint",
+    "collectionCount_one": "{{count}} koleksi",
+    "collectionCount_other": "{{count}} koleksi",
+    "moreEndpoints": "{{count}} lainnya di dokumentasi API",
+    "details": "Detail",
+    "copyId": "Salin",
+    "copied": "Tersalin",
+    "copyIdLabel": "Salin ID workspace",
+    "createdLabel": "Dibuat"
   },
   "invite": {
     "accepting": "Menerima undangan workspace kamu…",

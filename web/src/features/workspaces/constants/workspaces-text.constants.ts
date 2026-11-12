@@ -17,9 +17,11 @@ export const WORKSPACES_TEXT = {
     emptyTitle: 'list.emptyTitle',
     emptyDetail: 'list.emptyDetail',
     open: 'list.open',
+    updatedUnavailable: 'list.updatedUnavailable',
     columns: {
       workspace: 'list.columns.workspace',
       role: 'list.columns.role',
+      updated: 'list.columns.updated',
       action: 'list.columns.action',
     },
   },
@@ -27,6 +29,9 @@ export const WORKSPACES_TEXT = {
     total: 'summary.total',
     owned: 'summary.owned',
     shared: 'summary.shared',
+    totalHint: 'summary.totalHint',
+    ownedHint: 'summary.ownedHint',
+    sharedHint: 'summary.sharedHint',
   },
   create: {
     title: 'create.title',

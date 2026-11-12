@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@/shared/components/ui/button'
+import { Button } from '@/shared/components/primitives/button'
 
 export function CopyButton({
   value,

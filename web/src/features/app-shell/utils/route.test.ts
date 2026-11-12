@@ -10,6 +10,12 @@ describe('readRoute', () => {
     expect(readRoute('/workspaces')).toEqual({ page: 'workspaces' })
   })
 
+  test('opens the MCP key settings', () => {
+    expect(readRoute('/settings/mcp')).toEqual({ page: 'mcp' })
+    expect(readRoute('/admin/mcp')).toEqual({ page: 'admin-mcp' })
+    expect(readRoute('/admin/workspaces')).toEqual({ page: 'admin-workspaces' })
+  })
+
   test('reads the workspace id and tab from a workspace path', () => {
     expect(readRoute('/w/ws-1/docs')).toEqual({ page: 'workspace', workspaceId: 'ws-1', tab: 'docs' })
   })
@@ -32,5 +38,8 @@ describe('routeUrl', () => {
   test('returns the root and list paths for the other pages', () => {
     expect(routeUrl({ page: 'overview' })).toBe('/')
     expect(routeUrl({ page: 'workspaces' })).toBe('/workspaces')
+    expect(routeUrl({ page: 'mcp' })).toBe('/settings/mcp')
+    expect(routeUrl({ page: 'admin-mcp' })).toBe('/admin/mcp')
+    expect(routeUrl({ page: 'admin-workspaces' })).toBe('/admin/workspaces')
   })
 })

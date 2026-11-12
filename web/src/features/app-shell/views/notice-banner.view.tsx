@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Alert, AlertDescription } from '@/shared/components/ui/alert'
-import { Button } from '@/shared/components/ui/button'
+import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
+import { Button } from '@/shared/components/primitives/button'
 import { SHELL_TEXT } from '../constants/app-shell-text.constants'
 import { useNoticeStore } from '../stores/notice.store'
 

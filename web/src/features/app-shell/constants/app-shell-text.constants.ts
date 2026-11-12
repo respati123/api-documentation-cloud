@@ -16,9 +16,18 @@ export const SHELL_TEXT = {
     closeMenu: 'shell:nav.closeMenu',
     menu: 'shell:nav.menu',
     version: 'shell:nav.version',
+    expandMenu: 'shell:nav.expandMenu',
+    collapseMenu: 'shell:nav.collapseMenu',
+    searchWorkspaces: 'shell:nav.searchWorkspaces',
   },
   account: {
     signOut: 'shell:account.signOut',
+    signOutFailed: 'shell:account.signOutFailed',
+    settings: 'shell:account.settings',
+    mcp: 'shell:account.mcp',
+    admin: 'shell:account.admin',
+    adminMcp: 'shell:account.adminMcp',
+    adminWorkspaces: 'shell:account.adminWorkspaces',
   },
   breadcrumb: {
     root: 'shell:breadcrumb.root',
@@ -32,12 +41,24 @@ export const SHELL_TEXT = {
     overview: 'shell:page.overview',
     workspaces: 'shell:page.workspaces',
     workspace: 'shell:page.workspace',
+    mcp: 'shell:page.mcp',
+    adminMcp: 'shell:page.adminMcp',
+    adminWorkspaces: 'shell:page.adminWorkspaces',
   },
   session: {
     checking: 'shell:session.checking',
   },
   notice: {
     dismiss: 'shell:notice.dismiss',
+  },
+  context: {
+    title: 'shell:context.title',
+    subtitle: 'shell:context.subtitle',
+    workspaces: 'shell:context.workspaces',
+    workspacesDetail: 'shell:context.workspacesDetail',
+    recentWorkspaces: 'shell:context.recentWorkspaces',
+    quickLinks: 'shell:context.quickLinks',
+    connection: 'shell:context.connection',
   },
   unavailable: {
     title: 'shell:unavailable.title',
@@ -50,11 +71,15 @@ export const SHELL_PAGE_TITLE: Record<AppRoute['page'], string> = {
   overview: SHELL_TEXT.page.overview,
   workspaces: SHELL_TEXT.page.workspaces,
   workspace: SHELL_TEXT.page.workspace,
+  mcp: SHELL_TEXT.page.mcp,
+  'admin-mcp': SHELL_TEXT.page.adminMcp,
+  'admin-workspaces': SHELL_TEXT.page.adminWorkspaces,
 }
 
 export const WORKSPACE_TAB_TEXT: Record<WorkspaceTab, string> = {
   overview: 'workspace:tabs.overview',
   docs: 'workspace:tabs.docs',
+  projects: 'workspace:tabs.projects',
   activity: 'workspace:tabs.activity',
   team: 'workspace:tabs.team',
   settings: 'workspace:tabs.settings',

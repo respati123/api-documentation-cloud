@@ -23,6 +23,7 @@ export function useAuthSessionViewModel(): {
   const token = useAuthSessionStore((state) => state.token)
   const saveSession = useAuthSessionStore((state) => state.saveSession)
   const clearSession = useAuthSessionStore((state) => state.clearSession)
+  const signedIn = useAuthSessionStore((state) => state.signedIn)
 
   // Asks the server whether this browser has a session. A missing or expired cookie answers 401, which is anonymous, not an error.
   const currentUser = useQuery({
@@ -32,10 +33,11 @@ export function useAuthSessionViewModel(): {
     retry: false,
   })
 
+  // Only a session that was signed in and then answered 401 has expired. A first visit or a sign-out is not an expiry.
   const sessionEnded = currentUser.isError && shouldEndSession(currentUser.error)
   useEffect(() => {
-    if (sessionEnded) clearSession({ expired: true })
-  }, [sessionEnded, clearSession])
+    if (sessionEnded && signedIn) clearSession({ expired: true })
+  }, [sessionEnded, signedIn, clearSession])
 
   useEffect(() => {
     if (currentUser.isSuccess && currentUser.data) saveSession(currentUser.data)
@@ -43,11 +45,13 @@ export function useAuthSessionViewModel(): {
 
   const status: SessionStatus = currentUser.isPending ? 'checking' : currentUser.isSuccess ? 'authenticated' : 'anonymous'
 
+  // The server ends this browser's session and clears its cookie. Other devices keep their sessions.
+  // If the server refuses, the error reaches the caller and the screen keeps the session it still has.
   async function signOut() {
-    // The server ends this browser's session and clears its cookie. Other devices keep their sessions.
-    await authService.logout('').catch(() => undefined)
+    await authService.logout('')
     clearSession()
-    queryClient.removeQueries({ queryKey: authKeys.all })
+    // resetQueries notifies mounted observers and refetches /api/me, which now answers 401.
+    await queryClient.resetQueries({ queryKey: authKeys.all })
   }
 
   return { status, user: currentUser.data, token, signOut }

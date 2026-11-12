@@ -1,0 +1,14 @@
+{
+  "workspaces": {
+    "title": "All workspaces",
+    "subtitle": "An overview of every workspace in the app. Only members can open what is inside.",
+    "search": "Search workspace name or owner email",
+    "name": "Workspace",
+    "owner": "Owner",
+    "members": "Members",
+    "created": "Created",
+    "empty": "No workspaces yet.",
+    "error": "The workspace list could not be loaded.",
+    "privacy": "To open a workspace, ask its owner to invite you from the Team tab."
+  }
+}

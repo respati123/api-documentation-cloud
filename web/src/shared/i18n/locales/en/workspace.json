@@ -7,6 +7,7 @@
     "label": "Workspace sections",
     "overview": "Overview",
     "docs": "API docs",
+    "projects": "Project",
     "activity": "Activity",
     "team": "Team",
     "settings": "Settings"
@@ -27,6 +28,7 @@
     "members": "Team members",
     "latestChange": "Latest change",
     "latestVersion": "Latest version",
+    "changes": "Recent changes",
     "notAvailable": "Not available",
     "dateUnavailable": "Date unavailable",
     "collectionsTitle": "Collections",
@@ -45,7 +47,16 @@
     "syncNote": "This browser view reflects the latest version pushed to the cloud. Edit and sync local drafts from the desktop app.",
     "created": "Created {{date}}",
     "workspaceId": "Workspace ID",
-    "manageTeam": "Manage team"
+    "manageTeam": "Manage team",
+    "contentsTitle": "Collections and endpoints",
+    "collectionCount_one": "{{count}} collection",
+    "collectionCount_other": "{{count}} collections",
+    "moreEndpoints": "{{count}} more in API docs",
+    "details": "Details",
+    "copyId": "Copy",
+    "copied": "Copied",
+    "copyIdLabel": "Copy workspace ID",
+    "createdLabel": "Created"
   },
   "invite": {
     "accepting": "Accepting your workspace invitation…",

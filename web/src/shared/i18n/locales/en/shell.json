@@ -13,10 +13,28 @@
     "createWorkspace": "Create workspace",
     "closeMenu": "Close menu",
     "menu": "Menu",
+    "collapseMenu": "Collapse sidebar",
+    "expandMenu": "Expand sidebar",
+    "searchWorkspaces": "Search workspaces…",
     "version": "Version {{version}}"
   },
   "account": {
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "signOutFailed": "Could not sign out. Try again.",
+    "settings": "Settings",
+    "mcp": "MCP",
+    "admin": "Admin",
+    "adminMcp": "MCP access",
+    "adminWorkspaces": "All workspaces"
+  },
+  "context": {
+    "title": "Workspace overview",
+    "subtitle": "Quick access to your cloud work.",
+    "workspaces": "Workspaces",
+    "workspacesDetail": "Available to your account",
+    "quickLinks": "Quick links",
+    "recentWorkspaces": "Recent workspaces",
+    "connection": "Cloud connection"
   },
   "breadcrumb": {
     "root": "Cloud"
@@ -29,7 +47,10 @@
   "page": {
     "overview": "Overview",
     "workspaces": "Workspaces",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "mcp": "MCP API keys",
+    "adminMcp": "MCP access",
+    "adminWorkspaces": "All workspaces"
   },
   "session": {
     "checking": "Checking your session…"

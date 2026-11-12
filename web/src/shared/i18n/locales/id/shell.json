@@ -13,10 +13,28 @@
     "createWorkspace": "Buat workspace",
     "closeMenu": "Tutup menu",
     "menu": "Menu",
+    "collapseMenu": "Ciutkan sidebar",
+    "expandMenu": "Tampilkan sidebar",
+    "searchWorkspaces": "Cari workspace…",
     "version": "Versi {{version}}"
   },
   "account": {
-    "signOut": "Keluar"
+    "signOut": "Keluar",
+    "signOutFailed": "Gagal keluar. Coba lagi.",
+    "settings": "Pengaturan",
+    "mcp": "MCP",
+    "admin": "Admin",
+    "adminMcp": "Akses MCP",
+    "adminWorkspaces": "Semua workspace"
+  },
+  "context": {
+    "title": "Ringkasan workspace",
+    "subtitle": "Akses cepat pekerjaan cloud kamu.",
+    "workspaces": "Workspace",
+    "workspacesDetail": "Tersedia untuk akun kamu",
+    "quickLinks": "Akses cepat",
+    "recentWorkspaces": "Workspace terbaru",
+    "connection": "Koneksi cloud"
   },
   "breadcrumb": {
     "root": "Cloud"
@@ -29,7 +47,10 @@
   "page": {
     "overview": "Ringkasan",
     "workspaces": "Workspace",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "mcp": "API key MCP",
+    "adminMcp": "Akses MCP",
+    "adminWorkspaces": "Semua workspace"
   },
   "session": {
     "checking": "Memeriksa sesi kamu…"

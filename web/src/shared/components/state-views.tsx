@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
-import { Button } from '@/shared/components/ui/button'
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/shared/components/ui/empty'
-import { Skeleton } from '@/shared/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/primitives/alert'
+import { Button } from '@/shared/components/primitives/button'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/shared/components/primitives/empty'
+import { Skeleton } from '@/shared/components/primitives/skeleton'
 
 export function LoadingState({ label, testId }: { label: string; testId?: string }) {
   return (
