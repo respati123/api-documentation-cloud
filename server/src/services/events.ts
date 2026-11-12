@@ -23,6 +23,39 @@ export async function sendToMembers(ctx: AppContext, workspaceId: string, event:
   }
 }
 
+// Sends one event to every open socket of one account, such as a new notification for that person.
+export function sendToUser(ctx: AppContext, userId: string, event: string) {
+  for (const socket of ctx.syncSockets) {
+    if (socket.data.userId !== userId) continue
+    try { socket.send(event) }
+    catch { ctx.syncSockets.delete(socket) }
+  }
+}
+
+export type PlanningScope = 'documents' | 'items' | 'comments' | 'tasks' | 'members'
+
+// Which part of a project a write touched, read from the route after /api/workspaces/{id}/. Null for anything else.
+export function planningScopeOf(action: string): PlanningScope | null {
+  if (/^planning\/(document|epic|story|task)\/[\w-]+\/comments$/.test(action) || /^planning\/comments\//.test(action)) return 'comments'
+  if (action.startsWith('planning/documents')) return 'documents'
+  if (action.startsWith('planning/')) return 'items'
+  if (/^tasks\//.test(action) || /^projects\/[\w-]+\/tasks$/.test(action)) return 'tasks'
+  if (/^projects\/[\w-]+\/members$/.test(action)) return 'members'
+  return null
+}
+
+// Tells the open pages of people who may read the change that project data changed, so they reload that part.
+// The audience comes from planningAudience; everyone else in the workspace hears nothing. Agents and people both trigger it.
+export function broadcastPlanningChange(ctx: AppContext, workspaceId: string, scope: PlanningScope, actorId: string, audience: string[]) {
+  const readers = new Set(audience)
+  const event = JSON.stringify({ type: 'planning.changed', workspaceId, scope, actorId })
+  for (const socket of ctx.syncSockets) {
+    if (!readers.has(socket.data.userId)) continue
+    try { socket.send(event) }
+    catch { ctx.syncSockets.delete(socket) }
+  }
+}
+
 // changes lists the items the push changed, at most maxChangeSummary of them. changeTotal counts all of them.
 // Both are optional for readers: an older app ignores them.
 export async function broadcastWorkspaceUpdate(ctx: AppContext, workspaceId: string, headId: string, message: string, actor: AuthUser, commitCount: number, changes: ChangeSummary[] = []) {

@@ -3,6 +3,8 @@ import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
 import { clearedSessionCookie, clientAddress, currentUser, deviceLabel, endSession, enforceLimit, isSecureOrigin, sessionCookie } from '@/services/auth'
 import { created, noContent, ok } from '@/lib/http'
+import { isPasswordLengthValid } from '@/lib/password-policy'
+import { isAdmin } from '@/services/admin'
 import { exchangeDesktopCode, loginAccount, registerAccount, requestPasswordReset, resetPassword } from '@/services/accounts'
 
 // Adds a Set-Cookie header to a response that was built by ok() or created().
@@ -19,7 +21,7 @@ export async function handlePublicRoutes(ctx: AppContext, request: Request, meth
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const password = typeof body.password === 'string' ? body.password : ''
     if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new AppError('EMAIL_INVALID')
-    if (password.length < 10 || password.length > 256) throw new AppError('PASSWORD_LENGTH_INVALID')
+    if (!isPasswordLengthValid(password)) throw new AppError('PASSWORD_LENGTH_INVALID')
     const session = await registerAccount(db, email, password, { client: 'web', device: deviceLabel(request) })
     return withCookie(created(session), sessionCookie(session.token, isSecureOrigin(ctx.config.publicWebUrl)))
   }
@@ -48,12 +50,15 @@ export async function handlePublicRoutes(ctx: AppContext, request: Request, meth
     const body = await bodyOf(request)
     const rawToken = typeof body.token === 'string' ? body.token.trim() : ''
     const password = typeof body.password === 'string' ? body.password : ''
-    if (password.length < 10 || password.length > 256) throw new AppError('PASSWORD_LENGTH_INVALID')
+    if (!isPasswordLengthValid(password)) throw new AppError('PASSWORD_LENGTH_INVALID')
     await resetPassword(db, rawToken, password)
     return noContent()
   }
 
-  if (method === 'GET' && path === '/api/me') return ok({ user: await currentUser(db, request) })
+  if (method === 'GET' && path === '/api/me') {
+    const user = await currentUser(db, request)
+    return ok({ user: { ...user, isAdmin: await isAdmin(db, user.id) } })
+  }
 
   if (method === 'POST' && path === '/api/desktop-login/exchange') {
     const body = await bodyOf(request)

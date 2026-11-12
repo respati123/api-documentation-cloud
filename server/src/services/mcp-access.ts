@@ -1,0 +1,225 @@
+import type { SQL } from 'bun'
+import { AppError } from '@/lib/errors/app-error'
+import { effectiveTools, PLANNING_TOOLS, type McpPrincipal, type McpTool } from '@/models/mcp'
+import type { TaskStatus } from '@/models/project'
+import { findMcpPrincipal, markGuideRead, touchMcpKey } from '@/repositories/mcp-keys.repository'
+import { GUIDE_VERSION, guideFor } from '@/services/mcp-guides'
+import { findRole, listUserWorkspaces } from '@/repositories/memberships.repository'
+import { findAssignedTask, findTaskInWorkspace, listAssignedTasks, listProjects, listTasks, updateAssignedTaskStatus } from '@/repositories/projects.repository'
+import { addTaskSubtask, getTaskSubtasks, setTaskSubtaskDone } from '@/services/projects'
+import { addStoryTestCase, attachStoryDesign, getStoryDetails, linkStoryContract, updateStoryDetails } from '@/services/stories'
+import { listParticipatingStories, isStoryParticipant } from '@/repositories/planning.repository'
+import { mcpKeyHash } from '@/services/mcp-keys'
+import { addPlanningComment, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, getPlanningDocument, getPlanningItem, listPlanningDocuments, listPlanningItems, listPlanningTasks, type PlanningVia, type TargetKind } from '@/services/planning'
+
+const statuses: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'in_review', 'done']
+
+export async function authenticateMcpKey(db: SQL, value: string | undefined): Promise<McpPrincipal> {
+  if (!value?.startsWith('apm_')) throw new AppError('MCP_KEY_INVALID')
+  const principal = await findMcpPrincipal(db, mcpKeyHash(value))
+  if (!principal) throw new AppError('MCP_KEY_INVALID')
+  await touchMcpKey(db, principal.keyId)
+  return { ...principal, tools: effectiveTools(principal.tools) }
+}
+
+const GUIDE_FRESH_MS = 12 * 60 * 60 * 1000
+
+// A key may write once it has read the current playbook within the last twelve hours.
+export function guideIsFresh(principal: McpPrincipal, now = Date.now()): boolean {
+  return principal.guideVersion === GUIDE_VERSION && Boolean(principal.guideReadAt) && now - new Date(principal.guideReadAt as Date).getTime() < GUIDE_FRESH_MS
+}
+
+export async function readMcpGuide(db: SQL, principal: McpPrincipal) {
+  await markGuideRead(db, principal.keyId, GUIDE_VERSION)
+  return { version: GUIDE_VERSION, role: principal.role, guide: guideFor(principal.role) }
+}
+
+function filled(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function requireTool(principal: McpPrincipal, tool: McpTool) {
+  if (!principal.tools.includes(tool)) throw new AppError('MCP_PERMISSION_DENIED')
+}
+
+// Every tool except workspaces_list names a workspace. The member must belong to it at the time of the call.
+async function requireWorkspace(db: SQL, principal: McpPrincipal, tool: McpTool, workspaceId: unknown): Promise<string> {
+  requireTool(principal, tool)
+  if (typeof workspaceId !== 'string' || !(await findRole(db, workspaceId, principal.userId))) throw new AppError('WORKSPACE_NOT_FOUND')
+  return workspaceId
+}
+
+function via(principal: McpPrincipal): PlanningVia {
+  return { apiKeyId: principal.keyId, planning: principal.tools.some((tool) => PLANNING_TOOLS.includes(tool)) }
+}
+
+async function projectIdsOf(db: SQL, workspaceId: string): Promise<string[]> {
+  return (await listProjects(db, workspaceId)).map((project) => project.id)
+}
+
+export async function listMcpWorkspaces(db: SQL, principal: McpPrincipal) {
+  requireTool(principal, 'workspaces_list')
+  return listUserWorkspaces(db, principal.userId)
+}
+
+export async function listMcpProjects(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
+  const id = await requireWorkspace(db, principal, 'projects_list', workspaceId)
+  return (await listProjects(db, id)).map(({ taskCount: _taskCount, ...project }) => project)
+}
+
+export async function listMcpAssignedTasks(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
+  const id = await requireWorkspace(db, principal, 'tasks_list_assigned', workspaceId)
+  return listAssignedTasks(db, await projectIdsOf(db, id), principal.userId)
+}
+
+export async function getMcpAssignedTask(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown) {
+  const id = await requireWorkspace(db, principal, 'tasks_get_assigned', workspaceId)
+  const task = typeof taskId === 'string' ? await findAssignedTask(db, taskId, await projectIdsOf(db, id), principal.userId) : undefined
+  if (!task) throw new AppError('TASK_NOT_FOUND')
+  return task
+}
+
+export async function changeMcpAssignedTaskStatus(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, status: unknown) {
+  const id = await requireWorkspace(db, principal, 'tasks_update_assigned_status', workspaceId)
+  if (typeof status !== 'string' || !statuses.includes(status as TaskStatus)) throw new AppError('TASK_INPUT_INVALID')
+  const current = typeof taskId === 'string' ? await findTaskInWorkspace(db, taskId, id) : undefined
+  if (current?.locked && status !== 'backlog' && status !== current.status) throw new AppError('TASK_LOCKED')
+  const task = typeof taskId === 'string' ? await updateAssignedTaskStatus(db, taskId, await projectIdsOf(db, id), principal.userId, status as TaskStatus) : undefined
+  if (!task) throw new AppError('TASK_NOT_FOUND')
+  return task
+}
+
+export async function commentMcpAssignedTask(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, body: unknown) {
+  const id = await requireWorkspace(db, principal, 'tasks_comment_assigned', workspaceId)
+  const task = typeof taskId === 'string' ? await findAssignedTask(db, taskId, await projectIdsOf(db, id), principal.userId) : undefined
+  if (!task) throw new AppError('TASK_NOT_FOUND')
+  return addPlanningComment(db, id, principal.userId, 'task', task.id, { body }, via(principal))
+}
+
+export async function listMcpParticipatingStories(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
+  const id = await requireWorkspace(db, principal, 'stories_list_participating', workspaceId)
+  return listParticipatingStories(db, id, principal.userId)
+}
+
+async function requireParticipatingStory(db: SQL, workspaceId: string, userId: string, storyId: unknown): Promise<string> {
+  if (typeof storyId !== 'string' || !(await isStoryParticipant(db, workspaceId, storyId, userId))) throw new AppError('PLANNING_NOT_FOUND')
+  return storyId
+}
+
+export async function readMcpParticipatingStory(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown) {
+  const id = await requireWorkspace(db, principal, 'stories_read_participating', workspaceId)
+  const story = await requireParticipatingStory(db, id, principal.userId, storyId)
+  return getPlanningItem(db, id, story, principal.userId)
+}
+
+export async function commentMcpParticipatingStory(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, body: unknown) {
+  const id = await requireWorkspace(db, principal, 'stories_comment_participating', workspaceId)
+  const story = await requireParticipatingStory(db, id, principal.userId, storyId)
+  return addPlanningComment(db, id, principal.userId, 'story', story, { body }, via(principal))
+}
+
+export async function listMcpPlanning(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
+  const id = await requireWorkspace(db, principal, 'planning_list', workspaceId)
+  const grant = via(principal)
+  return { documents: await listPlanningDocuments(db, id, principal.userId, grant), items: await listPlanningItems(db, id, principal.userId, grant), tasks: await listPlanningTasks(db, id, principal.userId, grant) }
+}
+
+export async function readMcpDocument(db: SQL, principal: McpPrincipal, workspaceId: unknown, documentId: unknown) {
+  const id = await requireWorkspace(db, principal, 'planning_read_document', workspaceId)
+  if (typeof documentId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
+  return getPlanningDocument(db, id, documentId, principal.userId, via(principal))
+}
+
+// The playbook asks for ten level-2 sections; fewer than six means the template was not followed.
+export async function draftMcpPrd(db: SQL, principal: McpPrincipal, workspaceId: unknown, input: { title: unknown; content: unknown; sourceDocumentId: unknown }) {
+  const id = await requireWorkspace(db, principal, 'planning_draft_prd', workspaceId)
+  if (typeof input.content !== 'string' || (input.content.match(/^##\s+\S/gm) ?? []).length < 6) throw new AppError('MCP_DRAFT_INCOMPLETE')
+  return createPlanningDocument(db, id, principal.userId, { kind: 'prd', ...input }, via(principal))
+}
+
+export async function draftMcpItem(db: SQL, principal: McpPrincipal, workspaceId: unknown, input: { kind: unknown; parentId?: unknown; title: unknown; description?: unknown; acceptanceCriteria?: unknown; sourceDocumentId: unknown; sourceSection?: unknown; participantIds?: unknown }) {
+  const id = await requireWorkspace(db, principal, 'planning_draft_item', workspaceId)
+  if (!filled(input.sourceSection) || (input.kind === 'story' && !filled(input.acceptanceCriteria))) throw new AppError('MCP_DRAFT_INCOMPLETE')
+  return createPlanningItem(db, id, principal.userId, input, via(principal))
+}
+
+export async function draftMcpTask(db: SQL, principal: McpPrincipal, workspaceId: unknown, input: { storyId: unknown; title: unknown; description?: unknown; assigneeId?: unknown; priority?: unknown; role?: unknown }) {
+  const id = await requireWorkspace(db, principal, 'planning_draft_task', workspaceId)
+  if (!filled(input.role)) throw new AppError('MCP_DRAFT_INCOMPLETE')
+  return createPlanningTaskDraft(db, id, principal.userId, input, via(principal))
+}
+
+export async function commentMcpPlanning(db: SQL, principal: McpPrincipal, workspaceId: unknown, input: { targetKind: unknown; targetId: unknown; body: unknown }) {
+  const id = await requireWorkspace(db, principal, 'planning_comment', workspaceId)
+  if (!['document', 'epic', 'story', 'task'].includes(String(input.targetKind)) || typeof input.targetId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
+  return addPlanningComment(db, id, principal.userId, input.targetKind as TargetKind, input.targetId, { body: input.body }, via(principal))
+}
+
+export async function readMcpStory(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown) {
+  const id = await requireWorkspace(db, principal, 'story_read', workspaceId)
+  if (typeof storyId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
+  return getStoryDetails(db, id, storyId, principal.userId, via(principal))
+}
+
+export async function attachMcpDesign(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, input: { title: unknown; url: unknown; note?: unknown }) {
+  const id = await requireWorkspace(db, principal, 'story_attach_design', workspaceId)
+  if (typeof storyId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
+  return attachStoryDesign(db, id, storyId, principal.userId, input, via(principal))
+}
+
+export async function linkMcpContract(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, requestId: unknown) {
+  const id = await requireWorkspace(db, principal, 'story_link_api_contract', workspaceId)
+  if (typeof storyId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
+  return linkStoryContract(db, id, storyId, principal.userId, { requestId }, via(principal))
+}
+
+export async function writeMcpTestCase(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, input: { title: unknown; precondition?: unknown; steps: unknown; expected: unknown }) {
+  const id = await requireWorkspace(db, principal, 'story_write_test_case', workspaceId)
+  if (typeof storyId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
+  return addStoryTestCase(db, id, storyId, principal.userId, input, via(principal))
+}
+
+// Assigned tasks the member can start now: not done, not locked by a story design, and with every dependency done.
+export async function listMcpReadyTasks(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
+  const id = await requireWorkspace(db, principal, 'tasks_list_ready', workspaceId)
+  const tasks = (await Promise.all((await projectIdsOf(db, id)).map((projectId) => listTasks(db, projectId)))).flat()
+  const done = new Set(tasks.filter((task) => task.status === 'done').map((task) => task.id))
+  return tasks.filter((task) => task.assigneeId === principal.userId && task.status !== 'done' && !task.locked && task.dependsOn.every((dependency) => done.has(dependency)))
+}
+
+async function requireOwnTask(db: SQL, principal: McpPrincipal, tool: McpTool, workspaceId: unknown, taskId: unknown) {
+  const id = await requireWorkspace(db, principal, tool, workspaceId)
+  const task = typeof taskId === 'string' ? await findTaskInWorkspace(db, taskId, id) : undefined
+  if (!task || task.assigneeId !== principal.userId) throw new AppError('TASK_NOT_FOUND')
+  return { workspaceId: id, taskId: task.id }
+}
+
+export async function listMcpSubtasks(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown) {
+  const own = await requireOwnTask(db, principal, 'subtasks_list', workspaceId, taskId)
+  return getTaskSubtasks(db, own.workspaceId, own.taskId, principal.userId)
+}
+
+export async function addMcpSubtask(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, title: unknown) {
+  const own = await requireOwnTask(db, principal, 'subtask_add', workspaceId, taskId)
+  return addTaskSubtask(db, own.workspaceId, own.taskId, principal.userId, title)
+}
+
+export async function setMcpSubtaskDone(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, subtaskId: unknown, done: unknown) {
+  const own = await requireOwnTask(db, principal, 'subtask_set_done', workspaceId, taskId)
+  if (typeof subtaskId !== 'string') throw new AppError('TASK_INPUT_INVALID')
+  return setTaskSubtaskDone(db, own.workspaceId, own.taskId, subtaskId, principal.userId, done)
+}
+
+export async function writeMcpStoryDetails(
+  db: SQL,
+  principal: McpPrincipal,
+  workspaceId: unknown,
+  storyId: unknown,
+  input: { userStory: unknown; flow: unknown; definitionOfDone: unknown },
+) {
+  const id = await requireWorkspace(db, principal, 'story_write_details', workspaceId)
+  const story = (input.userStory ?? {}) as Record<string, unknown>
+  const complete = filled(story.role) && filled(story.action) && filled(story.benefit) && filled(input.flow) && Array.isArray(input.definitionOfDone) && input.definitionOfDone.length > 0
+  if (typeof storyId !== 'string' || !complete) throw new AppError('MCP_DRAFT_INCOMPLETE')
+  return updateStoryDetails(db, id, storyId, principal.userId, { userStory: input.userStory, flow: input.flow, definitionOfDone: input.definitionOfDone }, via(principal))
+}

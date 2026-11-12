@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
-import { findUserByEmail, findUserById, insertUser, setPasswordHash } from '@/repositories/users.repository'
+import { findUserByEmail, findUserById, insertUser, isAdminUser, setPasswordHash, upsertAdminUser } from '@/repositories/users.repository'
 import { databaseEnabled, openTestDatabase } from '@/testing/database'
 
 describe.skipIf(!databaseEnabled)('users repository', () => {
@@ -51,5 +51,34 @@ describe.skipIf(!databaseEnabled)('users repository', () => {
     await setPasswordHash(db, id, 'new-hash')
 
     expect((await findUserByEmail(db, email))?.passwordHash).toBe('new-hash')
+  })
+
+  test('upsertAdminUser creates an admin account for a new email', async () => {
+    const email = `admin-${randomUUID()}@test.dev`
+
+    const id = await upsertAdminUser(db, { id: randomUUID(), email, passwordHash: 'admin-hash' })
+
+    expect(await isAdminUser(db, id)).toBe(true)
+    expect((await findUserByEmail(db, email))?.passwordHash).toBe('admin-hash')
+  })
+
+  test('upsertAdminUser promotes an existing account and replaces its password hash', async () => {
+    const existingId = randomUUID()
+    const email = `promote-${randomUUID()}@test.dev`
+    await insertUser(db, { id: existingId, email, passwordHash: 'member-hash' })
+
+    const id = await upsertAdminUser(db, { id: randomUUID(), email, passwordHash: 'admin-hash' })
+
+    expect(id).toBe(existingId)
+    expect(await isAdminUser(db, existingId)).toBe(true)
+    expect((await findUserByEmail(db, email))?.passwordHash).toBe('admin-hash')
+  })
+
+  test('isAdminUser is false for an ordinary account and for an unknown id', async () => {
+    const id = randomUUID()
+    await insertUser(db, { id, email: `member-${randomUUID()}@test.dev`, passwordHash: 'hash' })
+
+    expect(await isAdminUser(db, id)).toBe(false)
+    expect(await isAdminUser(db, randomUUID())).toBe(false)
   })
 })

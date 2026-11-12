@@ -92,3 +92,27 @@ export async function countWorkspaces(db: SQL, userId: string): Promise<{ total:
   const [row] = await db`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE role = 'owner')::int AS owned FROM memberships WHERE user_id = ${userId}`
   return { total: row.total, owned: row.owned }
 }
+
+export interface AdminWorkspaceRow {
+  id: string
+  name: string
+  ownerEmail: string
+  memberCount: number
+  createdAt: Date
+  sortAt: string
+}
+
+// Every workspace for the app admin, newest first. Only the name, owner, and member count, never the content.
+export async function listAllWorkspacesPage(db: SQL, query: { search: string; after: { sortAt: string; id: string } | null; limit: number }): Promise<AdminWorkspaceRow[]> {
+  const pattern = `%${query.search.replace(/[\\%_]/g, (match) => `\\${match}`)}%`
+  const afterAt = query.after?.sortAt ?? null
+  const afterId = query.after?.id ?? null
+  return db`
+    SELECT w.id, w.name, u.email AS "ownerEmail", (SELECT count(*)::int FROM memberships m WHERE m.workspace_id = w.id) AS "memberCount", w.created_at AS "createdAt", w.created_at::text AS "sortAt"
+    FROM workspaces w
+    JOIN users u ON u.id = w.owner_id
+    WHERE (w.name ILIKE ${pattern} OR u.email ILIKE ${pattern})
+      AND (${afterAt}::text IS NULL OR (w.created_at, w.id) < (${afterAt}::timestamptz, ${afterId}::text))
+    ORDER BY w.created_at DESC, w.id DESC
+    LIMIT ${query.limit}`
+}

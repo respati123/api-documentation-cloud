@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { inviteMessage } from '@/services/mail'
+import { inviteMessage, mcpKeyMessage } from '@/services/mail'
 
 const invite = {
   workspaceName: 'Platform API',
@@ -19,5 +19,14 @@ describe('invite email', () => {
     const { text, html } = inviteMessage(invite)
     expect(text).not.toContain('desktop app and use this invitation link')
     expect(html).not.toContain('copy this link into the app')
+  })
+})
+
+describe('MCP key email', () => {
+  test('links to the MCP page and escapes the key name in the html', () => {
+    const { text, html } = mcpKeyMessage({ keyName: '<Laptop>', claimUrl: 'https://portal.test/settings/mcp', claimDays: 7 })
+    expect(text).toContain('https://portal.test/settings/mcp')
+    expect(html).toContain('&lt;Laptop&gt;')
+    expect(html).not.toContain('<Laptop>')
   })
 })

@@ -31,3 +31,12 @@ describe('sync and websocket error codes', () => {
     expect(errorDefinitions[code].status).toBe(status)
   })
 })
+
+describe('admin error codes', () => {
+  test.each([
+    ['ADMIN_REQUIRED', 403],
+    ['ADMIN_SEED_INVALID', 400],
+  ] as const)('%s uses status %i', (code, status) => {
+    expect(errorDefinitions[code].status).toBe(status)
+  })
+})

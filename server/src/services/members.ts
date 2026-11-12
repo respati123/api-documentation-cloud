@@ -5,6 +5,7 @@ import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagin
 import type { AuthUser, Role } from '@/models/workspace'
 import { deleteMembership, findRole, listMembersPage as listMemberRows, updateRole, type MemberRow } from '@/repositories/memberships.repository'
 import { broadcastWorkspaceChange } from '@/services/events'
+import { revokeKeyIfNoWorkspace } from '@/services/mcp-keys'
 
 export async function listMembersPage(db: SQL, workspaceId: string, limit: number, cursor: CursorKeys | null) {
   const after = cursorValues(cursor, ['r', 't', 'i'])
@@ -31,6 +32,7 @@ export async function removeMember(ctx: AppContext, workspaceId: string, actor: 
   if (targetRole === 'owner') throw new AppError('OWNER_CANNOT_LEAVE')
   await broadcastWorkspaceChange(ctx, workspaceId, 'members')
   await deleteMembership(ctx.db, workspaceId, targetId)
+  await revokeKeyIfNoWorkspace(ctx.db, targetId)
 }
 
 function withoutCursorKeys({ rank: _rank, sortAt: _sortAt, ...member }: MemberRow) {
