@@ -1,6 +1,6 @@
 # Repository Guidelines (web)
 
-This folder is the browser portal: React, Vite, shadcn/ui, and Tailwind. Core rules are below. Detailed guides are in `references/`. Read the guide that matches your task before you start.
+This folder is the browser portal: React, Vite, and Tailwind. Its UI components are our own, built with Tailwind. Core rules are below. Detailed guides are in `references/`. Read the guide that matches your task before you start.
 
 ## Project
 
@@ -34,9 +34,9 @@ Run the typecheck and build before you hand off any change in `src/`.
 
 ## Core rules
 
-- **MANDATORY: use Context7 for library docs.** Before you write or change code that calls React, Vite, Tailwind, shadcn/ui, TanStack Query, zod, i18next, or any other library, resolve the library ID with the Context7 MCP tools and query the docs for the exact API. Do not write library calls from memory. If Context7 is not available, use the official docs and say so in your reply. See `cloud/AGENTS.md`.
+- **MANDATORY: use Context7 for library docs.** Before you write or change code that calls React, Vite, Tailwind, TanStack Query, zod, i18next, or any other library, resolve the library ID with the Context7 MCP tools and query the docs for the exact API. Do not write library calls from memory. If Context7 is not available, use the official docs and say so in your reply. See `cloud/AGENTS.md`.
 - **UI work uses the impeccable skill**, installed at `.agents/skills/impeccable/`. Read `references/ui-design.md` before any UI edit.
-- **MANDATORY: every UI element in a view is a shadcn/ui component.** Views and pages never contain raw `button`, `input`, `select`, `textarea`, `label`, `table`, `hr`, or `a` elements. Use the **shadcn** skill (`.agents/skills/shadcn/SKILL.md`) and add missing components with `npx shadcn@latest add <name> -y`. A custom element is allowed only when no shadcn component fits. See `references/ui-design.md`.
+- **MANDATORY: views use the shared components.** Views and pages never contain raw `button`, `input`, `select`, `textarea`, `label`, `table`, `hr`, or `a` elements. Use the components in `src/shared/components/`, which are built with Tailwind. A raw element is allowed only when no shared component fits. See `references/ui-design.md`.
 - **Styling is Tailwind only.** No `.css` files except the single global entry `src/index.css`. Use Tailwind utilities and theme tokens.
 - **MANDATORY: no text literals in views or viewmodels.** A view calls `t(CONSTANT)`, where the constant is an `as const` object in `features/<name>/constants/`. Constants hold locale keys, and the words live in `id` and `en` locale files. Literal or template keys such as `t('list.create')` are not allowed. `src/app/ui-rules.test.ts` enforces this. See `references/i18n.md`.
 - **All imports are absolute, with the `@/` alias** (`@/` points to `src/`). No `../` or `./` imports.

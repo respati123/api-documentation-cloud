@@ -108,7 +108,7 @@ In `tsconfig.json`:
 - Every icon-only button has an `aria-label`, and the label is translated (see `i18n.md`).
 - Every form field has a visible label.
 - Focus must stay visible. Do not remove outlines without a replacement.
-- Dialogs trap focus and close with Escape. shadcn `Dialog` already does this. Do not replace it with a custom modal.
+- Dialogs trap focus and close with Escape. The shared `Dialog` in `shared/components/primitives/` gets this from Base UI. Do not replace it with a custom modal.
 
 ## Changes and commits
 

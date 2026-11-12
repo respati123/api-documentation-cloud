@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-React, TypeScript, Vite, Tailwind CSS v4, and shadcn/ui on Base UI. Already in the repository; the redesign keeps this stack.
+React, TypeScript, Vite, Tailwind CSS v4, and Base UI primitives with our own styled components. Already in the repository; the redesign keeps this stack.
 
 ## Users
 

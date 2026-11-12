@@ -12,35 +12,27 @@ Use the **impeccable** skill for all UI work. It is installed in this folder at 
 4. When the change is finished, run the detector on the changed files:
    `./.agents/skills/impeccable/scripts/impeccable detect --json <changed files>`
 
-## Required skill: shadcn
+## Components (mandatory)
 
-Use the **shadcn** skill for every component change. It is installed at `.agents/skills/shadcn/SKILL.md`.
+Every interactive or structural UI element in a view uses a shared component from `src/shared/components/`. We build these components ourselves with Tailwind.
 
-1. Read `.agents/skills/shadcn/SKILL.md` and its `rules/` files that match the change (`composition.md`, `forms.md`, `styling.md`, `icons.md`).
-2. Check what is installed with `npx shadcn@latest info --json` before adding anything.
-3. Fetch the component docs with `npx shadcn@latest docs <component>` before writing code that uses it.
-
-## Components: shadcn/ui only (mandatory)
-
-This rule is mandatory. Every interactive or structural UI element in a view uses a shadcn component.
-
-- Views in `features/**/views` and `features/**/pages` never contain raw `button`, `input`, `select`, `textarea`, `label`, `table`, `hr`, or `a` elements. Use `Button`, `Input`, `Select`, `Textarea`, `Label`, `Table`, `Separator`, or the shadcn link pattern (`Button` with `variant="link"`).
-- Callouts, errors, and notices use `Alert`. Empty states use `Empty`. Stat tiles and panels use `Card`. Status labels use `Badge`. Loading placeholders use `Skeleton`. Dividers use `Separator`.
-- Components are added only with the shadcn CLI: `npx shadcn@latest add <component> -y`. The generated files go in `src/shared/components/ui/`. Do not hand-edit them. If a component needs a different look, wrap it in an atom or molecule.
-- Import the generated `cn` helper through `@/shared/utils/cn`. The CLI writes `from "cn"` by default, so fix it after every `add`.
-- Before writing a custom element, search for a shadcn component. A custom element is allowed only when no shadcn component fits, such as a decorative mark. Say so in the code review.
-- Do not add a third-party UI library next to shadcn.
+- Views in `features/**/views` and `features/**/pages` never contain raw `button`, `input`, `select`, `textarea`, `label`, `table`, `hr`, or `a` elements. Use the shared component for the element.
+- Before writing a new component, check `src/shared/components/` for one that already fits. Add a new component there when a pattern repeats across features.
+- Shared components are plain React components that take props and render Tailwind classes. Keep each one in its own file, with an English name. Keep the variants in one place, so the same button or card looks the same everywhere.
+- Import class-merging helpers through `@/shared/utils/cn`.
+- A raw element is allowed only when no shared component fits, such as a decorative mark. Say so in the code review.
+- Do not add a third-party UI library. A new one needs a decision from the team first.
 - `src/app/ui-rules.test.ts` enforces the raw-element rule for views and pages. Run `bun run test` before handoff.
 
 ## Tailwind CSS
 
-shadcn/ui is built on Tailwind CSS. Tailwind is required, and it is the only styling system.
+Tailwind is required, and it is the only styling system.
 
 - Tailwind v4 is set up through the Vite plugin (`@tailwindcss/vite`) and one global entry stylesheet, `src/index.css`.
-- `index.css` holds only three things: the `@import "tailwindcss"` line, the shadcn theme tokens (`:root` and `.dark` variables), and the base layer that shadcn generates. Nothing else goes there.
+- `index.css` holds only three things: the `@import "tailwindcss"` line, the theme tokens (`:root` and `.dark` variables), and the base layer. Nothing else goes there.
 - The entry stylesheet is the only `.css` file in the portal. It is imported once in `app/providers.tsx` or `main.tsx`.
 - No `.css`, `.scss`, or `.module.css` files for components. Style with Tailwind utility classes.
-- Use the `cn()` helper from `@/shared/utils/cn` to merge class names. It is the shadcn default.
+- Use the `cn()` helper from `@/shared/utils/cn` to merge class names.
 
 ## Styling rules
 
@@ -56,7 +48,7 @@ shadcn/ui is built on Tailwind CSS. Tailwind is required, and it is the only sty
 
 ## Scrolling
 
-- Use shadcn `ScrollArea` for any scrollable region. Set `type="auto"`, so the scrollbar appears only when the content overflows.
+- Use the shared scroll-area component for any scrollable region. Set `type="auto"`, so the scrollbar appears only when the content overflows.
 - When there is nothing to scroll, the scrollbar stays hidden.
 - When the user scrolls, show a thin indicator. Hide it again after the scroll stops.
 - Scrolling should feel smooth. Do not set `scroll-behavior` on the whole page to get this.
@@ -66,7 +58,7 @@ shadcn/ui is built on Tailwind CSS. Tailwind is required, and it is the only sty
 
 Loading must not look broken or jump:
 
-- Show a skeleton with the same shape and size as the final content. Use shadcn `Skeleton`.
+- Show a skeleton with the same shape and size as the final content. Use the shared skeleton component.
 - Do not show a spinner that replaces the whole screen. Keep the layout and fill only the content area.
 - Avoid flicker. Do not show the skeleton for requests that finish in under about 150ms. Delay it, or let the query serve cached data.
 - When a query changes its key, keep the previous data on screen with `keepPreviousData`, and show a small inline pending indicator.

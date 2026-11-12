@@ -35,7 +35,7 @@ Every route has an error boundary. Each feature page may also have a smaller bou
 
 - Use `react-error-boundary` (`ErrorBoundary`).
 - Wrap the boundary in `QueryErrorResetBoundary` so the "Try again" button also resets failed queries.
-- Put the wrapper in `shared/errors/error-boundary.tsx`. Put the fallback UI in `shared/errors/` too, built from shadcn `Alert` and `Button`.
+- Put the wrapper in `shared/errors/error-boundary.tsx`. Put the fallback UI in `shared/errors/` too, built from the shared `Alert` and `Button` components.
 - The route-level boundary goes in `app/`, around each page's outlet.
 - Boundaries catch render errors only. Errors from event handlers and async code must be caught in the ViewModel and shown as state.
 - Log the error with `console.error` in development. Do not show the stack trace to users.
