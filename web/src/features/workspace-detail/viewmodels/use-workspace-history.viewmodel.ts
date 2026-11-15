@@ -5,6 +5,7 @@ import { useAuthSessionStore } from '@/features/auth'
 import { ACTIVITY_TEXT } from '@/features/workspace-detail/constants/activity-text.constants'
 import type { CommitDayGroup, DiffLayout } from '@/features/workspace-detail/models/history.model'
 import { workspaceDetailService } from '@/features/workspace-detail/services/workspace-detail.service'
+import { detectBreakingChanges } from '@/features/workspace-detail/utils/breaking-changes'
 import {
   buildChangeTree,
   buildFileDiffs,
@@ -87,8 +88,11 @@ export function useWorkspaceHistoryViewModel({
     : commitQuery.data && (!parentId || parentQuery.data)
       ? 'ready'
       : 'loading'
-  const files =
-    status === 'ready' && commitQuery.data ? buildFileDiffs(compareSnapshots(parentQuery.data?.tree ?? [], commitQuery.data.tree)) : []
+  const parentTree = parentQuery.data?.tree ?? []
+  const commitTree = commitQuery.data?.tree ?? []
+  const ready = status === 'ready'
+  const files = ready ? buildFileDiffs(compareSnapshots(parentTree, commitTree)) : []
+  const breakingChanges = ready ? detectBreakingChanges(parentTree, commitTree) : []
 
   const dayGroups: CommitDayGroup[] = groupByDay(commits, (commit) => commit.createdAt).map((group) => ({
     key: group.key,
@@ -132,6 +136,8 @@ export function useWorkspaceHistoryViewModel({
     },
     files,
     tree: buildChangeTree(files),
+    breakingChanges,
+    breakingFileIds: [...new Set(breakingChanges.map((change) => change.nodeId))],
     totals: diffTotals(files),
     layout,
     // A narrow screen always reads the unified diff; the chosen layout comes back on a wider one.

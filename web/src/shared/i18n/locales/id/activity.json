@@ -80,5 +80,19 @@
     "added": "A",
     "modified": "M",
     "deleted": "D"
+  },
+  "breaking": {
+    "badge": "Breaking change",
+    "badgeCount_one": "{{count}} breaking change",
+    "badgeCount_other": "{{count}} breaking change",
+    "title": "Commit ini bisa merusak pemanggil API",
+    "detail": "Client yang dibuat untuk versi induk bisa gagal setelah perubahan ini.",
+    "reason": {
+      "endpoint-removed": "Endpoint dihapus: {{detail}}",
+      "method-changed": "Method berubah: {{detail}}",
+      "path-changed": "Path berubah: {{detail}}",
+      "response-removed": "Response {{detail}} yang terdokumentasi dihapus",
+      "response-field-removed": "Field response dihapus: {{detail}}"
+    }
   }
 }

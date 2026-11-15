@@ -1,6 +1,7 @@
 import '@/shared/i18n'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { detectBreakingChanges } from '@/features/workspace-detail/utils/breaking-changes'
 import { buildChangeTree, buildFileDiffs, diffTotals } from '@/features/workspace-detail/utils/commit-history'
 import { compareSnapshots } from '@/features/workspace-detail/utils/snapshot-diff'
 import { CommitDetailView, type CommitDetailViewProps } from '@/features/workspace-detail/views/commit-detail.view'
@@ -25,6 +26,8 @@ const props: CommitDetailViewProps = {
   error: null,
   files,
   tree: buildChangeTree(files),
+  breakingChanges: [],
+  breakingFileIds: [],
   totals: diffTotals(files),
   layout: 'split',
   diffLayout: 'split',
@@ -104,5 +107,33 @@ describe('CommitDetailView', () => {
 
     rerender(<CommitDetailView {...props} files={[]} tree={[]} />)
     expect(screen.getByTestId('history-commit-empty')).toBeInTheDocument()
+  })
+})
+
+describe('CommitDetailView breaking changes', () => {
+  const breaking = detectBreakingChanges([request('a', '/v1')], [request('a', '/v2')])
+
+  test('marks the commit, lists each reason, and flags the item', () => {
+    render(<CommitDetailView {...props} breakingChanges={breaking} breakingFileIds={['a']} />)
+
+    expect(screen.getByTestId('history-commit-breaking-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('history-breaking-panel')).toHaveTextContent('/v1 → /v2')
+    expect(screen.getByTestId('history-file-a-breaking')).toBeInTheDocument()
+    expect(screen.queryByTestId('history-file-b-breaking')).not.toBeInTheDocument()
+  })
+
+  test('jumps to the item from a listed reason', () => {
+    render(<CommitDetailView {...props} breakingChanges={breaking} breakingFileIds={['a']} />)
+
+    fireEvent.click(screen.getByTestId('history-breaking-a-path-changed'))
+
+    expect(props.onJumpToFile).toHaveBeenCalledWith('a')
+  })
+
+  test('shows no breaking marks for a safe commit', () => {
+    render(<CommitDetailView {...props} />)
+
+    expect(screen.queryByTestId('history-commit-breaking-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('history-breaking-panel')).not.toBeInTheDocument()
   })
 })

@@ -120,6 +120,8 @@ export function WorkspacePage({ workspaceId, tab, commitId, navigate }: Workspac
               error={vm.history.error}
               files={vm.history.files}
               tree={vm.history.tree}
+              breakingChanges={vm.history.breakingChanges}
+              breakingFileIds={vm.history.breakingFileIds}
               totals={vm.history.totals}
               layout={vm.history.layout}
               diffLayout={vm.history.diffLayout}

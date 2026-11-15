@@ -1,12 +1,14 @@
-import { ArrowLeft, ChevronDown, ChevronRight, Folder, FolderTree } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, Folder, FolderTree, TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   ACTIVITY_KIND_SHORT_TEXT,
   ACTIVITY_KIND_TEXT,
   ACTIVITY_TEXT,
+  BREAKING_REASON_TEXT,
   DIFF_LAYOUT_TEXT,
 } from '@/features/workspace-detail/constants/activity-text.constants'
 import type { ChangeTreeGroup, DiffLayout, DiffStats, FileDiff } from '@/features/workspace-detail/models/history.model'
+import type { BreakingChange } from '@/features/workspace-detail/utils/breaking-changes'
 import { fileAnchorId } from '@/features/workspace-detail/utils/commit-history'
 import type { ChangeKind } from '@/features/workspace-detail/utils/snapshot-diff'
 import { DiffView } from '@/features/workspace-detail/views/diff-view.view'
@@ -49,6 +51,8 @@ export interface CommitDetailViewProps {
   error: string | null
   files: FileDiff[]
   tree: ChangeTreeGroup[]
+  breakingChanges: BreakingChange[]
+  breakingFileIds: string[]
   totals: DiffStats & { files: number }
   layout: DiffLayout
   diffLayout: DiffLayout
@@ -93,9 +97,17 @@ export function CommitDetailView(props: CommitDetailViewProps) {
         data-testid="history-commit-header"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h2 className="min-w-0 font-heading text-xl font-semibold tracking-tight break-words" data-testid="history-commit-message">
-            {commit.message}
-          </h2>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="min-w-0 font-heading text-xl font-semibold tracking-tight break-words" data-testid="history-commit-message">
+              {commit.message}
+            </h2>
+            {props.breakingChanges.length > 0 && (
+              <Badge variant="destructive" data-testid="history-commit-breaking-badge">
+                <TriangleAlert aria-hidden="true" />
+                {t(ACTIVITY_TEXT.breaking.badgeCount, { count: props.breakingChanges.length })}
+              </Badge>
+            )}
+          </div>
           {props.canRestore && <RestoreDialog disabled={commit.isLatest} onConfirm={props.onRestore} />}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-sm">
@@ -156,6 +168,9 @@ export function CommitDetailView(props: CommitDetailViewProps) {
           testId="history-commit-empty"
         />
       )}
+      {status === 'ready' && props.breakingChanges.length > 0 && (
+        <BreakingPanel changes={props.breakingChanges} onJumpToFile={props.onJumpToFile} />
+      )}
       {status === 'ready' && files.length > 0 && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -186,7 +201,7 @@ export function CommitDetailView(props: CommitDetailViewProps) {
             )}
           </div>
           <div className="grid items-start gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
-            <ChangeTree tree={props.tree} onJumpToFile={props.onJumpToFile} />
+            <ChangeTree tree={props.tree} breakingFileIds={props.breakingFileIds} onJumpToFile={props.onJumpToFile} />
             <div className="grid min-w-0 gap-4">
               {files.map((file) => (
                 <FileCard key={file.id} file={file} {...props} />
@@ -245,7 +260,15 @@ function KindMark({ kind }: { kind: ChangeKind }) {
   )
 }
 
-function ChangeTree({ tree, onJumpToFile }: { tree: ChangeTreeGroup[]; onJumpToFile: (fileId: string) => void }) {
+function ChangeTree({
+  tree,
+  breakingFileIds,
+  onJumpToFile,
+}: {
+  tree: ChangeTreeGroup[]
+  breakingFileIds: string[]
+  onJumpToFile: (fileId: string) => void
+}) {
   const { t } = useTranslation('activity')
   return (
     <nav
@@ -275,6 +298,9 @@ function ChangeTree({ tree, onJumpToFile }: { tree: ChangeTreeGroup[]; onJumpToF
             >
               <KindMark kind={file.kind} />
               <span className="min-w-0 flex-1 truncate text-left">{file.name}</span>
+              {breakingFileIds.includes(file.id) && (
+                <TriangleAlert aria-hidden="true" className="size-3.5 text-destructive" data-testid={`history-tree-${file.id}-breaking`} />
+              )}
             </Button>
           ))}
         </div>
@@ -289,6 +315,7 @@ function FileCard({
   viewedIds,
   collapsedIds,
   expandedGapKeys,
+  breakingFileIds,
   onToggleViewed,
   onToggleCollapsed,
   onExpandGap,
@@ -317,6 +344,12 @@ function FileCard({
           {collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
         </Button>
         <KindMark kind={file.kind} />
+        {breakingFileIds.includes(file.id) && (
+          <Badge variant="destructive" data-testid={`history-file-${file.id}-breaking`}>
+            <TriangleAlert aria-hidden="true" />
+            {t(ACTIVITY_TEXT.breaking.badge)}
+          </Badge>
+        )}
         {file.nodeKind === 'request' ? (
           <Badge variant={methodVariant(file.method)} className="font-mono">
             {file.method}
@@ -350,6 +383,42 @@ function FileCard({
       {!collapsed && (
         <DiffView fileId={file.id} blocks={file.blocks} layout={diffLayout} expandedGapKeys={expandedGapKeys} onExpandGap={onExpandGap} />
       )}
+    </section>
+  )
+}
+
+function BreakingPanel({ changes, onJumpToFile }: { changes: BreakingChange[]; onJumpToFile: (fileId: string) => void }) {
+  const { t } = useTranslation('activity')
+  return (
+    <section
+      role="note"
+      className="grid gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+      data-testid="history-breaking-panel"
+    >
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+        <TriangleAlert aria-hidden="true" className="size-4" />
+        {t(ACTIVITY_TEXT.breaking.title)}
+      </h3>
+      <p className="text-sm text-muted-foreground">{t(ACTIVITY_TEXT.breaking.detail)}</p>
+      <ul className="grid gap-1">
+        {changes.map((change) => (
+          <li key={`${change.nodeId}-${change.reason}-${change.detail}`} className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto p-0 font-medium text-foreground"
+              data-testid={`history-breaking-${change.nodeId}-${change.reason}`}
+              onClick={() => onJumpToFile(change.nodeId)}
+            >
+              <span className="font-mono text-xs">{change.method}</span>
+              {change.name}
+            </Button>
+            <span className="min-w-0 font-mono text-xs break-all text-muted-foreground">
+              {t(BREAKING_REASON_TEXT[change.reason], { detail: change.detail })}
+            </span>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

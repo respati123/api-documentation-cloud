@@ -1,4 +1,5 @@
 import type { DiffLayout } from '@/features/workspace-detail/models/history.model'
+import type { BreakingReason } from '@/features/workspace-detail/utils/breaking-changes'
 import type { ChangeKind } from '@/features/workspace-detail/utils/snapshot-diff'
 
 export const ACTIVITY_TEXT = {
@@ -53,6 +54,12 @@ export const ACTIVITY_TEXT = {
   layout: {
     label: 'activity:layout.label',
   },
+  breaking: {
+    badge: 'activity:breaking.badge',
+    badgeCount: 'activity:breaking.badgeCount',
+    title: 'activity:breaking.title',
+    detail: 'activity:breaking.detail',
+  },
   detail: {
     loading: 'activity:detail.loading',
     errorTitle: 'activity:detail.errorTitle',
@@ -85,4 +92,12 @@ export const ACTIVITY_KIND_SHORT_TEXT: Record<ChangeKind, string> = {
 export const DIFF_LAYOUT_TEXT: Record<DiffLayout, string> = {
   split: 'activity:layout.split',
   unified: 'activity:layout.unified',
+}
+
+export const BREAKING_REASON_TEXT: Record<BreakingReason, string> = {
+  'endpoint-removed': 'activity:breaking.reason.endpoint-removed',
+  'method-changed': 'activity:breaking.reason.method-changed',
+  'path-changed': 'activity:breaking.reason.path-changed',
+  'response-removed': 'activity:breaking.reason.response-removed',
+  'response-field-removed': 'activity:breaking.reason.response-field-removed',
 }

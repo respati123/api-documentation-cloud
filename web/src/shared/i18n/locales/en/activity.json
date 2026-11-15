@@ -80,5 +80,19 @@
     "added": "A",
     "modified": "M",
     "deleted": "D"
+  },
+  "breaking": {
+    "badge": "Breaking change",
+    "badgeCount_one": "{{count}} breaking change",
+    "badgeCount_other": "{{count}} breaking changes",
+    "title": "This commit can break callers",
+    "detail": "Clients built against the parent version may fail after these changes.",
+    "reason": {
+      "endpoint-removed": "Endpoint removed: {{detail}}",
+      "method-changed": "Method changed: {{detail}}",
+      "path-changed": "Path changed: {{detail}}",
+      "response-removed": "Documented response {{detail}} removed",
+      "response-field-removed": "Response field removed: {{detail}}"
+    }
   }
 }

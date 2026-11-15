@@ -99,6 +99,17 @@ describe('useWorkspaceHistoryViewModel', () => {
     expect(result.current.commit).toMatchObject({ shortId: 'c3', parentShortId: 'c2', isLatest: true })
   })
 
+  test('finds breaking changes against the parent', async () => {
+    const { result } = renderHistory()
+
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.breakingChanges.map((change) => [change.nodeId, change.reason])).toEqual([
+      ['a', 'path-changed'],
+      ['b', 'path-changed'],
+    ])
+    expect(result.current.breakingFileIds).toEqual(['a', 'b'])
+  })
+
   test('opens a shared commit that is not in the loaded list, with its author from the detail', async () => {
     const { result } = renderHistory({ commitId: 'orphan' })
 
