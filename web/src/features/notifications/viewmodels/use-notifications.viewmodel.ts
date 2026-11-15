@@ -10,6 +10,7 @@ import {
 import { type AppNotification, notificationCreatedSchema } from '@/features/notifications/models/notification.model'
 import { notificationsService } from '@/features/notifications/services/notifications.service'
 import { useRealtimeEvent } from '@/shared/realtime/use-realtime-event'
+import { showToast } from '@/shared/toast/toast-manager'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatRelativeDate } from '@/shared/utils/format'
 
@@ -30,17 +31,29 @@ export function useNotificationsViewModel(onOpenLink: (link: string) => void) {
     refetchInterval: 5 * 60_000,
   })
   const refresh = () => queryClient.invalidateQueries({ queryKey: notificationKeys.latest })
-  useRealtimeEvent((event) => {
-    if (z.safeParse(notificationCreatedSchema, event).success) void refresh()
-  })
-  const markRead = useMutation({ mutationFn: (id: string) => notificationsService.markRead(token, id), onSuccess: refresh })
-  const markAllRead = useMutation({ mutationFn: () => notificationsService.markAllRead(token), onSuccess: refresh })
-
   const describe = (notification: AppNotification) => {
     const key = NOTIFICATION_KIND_TEXT[notification.kind] ?? UNKNOWN_NOTIFICATION_TEXT
     const text = (name: string) => (typeof notification.data[name] === 'string' ? (notification.data[name] as string) : '')
     return t(key, { keyName: text('keyName'), actor: text('actor'), preview: text('preview'), title: text('title') })
   }
+  const markRead = useMutation({ mutationFn: (id: string) => notificationsService.markRead(token, id), onSuccess: refresh })
+  useRealtimeEvent((event) => {
+    const parsed = z.safeParse(notificationCreatedSchema, event)
+    if (!parsed.success) return
+    void refresh()
+    const { notification } = parsed.data
+    // Using the notification id keeps one toast even when two menus are mounted.
+    showToast({
+      id: notification.id,
+      kind: 'notification',
+      message: describe(notification),
+      onOpen: () => {
+        markRead.mutate(notification.id)
+        onOpenLink(notification.link)
+      },
+    })
+  })
+  const markAllRead = useMutation({ mutationFn: () => notificationsService.markAllRead(token), onSuccess: refresh })
 
   return {
     unreadCount: latest.data?.unreadCount ?? 0,

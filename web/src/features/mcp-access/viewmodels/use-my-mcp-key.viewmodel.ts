@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNoticeStore } from '@/features/app-shell'
 import { useAuthSessionStore } from '@/features/auth'
 import { MCP_ACCESS_TEXT } from '@/features/mcp-access/constants/mcp-access-text.constants'
 import type { McpKey, McpKeyValidDays } from '@/features/mcp-access/models/mcp-key.model'
 import { mcpKeysService } from '@/features/mcp-access/services/mcp-keys.service'
 import { setupSnippets } from '@/features/mcp-access/utils/setup-snippets'
 import { absoluteApiUrl } from '@/shared/services/api-client'
+import { showToast } from '@/shared/toast/toast-manager'
 import { readErrorMessage } from '@/shared/utils/error-message'
 
 export const mcpKeyQueryKeys = {
@@ -24,7 +24,6 @@ export function useMyMcpKeyViewModel() {
   const { t } = useTranslation('mcp')
   const token = useAuthSessionStore((state) => state.token)
   const signedIn = useAuthSessionStore((state) => state.signedIn)
-  const showNotice = useNoticeStore((state) => state.show)
   const queryClient = useQueryClient()
   // The secret lives only in this state. It is gone once the member dismisses it or leaves the page.
   const [created, setCreated] = useState<{ name: string; secret: string } | null>(null)
@@ -47,7 +46,7 @@ export function useMyMcpKeyViewModel() {
   const revoke = useMutation({
     mutationFn: (key: McpKey) => mcpKeysService.revoke(token, key.id),
     onSuccess: async (_result, key) => {
-      showNotice({ kind: 'success', message: t(MCP_ACCESS_TEXT.table.revoked, { name: key.name }) })
+      showToast({ kind: 'success', message: t(MCP_ACCESS_TEXT.table.revoked, { name: key.name }) })
       await queryClient.invalidateQueries({ queryKey: mcpKeyQueryKeys.mine })
     },
   })

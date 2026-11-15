@@ -15,5 +15,10 @@
   "pagination": {
     "loadMore": "Load more",
     "loading": "Loading…"
+  },
+  "toast": {
+    "close": "Dismiss",
+    "region": "Notifications",
+    "open": "Open"
   }
 }

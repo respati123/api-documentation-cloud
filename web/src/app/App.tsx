@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AdminWorkspacesPage } from '@/features/admin-workspaces'
-import { AppShellView, NoticeBanner, SHELL_TEXT, useAppShellViewModel, useNoticeStore } from '@/features/app-shell'
+import { AppShellView, SHELL_TEXT, useAppShellViewModel } from '@/features/app-shell'
 import { AuthPage, isPasswordResetRoute, useAuthSessionViewModel } from '@/features/auth'
 import { DESKTOP_TEXT, DesktopLoginPage, hasDesktopLoginRequest } from '@/features/desktop-login'
 import { AdminMcpKeysPage, MyMcpKeyPage } from '@/features/mcp-access'
@@ -9,13 +9,13 @@ import { usePendingInviteViewModel, WORKSPACE_TEXT, WorkspacePage } from '@/feat
 import { CreateWorkspaceDialog, WORKSPACES_TEXT, WorkspacesPage } from '@/features/workspaces'
 import { LoadingState } from '@/shared/components/state-views'
 import { useRealtimeConnection } from '@/shared/realtime/use-realtime-connection'
+import { showToast } from '@/shared/toast/toast-manager'
 
 export default function App() {
   const { t } = useTranslation()
   const session = useAuthSessionViewModel()
   const shell = useAppShellViewModel()
   const invite = usePendingInviteViewModel(shell.navigate)
-  const showNotice = useNoticeStore((state) => state.show)
   useRealtimeConnection(session.status === 'authenticated')
 
   if (session.status === 'checking') {
@@ -56,7 +56,6 @@ export default function App() {
         onCreateWorkspace={shell.openCreateWorkspace}
         onSignOut={() => void shell.signOut()}
       >
-        <NoticeBanner />
         {shell.route.page === 'overview' && <WorkspacesPage variant="overview" onOpenWorkspace={openWorkspace} />}
         {shell.route.page === 'workspaces' && <WorkspacesPage variant="list" onOpenWorkspace={openWorkspace} />}
         {shell.route.page === 'mcp' && <MyMcpKeyPage />}
@@ -76,7 +75,7 @@ export default function App() {
       <CreateWorkspaceDialog
         onCreated={(workspace) => {
           shell.navigate({ page: 'workspace', workspaceId: workspace.id, tab: 'overview' })
-          showNotice({ kind: 'success', message: t(WORKSPACES_TEXT.create.ready, { name: workspace.name }) })
+          showToast({ kind: 'success', message: t(WORKSPACES_TEXT.create.ready, { name: workspace.name }) })
         }}
       />
     </>

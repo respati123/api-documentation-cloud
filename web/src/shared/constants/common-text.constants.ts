@@ -4,4 +4,9 @@ export const COMMON_TEXT = {
     retry: 'common:error.retry',
     unexpected: 'common:error.unexpected',
   },
+  toast: {
+    close: 'common:toast.close',
+    region: 'common:toast.region',
+    open: 'common:toast.open',
+  },
 } as const

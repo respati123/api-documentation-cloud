@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNoticeStore } from '@/features/app-shell'
 import { WORKSPACE_TEXT } from '@/features/workspace-detail/constants/workspace-detail-text.constants'
 import { parseSyncEvent } from '@/features/workspace-detail/utils/live-sync'
 import { workspaceDetailKeys } from '@/features/workspace-detail/viewmodels/workspace-detail.keys'
 import { useRealtimeStatusStore } from '@/shared/realtime/realtime-bus'
 import { useRealtimeEvent } from '@/shared/realtime/use-realtime-event'
+import { showToast } from '@/shared/toast/toast-manager'
 
 export type LiveStatus = 'connecting' | 'live' | 'offline'
 
@@ -13,7 +13,6 @@ export type LiveStatus = 'connecting' | 'live' | 'offline'
 export function useWorkspaceLiveSync(workspaceId: string): LiveStatus {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const showNotice = useNoticeStore((state) => state.show)
   const status = useRealtimeStatusStore((state) => state.status)
 
   useRealtimeEvent((raw) => {
@@ -21,7 +20,7 @@ export function useWorkspaceLiveSync(workspaceId: string): LiveStatus {
     if (!event || event.workspaceId !== workspaceId) return
     void queryClient.invalidateQueries({ queryKey: workspaceDetailKeys.all })
     if (event.type === 'workspace.updated')
-      showNotice({ kind: 'info', message: t(WORKSPACE_TEXT.live.updated, { actor: event.actorEmail }) })
+      showToast({ kind: 'info', message: t(WORKSPACE_TEXT.live.updated, { actor: event.actorEmail }) })
   })
 
   return status === 'idle' ? 'connecting' : status

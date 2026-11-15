@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { useAuthSessionViewModel } from '@/features/auth'
 import { useCreateWorkspaceStore, useWorkspacesQuery, workspacesKeys } from '@/features/workspaces'
 import { ApiError, checkApiHealth } from '@/shared/services/api-client'
+import { showToast } from '@/shared/toast/toast-manager'
 import { SHELL_TEXT } from '../constants/app-shell-text.constants'
 import type { AppRoute } from '../models/route.model'
-import { useNoticeStore } from '../stores/notice.store'
 import { useAppRouteViewModel } from './use-app-route.viewmodel'
 
 export const shellKeys = {
@@ -23,7 +23,6 @@ export function useAppShellViewModel() {
     staleTime: 60_000,
   })
   const openCreateWorkspace = useCreateWorkspaceStore((state) => state.open)
-  const showNotice = useNoticeStore((state) => state.show)
   const { t } = useTranslation('shell')
   const { route, navigate: changeRoute } = useAppRouteViewModel()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -38,7 +37,7 @@ export function useAppShellViewModel() {
       await session.signOut()
     } catch (error) {
       // The server kept the session, so the workspace stays on screen with the reason.
-      showNotice({ kind: 'error', message: error instanceof ApiError ? error.message : t(SHELL_TEXT.account.signOutFailed) })
+      showToast({ kind: 'error', message: error instanceof ApiError ? error.message : t(SHELL_TEXT.account.signOutFailed) })
       return
     }
     queryClient.removeQueries({ queryKey: workspacesKeys.all })

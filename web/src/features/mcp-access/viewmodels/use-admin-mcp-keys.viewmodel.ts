@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDeferredValue, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNoticeStore } from '@/features/app-shell'
 import { useAuthSessionStore } from '@/features/auth'
 import { MCP_ACCESS_TEXT } from '@/features/mcp-access/constants/mcp-access-text.constants'
 import type { AdminMcpKey } from '@/features/mcp-access/models/mcp-key.model'
 import { mcpKeysService } from '@/features/mcp-access/services/mcp-keys.service'
 import { mcpKeyQueryKeys } from '@/features/mcp-access/viewmodels/use-my-mcp-key.viewmodel'
 import { usePageList } from '@/shared/hooks/use-page-list'
+import { showToast } from '@/shared/toast/toast-manager'
 import { readErrorMessage } from '@/shared/utils/error-message'
 
 // Members create their own keys. The admin watches every key and revokes one when it should stop working.
@@ -15,7 +15,6 @@ export function useAdminMcpKeysViewModel() {
   const { t } = useTranslation('mcp')
   const token = useAuthSessionStore((state) => state.token)
   const isAdmin = useAuthSessionStore((state) => state.isAdmin)
-  const showNotice = useNoticeStore((state) => state.show)
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const query = useDeferredValue(search)
@@ -28,7 +27,7 @@ export function useAdminMcpKeysViewModel() {
   const revoke = useMutation({
     mutationFn: (key: AdminMcpKey) => mcpKeysService.adminRevoke(token, key.id),
     onSuccess: async (_result, key) => {
-      showNotice({ kind: 'success', message: t(MCP_ACCESS_TEXT.admin.revoked, { name: key.name, email: key.owner.email }) })
+      showToast({ kind: 'success', message: t(MCP_ACCESS_TEXT.admin.revoked, { name: key.name, email: key.owner.email }) })
       await queryClient.invalidateQueries({ queryKey: mcpKeyQueryKeys.all })
     },
   })
