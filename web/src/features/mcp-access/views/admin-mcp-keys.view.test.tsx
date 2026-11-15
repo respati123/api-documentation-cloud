@@ -1,48 +1,34 @@
 import '@/shared/i18n'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import type { McpKeyMember } from '@/features/mcp-access/models/mcp-key.model'
 import { AdminMcpKeysView, type AdminMcpKeysViewProps } from '@/features/mcp-access/views/admin-mcp-keys.view'
 
 const key = {
   id: 'k-1',
-  name: 'Laptop',
-  role: 'qa' as const,
-  tools: ['workspaces_list'],
-  validDays: 30,
+  name: 'Server CI',
+  keySuffix: 'zz99',
   status: 'active' as const,
-  claimExpiresAt: '2026-11-19T00:00:00.000Z',
-  claimedAt: '2026-11-12T00:00:00.000Z',
-  expiresAt: '2026-12-12T00:00:00.000Z',
+  expiresAt: '2027-02-10T00:00:00.000Z',
   lastUsedAt: null,
   revokedAt: null,
   createdAt: '2026-11-12T00:00:00.000Z',
+  owner: { id: 'u-1', email: 'rani@contoh.test' },
 }
 
-function props(members: McpKeyMember[]): AdminMcpKeysViewProps {
+function props(overrides: Partial<AdminMcpKeysViewProps> = {}): AdminMcpKeysViewProps {
   return {
     isAdmin: true,
     search: '',
     setSearch: vi.fn(),
-    members,
-    status: members.length ? 'ready' : 'empty',
+    keys: [key],
+    status: 'ready',
     hasMore: false,
     isLoadingMore: false,
     loadMore: vi.fn(),
-    error: null,
-    busyKeyId: null,
-    onReissue: vi.fn(),
+    revokingId: null,
     onRevoke: vi.fn(),
-    allTools: [],
-    dialog: null,
-    openDialog: vi.fn(),
-    closeDialog: vi.fn(),
-    setName: vi.fn(),
-    setRole: vi.fn(),
-    toggleTool: vi.fn(),
-    resetTools: vi.fn(),
-    setValidDays: vi.fn(),
-    onSubmit: vi.fn(),
+    error: null,
+    ...overrides,
   }
 }
 
@@ -51,23 +37,37 @@ afterEach(() => {
 })
 
 describe('AdminMcpKeysView', () => {
-  test('a member without a key gets a create button', () => {
-    render(<AdminMcpKeysView {...props([{ userId: 'u-1', email: 'a@b.test', workspaceCount: 1, key: null }])} />)
+  test('each key shows its owner, name, and last four characters', () => {
+    render(<AdminMcpKeysView {...props()} />)
 
-    expect(screen.getByTestId('mcp-admin-row-u-1-create')).toBeInTheDocument()
-    expect(screen.getByTestId('mcp-admin-row-u-1')).toHaveTextContent('None')
+    const row = screen.getByTestId('mcp-admin-keys-row-k-1')
+    expect(row).toHaveTextContent('rani@contoh.test')
+    expect(row).toHaveTextContent('Server CI')
+    expect(row).toHaveTextContent('zz99')
   })
 
-  test('an active key can be reissued or revoked', () => {
-    render(<AdminMcpKeysView {...props([{ userId: 'u-1', email: 'a@b.test', workspaceCount: 1, key }])} />)
+  test('typing in the search box updates the search', () => {
+    const vm = props()
+    render(<AdminMcpKeysView {...vm} />)
 
-    expect(screen.getByTestId('mcp-admin-row-u-1-reissue')).toBeInTheDocument()
-    expect(screen.getByTestId('mcp-admin-row-u-1-revoke')).toHaveTextContent('Revoke')
+    fireEvent.change(screen.getByTestId('mcp-admin-search'), { target: { value: 'rani' } })
+
+    expect(vm.setSearch).toHaveBeenCalledWith('rani')
   })
 
-  test('a pending key offers to cancel the claim', () => {
-    render(<AdminMcpKeysView {...props([{ userId: 'u-1', email: 'a@b.test', workspaceCount: 1, key: { ...key, status: 'pending' } }])} />)
+  test('the admin revokes a key after confirming', () => {
+    const vm = props()
+    render(<AdminMcpKeysView {...vm} />)
 
-    expect(screen.getByTestId('mcp-admin-row-u-1-revoke')).toHaveTextContent('Cancel claim')
+    fireEvent.click(screen.getByTestId('mcp-admin-keys-revoke-k-1'))
+    fireEvent.click(screen.getByTestId('mcp-admin-keys-revoke-k-1-confirm'))
+
+    expect(vm.onRevoke).toHaveBeenCalledWith(key)
+  })
+
+  test('an empty list says there are no keys', () => {
+    render(<AdminMcpKeysView {...props({ status: 'empty', keys: [] })} />)
+
+    expect(screen.getByTestId('mcp-admin-empty')).toBeInTheDocument()
   })
 })

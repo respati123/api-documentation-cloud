@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { PlanningDocumentSummary, PlanningItem } from '@/features/projects/models/planning.model'
-import { documentBlocks, headingsOf, isOverdue, itemCodes, pipelineCounts, waitingQueue } from '@/features/projects/utils/planning'
+import { headingsOf, isOverdue, itemCodes, pipelineCounts, waitingQueue } from '@/features/projects/utils/planning'
 
 function doc(overrides: Partial<PlanningDocumentSummary>): PlanningDocumentSummary {
   return {
@@ -53,16 +53,6 @@ describe('headings and blocks', () => {
     expect(headingsOf(markdown).map((heading) => [heading.level, heading.text])).toEqual([
       [2, 'Goals'],
       [3, 'Detail'],
-    ])
-  })
-
-  test('blocks keep the text between headings and drop the title line', () => {
-    expect(documentBlocks(markdown).map((block) => (block.type === 'heading' ? block.heading.text : block.text))).toEqual([
-      'Intro',
-      'Goals',
-      'Ship it',
-      'Detail',
-      'More',
     ])
   })
 })

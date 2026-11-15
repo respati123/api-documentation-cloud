@@ -79,7 +79,7 @@ function fail(status: number, message: string): never {
 
 function record(targetKind: string, targetId: string, action: string) {
   state.events = [
-    { id: newId('ev'), actorId: 'demo-maya', apiKeyId: null, targetKind, targetId, action, createdAt: now() },
+    { id: newId('ev'), actorId: 'demo-maya', apiKeyId: null, apiKeyName: null, targetKind, targetId, action, createdAt: now() },
     ...state.events,
   ]
 }
@@ -173,7 +173,8 @@ export async function demoRequest(method: string, path: string, body: unknown): 
     return { subtask: state.subtasks[taskId]?.find((subtask) => subtask.id === subtaskId) }
   }
 
-  if (route === 'GET /planning/documents') return { documents: state.documents.map(summary), canManage: true, canApprove: true }
+  if (route === 'GET /planning/documents')
+    return { documents: state.documents.map(summary), canManage: true, canApprove: true, canReadDocuments: true }
   if (route === 'POST /planning/documents' || route === 'POST /planning/documents/upload') {
     const form = body instanceof FormData ? body : null
     const kind = (form?.get('kind') ?? input.kind) === 'prd' ? 'prd' : 'brd'

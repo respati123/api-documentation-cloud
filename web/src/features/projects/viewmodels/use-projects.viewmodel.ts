@@ -149,6 +149,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     setRoleFilter: (role: '' | WorkRole) => setFilters((current) => ({ ...current, role })),
     hasRoles: allTasks.some((task) => task.role),
     taskExtras,
+    taskActivity: editingTaskId ? planning.activityFor(editingTaskId) : [],
     shownCount: visible.length,
     totalCount: allTasks.length,
     columns: PROJECT_STATUS_ORDER.map((status) => {

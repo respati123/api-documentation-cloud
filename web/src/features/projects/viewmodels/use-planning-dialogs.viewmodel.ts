@@ -174,7 +174,8 @@ export function usePlanningDialogsViewModel(
         setItemParent(epics.find((epic) => epic.id === parentId) ?? null)
         setItemSourceId(approvedPrds[0]?.id ?? '')
         setItemTitle('')
-        setItemDescription('')
+        // A new epic starts from the template labels. Labels left empty are not shown on the epic page.
+        setItemDescription(parentId ? '' : t(PLANNING_TEXT.itemDialog.epicTemplate))
         setItemCriteria('')
         setItemSection('')
         setItemParticipants([])

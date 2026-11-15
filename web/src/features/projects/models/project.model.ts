@@ -30,10 +30,16 @@ export const taskSchema = z.object({
   subtaskDone: z.optional(z.number()),
   subtaskTotal: z.optional(z.number()),
 })
-export const projectMemberSchema = z.object({ id: z.string(), email: z.string(), discipline: z.nullable(z.string()) })
+// `discipline` is the first role. `disciplines` holds every role; older servers send only `discipline`.
+export const projectMemberSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  discipline: z.nullable(z.string()),
+  disciplines: z.optional(z.array(z.string())),
+})
 export const projectDisciplineSchema = z.enum(['backend', 'frontend', 'mobile', 'pm', 'qa', 'ui_ux', 'devops', 'other', 'tech_lead'])
 export type Project = z.infer<typeof projectSchema>
 export type Task = z.infer<typeof taskSchema>
 export type TaskStatus = Task['status']
-export type ProjectMember = { id: string; email: string; discipline: string | null }
+export type ProjectMember = { id: string; email: string; discipline: string | null; disciplines?: string[] }
 export type ProjectDiscipline = z.infer<typeof projectDisciplineSchema>

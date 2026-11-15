@@ -12,6 +12,7 @@ import type { LiveStatus } from '../viewmodels/use-workspace-live-sync.viewmodel
 
 export interface WorkspacePageViewProps {
   workspace: CloudWorkspaceRef
+  adminView: boolean
   activeTab: WorkspaceTab
   tabs: readonly WorkspaceTab[]
   memberCount: number
@@ -21,7 +22,16 @@ export interface WorkspacePageViewProps {
   children: ReactNode
 }
 
-export function WorkspacePageView({ workspace, activeTab, tabs, memberCount, onTabChange, onInvite, children }: WorkspacePageViewProps) {
+export function WorkspacePageView({
+  workspace,
+  adminView,
+  activeTab,
+  tabs,
+  memberCount,
+  onTabChange,
+  onInvite,
+  children,
+}: WorkspacePageViewProps) {
   const { t } = useTranslation('workspace')
   return (
     <div data-testid="workspace-page" className="grid gap-6">
@@ -29,7 +39,9 @@ export function WorkspacePageView({ workspace, activeTab, tabs, memberCount, onT
         <div className="grid min-w-0 gap-1">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="truncate font-heading text-2xl font-semibold tracking-tight">{workspace.name}</h1>
-            <Badge variant="secondary">{t(WORKSPACES_ROLE_TEXT[workspace.role])}</Badge>
+            <Badge variant="secondary" data-testid="workspace-role-badge">
+              {adminView ? t(WORKSPACE_TEXT.header.adminView) : t(WORKSPACES_ROLE_TEXT[workspace.role])}
+            </Badge>
           </div>
           <p className="text-sm text-muted-foreground">{t(WORKSPACE_TEXT.header.subtitle)}</p>
         </div>

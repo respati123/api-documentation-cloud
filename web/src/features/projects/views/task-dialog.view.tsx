@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { PROJECT_STATUS_ORDER, PROJECTS_TEXT } from '@/features/projects/constants/projects-text.constants'
 import type { Task } from '@/features/projects/models/project.model'
 import type { useProjectsViewModel } from '@/features/projects/viewmodels/use-projects.viewmodel'
+import { PlanningActivityView } from '@/features/projects/views/planning-activity.view'
 import { PlanningCommentsView } from '@/features/projects/views/planning-comments.view'
 import { Avatar, PriorityMark, StatusIcon, TASK_TONE } from '@/features/projects/views/planning-marks.view'
 import { TaskExtrasSide, TaskSubtasks } from '@/features/projects/views/task-extras.view'
@@ -131,6 +132,7 @@ export function TaskDialogView({ vm }: { vm: ViewModel }) {
                 />
               </div>
               {vm.editingTaskId && <TaskExtrasSide extras={vm.taskExtras} />}
+              {vm.editingTaskId && <PlanningActivityView activity={vm.taskActivity} />}
             </aside>
           </div>
           <footer className="flex justify-end gap-2 border-t border-border px-[18px] py-3">

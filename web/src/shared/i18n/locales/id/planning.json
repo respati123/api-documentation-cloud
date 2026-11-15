@@ -143,7 +143,55 @@
     "emptyDetail": "Epic disusun dari PRD yang sudah disetujui, oleh agent atau oleh PM.",
     "needsPrd": "Setujui PRD dulu. Epic selalu berdasarkan satu PRD.",
     "storyCount": "{{count}} story",
-    "noStories": "Belum ada story."
+    "noStories": "Belum ada story.",
+    "subtitle": "Kumpulan story dari PRD. Lihat progres tiap epic dan story mana yang masih tertahan di desain.",
+    "search": "Cari epic atau story",
+    "filterLabel": "Filter status",
+    "filter": {
+      "all": "Semua",
+      "planning": "Perencanaan",
+      "ready": "Siap",
+      "active": "Dikerjakan",
+      "done": "Selesai"
+    },
+    "layout": {
+      "label": "Tampilan",
+      "list": "Daftar",
+      "board": "Papan"
+    },
+    "summary": {
+      "label": "Ringkasan epic",
+      "active": "Epic dikerjakan",
+      "storiesDone": "Story selesai",
+      "awaitingDesign": "Menunggu persetujuan desain",
+      "stages": "Sebaran tahap story",
+      "ofTotal": "dari {{count}}",
+      "storyUnit": "story"
+    },
+    "progress": "{{done}}/{{total}} story selesai",
+    "percent": "{{value}}%",
+    "awaitingDesign": "{{count}} story belum lewat desain",
+    "unpublished": "Belum terbit",
+    "team": "Tim: {{names}}",
+    "tasks": "{{done}}/{{total}} task",
+    "noTasks": "Belum ada task",
+    "expand": "Buka story {{code}}",
+    "collapse": "Tutup story {{code}}",
+    "step": "Tahap {{step}} dari {{total}}: {{stage}}",
+    "stageBar": "Tahap story: {{summary}}",
+    "noMatch": "Tidak ada epic yang cocok dengan filter atau pencarian ini.",
+    "columnEmpty": "Kosong"
+  },
+  "epicDetail": {
+    "overview": "Ringkasan",
+    "noDescription": "Belum ada deskripsi.",
+    "fromPrd": "Dari PRD",
+    "team": "Tim",
+    "noTeam": "Belum ada anggota tim.",
+    "awaitingDesign": "Menunggu desain",
+    "ratio": "{{done}}/{{total}}",
+    "now": "Sekarang",
+    "target": "Target"
   },
   "item": {
     "crumbProject": "Proyek",
@@ -202,7 +250,9 @@
     "participants": "Peserta",
     "submit": "Buat draft",
     "submitting": "Membuat…",
-    "cancel": "Batal"
+    "cancel": "Batal",
+    "epicTemplate": "Tujuan: \nMencakup: \nDi luar cakupan: \nUkuran sukses: \nKriteria selesai:\n- \nRisiko & dependensi:\n- ",
+    "epicHint": "Isi tiap label. Mencakup diisi kode requirement (R1, R2). Ukuran sukses ditulis \"nama (sekarang → target)\". Daftar ditulis satu per baris diawali \"- \". Label yang kosong tidak ditampilkan."
   },
   "comments": {
     "title": "Diskusi",
@@ -237,8 +287,13 @@
       "source_reviewed": "meninjau terhadap PRD terbaru",
       "status": "mengubah status",
       "design_approved": "menyetujui desain",
-      "test_case_added": "menambah test case"
-    }
+      "test_case_added": "menambah test case",
+      "design_attached": "melampirkan desain",
+      "contract_linked": "menautkan kontrak API",
+      "subtask_added": "menambah sub-task",
+      "subtask_done": "menyelesaikan sub-task"
+    },
+    "viaKey": "lewat key {{name}}"
   },
   "board": {
     "search": "Cari task",

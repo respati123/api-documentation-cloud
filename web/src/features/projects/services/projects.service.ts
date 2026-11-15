@@ -29,8 +29,8 @@ export const projectsService = {
       z.object({ members: z.array(projectMemberSchema) }),
       await workspaceCall(workspaceId, `/projects/${projectId}/members`, { token }),
     ).members,
-  assignProjectMember: async (token: string, workspaceId: string, projectId: string, userId: string, discipline: ProjectDiscipline) =>
-    workspaceCall(workspaceId, `/projects/${projectId}/members`, { token, method: 'POST', body: { userId, discipline } }),
+  assignProjectMember: async (token: string, workspaceId: string, projectId: string, userId: string, disciplines: ProjectDiscipline[]) =>
+    workspaceCall(workspaceId, `/projects/${projectId}/members`, { token, method: 'POST', body: { userId, disciplines } }),
   createTask: async (
     token: string,
     workspaceId: string,

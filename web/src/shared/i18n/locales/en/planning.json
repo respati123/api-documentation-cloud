@@ -143,7 +143,55 @@
     "emptyDetail": "Epics are drafted from an approved PRD, by an agent or by the PM.",
     "needsPrd": "Approve a PRD first. Epics are always based on one.",
     "storyCount": "{{count}} stories",
-    "noStories": "No stories yet."
+    "noStories": "No stories yet.",
+    "subtitle": "Stories grouped from the PRD. See how far each epic is, and which stories are still waiting on design.",
+    "search": "Search epics or stories",
+    "filterLabel": "Filter by status",
+    "filter": {
+      "all": "All",
+      "planning": "Planning",
+      "ready": "Ready",
+      "active": "In progress",
+      "done": "Done"
+    },
+    "layout": {
+      "label": "Layout",
+      "list": "List",
+      "board": "Board"
+    },
+    "summary": {
+      "label": "Epic summary",
+      "active": "Epics in progress",
+      "storiesDone": "Stories done",
+      "awaitingDesign": "Waiting for design approval",
+      "stages": "Story stages",
+      "ofTotal": "of {{count}}",
+      "storyUnit": "stories"
+    },
+    "progress": "{{done}}/{{total}} stories done",
+    "percent": "{{value}}%",
+    "awaitingDesign": "{{count}} stories not past design yet",
+    "unpublished": "Not published",
+    "team": "Team: {{names}}",
+    "tasks": "{{done}}/{{total}} tasks",
+    "noTasks": "No tasks yet",
+    "expand": "Show stories of {{code}}",
+    "collapse": "Hide stories of {{code}}",
+    "step": "Stage {{step}} of {{total}}: {{stage}}",
+    "stageBar": "Story stages: {{summary}}",
+    "noMatch": "No epics match this filter or search.",
+    "columnEmpty": "Empty"
+  },
+  "epicDetail": {
+    "overview": "Overview",
+    "noDescription": "No description yet.",
+    "fromPrd": "From the PRD",
+    "team": "Team",
+    "noTeam": "No team members yet.",
+    "awaitingDesign": "Waiting on design",
+    "ratio": "{{done}}/{{total}}",
+    "now": "Now",
+    "target": "Target"
   },
   "item": {
     "crumbProject": "Project",
@@ -202,7 +250,9 @@
     "participants": "Participants",
     "submit": "Create draft",
     "submitting": "Creating…",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "epicTemplate": "Goal: \nScope: \nOut of scope: \nSuccess metrics: \nDone when:\n- \nRisks & dependencies:\n- ",
+    "epicHint": "Fill in each label. Scope takes requirement ids (R1, R2). Write success metrics as \"name (now → target)\". Put list items one per line, starting with \"- \". Empty labels are not shown."
   },
   "comments": {
     "title": "Discussion",
@@ -237,8 +287,13 @@
       "source_reviewed": "reviewed against the latest PRD",
       "status": "changed status",
       "design_approved": "approved the design",
-      "test_case_added": "added a test case"
-    }
+      "test_case_added": "added a test case",
+      "design_attached": "attached a design",
+      "contract_linked": "linked an API contract",
+      "subtask_added": "added a sub-task",
+      "subtask_done": "finished a sub-task"
+    },
+    "viaKey": "via key {{name}}"
   },
   "board": {
     "search": "Search tasks",

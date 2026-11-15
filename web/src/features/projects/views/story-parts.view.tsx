@@ -1,9 +1,8 @@
-import { Check, Copy, ExternalLink, Lock, Plus, X } from 'lucide-react'
+import { Check, ChevronRight, Copy, ExternalLink, Lock, Plus, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import { PROJECTS_TEXT } from '@/features/projects/constants/projects-text.constants'
 import { STORY_STAGES, type StoryStage, WORK_ROLES, type WorkRole } from '@/features/projects/models/story.model'
-import { documentBlocks } from '@/features/projects/utils/planning'
 import type { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
 import {
   Notice,
@@ -15,6 +14,7 @@ import {
   StatusIcon,
   TASK_TONE,
 } from '@/features/projects/views/planning-marks.view'
+import { MarkdownContent } from '@/shared/components/markdown-content'
 import { Badge } from '@/shared/components/primitives/badge'
 import { Button } from '@/shared/components/primitives/button'
 import { Checkbox } from '@/shared/components/primitives/checkbox'
@@ -28,30 +28,36 @@ import { cn } from '@/shared/utils/cn'
 
 type Extras = ReturnType<typeof useStoryExtrasViewModel>
 
+// A compact track of the six stages: done stages get a check, the current one is highlighted.
 export function StoryStageStepper({ stage }: { stage: StoryStage }) {
   const { t } = useTranslation('planning')
   const current = STORY_STAGES.indexOf(stage)
   return (
-    <ol aria-label={t(PLANNING_TEXT.item.stepper)} className="flex flex-wrap overflow-hidden rounded-xl border border-border bg-card">
+    <ol
+      aria-label={t(PLANNING_TEXT.item.stepper)}
+      className="flex flex-wrap items-center gap-x-1 gap-y-1.5 text-[12.5px]"
+      data-testid="projects-story-stepper"
+    >
       {STORY_STAGES.map((step, index) => (
-        <li
-          key={step}
-          aria-current={index === current ? 'step' : undefined}
-          className={cn(
-            'flex flex-auto items-center gap-2 border-r border-border px-3.5 py-2.5 text-[12.5px] whitespace-nowrap text-muted-foreground last:border-r-0',
-            index < current && 'text-success',
-            index === current && 'bg-accent font-semibold text-foreground',
-          )}
-        >
+        <li key={step} aria-current={index === current ? 'step' : undefined} className="inline-flex items-center gap-1">
+          {index > 0 && <ChevronRight aria-hidden="true" className="size-3.5 text-border" />}
           <span
             className={cn(
-              'grid size-[18px] place-items-center rounded-full border border-current text-[11px]',
-              index < current && 'border-success bg-success text-white',
+              'inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-muted-foreground',
+              index < current && 'text-success',
+              index === current && 'bg-accent font-semibold text-accent-foreground',
             )}
           >
-            {index < current ? <Check className="size-3" /> : index + 1}
+            <span
+              className={cn(
+                'grid size-4 place-items-center rounded-full border border-current text-[10px]',
+                index < current && 'border-success bg-success text-white',
+              )}
+            >
+              {index < current ? <Check className="size-2.5" /> : index + 1}
+            </span>
+            {t(PLANNING_TEXT.stage[step])}
           </span>
-          {t(PLANNING_TEXT.stage[step])}
         </li>
       ))}
     </ol>
@@ -63,10 +69,10 @@ export function UserStoryLine({ extras }: { extras: Extras }) {
   const story = extras.userStory
   if (!story?.role) return null
   return (
-    <p className="max-w-[80ch] text-muted-foreground">
-      {t(PLANNING_TEXT.story.as)} <span className="font-semibold text-foreground">{story.role}</span>, {t(PLANNING_TEXT.story.want)}{' '}
-      <span className="font-semibold text-foreground">{story.action}</span>, {t(PLANNING_TEXT.story.so)}{' '}
-      <span className="font-semibold text-foreground">{story.benefit}</span>.
+    <p className="max-w-[72ch] text-[15px] leading-relaxed text-muted-foreground" data-testid="projects-story-user-story">
+      {t(PLANNING_TEXT.story.as)} <span className="font-medium text-foreground">{story.role}</span>, {t(PLANNING_TEXT.story.want)}{' '}
+      <span className="font-medium text-foreground">{story.action}</span>, {t(PLANNING_TEXT.story.so)}{' '}
+      <span className="font-medium text-foreground">{story.benefit}</span>.
     </p>
   )
 }
@@ -113,7 +119,6 @@ const triggerClass =
 
 export function StoryTabs({ extras, description, acceptance }: { extras: Extras; description: string; acceptance: string }) {
   const { t } = useTranslation('planning')
-  const flowBlocks = documentBlocks(extras.flow)
 
   if (extras.isLoading) return <Skeleton className="h-64 w-full rounded-xl" />
   return (
@@ -159,19 +164,8 @@ export function StoryTabs({ extras, description, acceptance }: { extras: Extras;
         </TabsList>
 
         <TabsContent value="flow" className="grid max-w-[72ch] gap-3 px-[18px] py-4">
-          {flowBlocks.length > 0 ? (
-            flowBlocks.map((block, index) =>
-              block.type === 'heading' ? (
-                <h3 key={block.heading.id} className="font-heading text-[15px] font-semibold">
-                  {block.heading.text}
-                </h3>
-              ) : (
-                // biome-ignore lint/suspicious/noArrayIndexKey: text blocks have no id and keep their order
-                <p key={index} className="text-sm leading-relaxed whitespace-pre-wrap">
-                  {block.text}
-                </p>
-              ),
-            )
+          {extras.flowBlocks.length > 0 ? (
+            <MarkdownContent blocks={extras.flowBlocks} />
           ) : (
             <p className={cn('text-sm whitespace-pre-wrap', !description && 'text-muted-foreground')}>
               {description || t(PLANNING_TEXT.item.noDescription)}

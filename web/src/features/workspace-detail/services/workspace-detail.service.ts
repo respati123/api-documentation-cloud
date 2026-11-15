@@ -24,6 +24,7 @@ const snapshotSchema = z.looseObject({
   updatedAt: z.optional(z.nullable(z.string())),
   tree: z.array(apiNodeSchema),
   usesBranches: z.optional(z.boolean()),
+  adminView: z.optional(z.boolean()),
 })
 
 const branchListSchema = z.object({

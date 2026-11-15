@@ -144,10 +144,10 @@ export function TeamView({
                       </TableCell>
                       <TableCell>
                         <ProjectRoleSelect
-                          value={projectRoles.roleOf(member.id)}
+                          value={projectRoles.rolesOf(member.id)}
                           editable={projectRoles.canAssign && member.role !== 'viewer'}
                           saving={projectRoles.savingMemberId === member.id}
-                          onChange={(discipline) => projectRoles.onAssign(member.id, discipline)}
+                          onChange={(disciplines) => projectRoles.onAssign(member.id, disciplines)}
                           testId={`team-project-role-${member.id}`}
                         />
                       </TableCell>

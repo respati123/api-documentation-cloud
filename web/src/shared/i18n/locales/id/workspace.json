@@ -1,7 +1,8 @@
 {
   "header": {
     "subtitle": "Koleksi bersama, referensi API, dan riwayat perubahan.",
-    "invite": "Undang anggota tim"
+    "invite": "Undang anggota tim",
+    "adminView": "Admin · hanya lihat"
   },
   "tabs": {
     "label": "Bagian workspace",

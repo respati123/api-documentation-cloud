@@ -14,6 +14,7 @@ const baseProps: AdminWorkspacesViewProps = {
   isLoadingMore: false,
   loadMore: vi.fn(),
   error: null,
+  onOpenWorkspace: vi.fn(),
 }
 
 afterEach(() => {
@@ -28,6 +29,15 @@ describe('AdminWorkspacesView', () => {
     expect(row).toHaveTextContent('Contoh Proyek')
     expect(row).toHaveTextContent('owner@contoh.test')
     expect(row).toHaveTextContent('7')
+  })
+
+  test('choosing a workspace opens it', () => {
+    const onOpenWorkspace = vi.fn()
+    render(<AdminWorkspacesView {...baseProps} onOpenWorkspace={onOpenWorkspace} />)
+
+    fireEvent.click(screen.getByTestId('admin-workspaces-open-w-1'))
+
+    expect(onOpenWorkspace).toHaveBeenCalledWith('w-1')
   })
 
   test('typing in the search box updates the search', () => {

@@ -54,6 +54,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
   return (
     <WorkspacePageView
       workspace={workspace}
+      adminView={vm.snapshot?.adminView === true}
       activeTab={vm.activeTab}
       tabs={vm.visibleTabs}
       memberCount={vm.members.length}

@@ -5,10 +5,11 @@ import { useAuthSessionStore } from '@/features/auth'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { DocumentStatus, PlanningDocumentSummary, PlanningEvent } from '@/features/projects/models/planning.model'
 import { planningService } from '@/features/projects/services/planning.service'
-import { documentBlocks, headingsOf } from '@/features/projects/utils/planning'
+import { headingsOf } from '@/features/projects/utils/planning'
 import { planningKeys } from '@/features/projects/viewmodels/planning-keys'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate, formatRelativeDate } from '@/shared/utils/format'
+import { parseMarkdown } from '@/shared/utils/markdown'
 
 export type DocumentAction = 'review_pm' | 'review_team' | 'superseded' | 'draft'
 
@@ -89,7 +90,7 @@ export function useDocumentDetailViewModel(
             ? ('ready' as const)
             : ('error' as const),
     document,
-    blocks: documentBlocks(content),
+    blocks: parseMarkdown(content),
     headings: headingsOf(content),
     viewingVersion,
     versions: (document?.versions ?? []).map((version) => ({

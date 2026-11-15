@@ -22,6 +22,7 @@ export const documentListSchema = z.object({
   documents: z.array(documentSummarySchema),
   canManage: z.boolean(),
   canApprove: z.optional(z.boolean()),
+  canReadDocuments: z.optional(z.boolean()),
 })
 
 export const documentSchema = z.extend(documentSummarySchema, {
@@ -79,6 +80,7 @@ export const planningEventSchema = z.object({
   id: z.string(),
   actorId: z.string(),
   apiKeyId: z.nullable(z.string()),
+  apiKeyName: z.nullable(z.string()),
   targetKind: z.string(),
   targetId: z.string(),
   action: z.string(),

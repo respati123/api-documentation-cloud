@@ -266,10 +266,16 @@ export function PlanningDialogsView({ dialogs }: { dialogs: Dialogs }) {
           <Textarea
             id="planning-item-description"
             data-testid="planning-item-description"
-            className="min-h-24"
+            className={item.parentTitle ? 'min-h-24' : 'min-h-56 font-mono text-[13px]'}
+            aria-describedby={item.parentTitle ? undefined : 'planning-item-description-hint'}
             value={item.description}
             onChange={(event) => item.setDescription(event.target.value)}
           />
+          {!item.parentTitle && (
+            <p id="planning-item-description-hint" className="text-xs text-muted-foreground">
+              {t(PLANNING_TEXT.itemDialog.epicHint)}
+            </p>
+          )}
         </div>
         {item.parentTitle && (
           <div className="grid gap-1.5">

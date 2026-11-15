@@ -62,6 +62,12 @@
     --color-role-frontend: var(--role-frontend);
     --color-role-mobile: var(--role-mobile);
     --color-role-qa: var(--role-qa);
+    --color-stage-draft: var(--stage-draft);
+    --color-stage-design: var(--stage-design);
+    --color-stage-design-approved: var(--stage-design-approved);
+    --color-stage-in-progress: var(--stage-in-progress);
+    --color-stage-qa: var(--stage-qa);
+    --color-stage-done: var(--stage-done);
 }
 
 /* The scrollbar thumb color, registered so it can fade. Not inherited: each scroll container fades on its own. */
@@ -135,6 +141,13 @@
     --role-frontend: #00b0f4;
     --role-mobile: #16803d;
     --role-qa: #a66213;
+    /* Story stages, in order. Used for the stage bar and steps on the epic list. */
+    --stage-draft: #c4c7d2;
+    --stage-design: #ec48bd;
+    --stage-design-approved: #8b93f6;
+    --stage-in-progress: #e0a23a;
+    --stage-qa: #00b0f4;
+    --stage-done: #16a34a;
 }
 
 /* Sign-in page only. Dark tokens from DESIGN.md; the rest of the portal stays on the light palette above. */

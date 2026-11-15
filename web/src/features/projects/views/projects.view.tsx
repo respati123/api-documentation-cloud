@@ -90,6 +90,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
                 epics={planning.epics}
                 canManage={planning.access.canManage}
                 onNewEpic={() => planning.dialogs.item.onOpen()}
+                onNewStory={(epicId) => planning.dialogs.item.onOpen(epicId)}
               />
             ))}
           {planning.section === 'board' && vm.selectedProject && <TaskBoardView vm={vm} />}

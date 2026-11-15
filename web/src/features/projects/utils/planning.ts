@@ -50,29 +50,6 @@ export function headingsOf(markdown: string): Heading[] {
   })
 }
 
-export type DocumentBlock = { type: 'heading'; heading: Heading } | { type: 'text'; text: string }
-
-// Splits a document into headings and the text between them, so each heading can be an anchor.
-export function documentBlocks(markdown: string): DocumentBlock[] {
-  const headings = new Map(headingsOf(markdown).map((heading) => [heading.id, heading]))
-  const blocks: DocumentBlock[] = []
-  let buffer: string[] = []
-  const flush = () => {
-    const text = buffer.join('\n').trim()
-    if (text) blocks.push({ type: 'text', text })
-    buffer = []
-  }
-  markdown.split('\n').forEach((line, index) => {
-    const heading = headings.get(`section-${index}`)
-    if (heading) {
-      flush()
-      blocks.push({ type: 'heading', heading })
-    } else if (!/^#\s/.test(line)) buffer.push(line)
-  })
-  flush()
-  return blocks
-}
-
 export interface PipelineCounts {
   brd: { total: number; approved: number }
   prd: { total: number; inReview: number; approved: number }

@@ -1,7 +1,8 @@
 {
   "header": {
     "subtitle": "Shared collection, API reference, and change history.",
-    "invite": "Invite teammate"
+    "invite": "Invite teammate",
+    "adminView": "Admin · read only"
   },
   "tabs": {
     "label": "Workspace sections",

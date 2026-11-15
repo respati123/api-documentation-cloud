@@ -16,6 +16,7 @@ import {
   PropertyRow,
   StatusBadge,
 } from '@/features/projects/views/planning-marks.view'
+import { MarkdownContent } from '@/shared/components/markdown-content'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Badge } from '@/shared/components/primitives/badge'
 import { Button } from '@/shared/components/primitives/button'
@@ -158,32 +159,10 @@ export function DocumentDetailView({ planning }: { planning: Planning }) {
           ) : vm.blocks.length === 0 ? (
             <p className="mt-5 text-sm text-muted-foreground">{t(PLANNING_TEXT.document.empty)}</p>
           ) : (
-            <div
-              className={cn(
-                'mt-5 grid max-w-[72ch] gap-3',
-                document.kind === 'prd' && vm.writtenByAgent && 'border-l-[3px] border-primary/30 pl-3',
-              )}
-            >
-              {vm.blocks.map((block, index) =>
-                block.type === 'heading' ? (
-                  <h3
-                    key={block.heading.id}
-                    id={block.heading.id}
-                    className={cn(
-                      'scroll-mt-4 font-heading font-semibold tracking-tight',
-                      block.heading.level === 2 ? 'mt-3 text-base' : 'text-[15px]',
-                    )}
-                  >
-                    {block.heading.text}
-                  </h3>
-                ) : (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: text blocks have no id and keep their order
-                  <p key={index} className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {block.text}
-                  </p>
-                ),
-              )}
-            </div>
+            <MarkdownContent
+              blocks={vm.blocks}
+              className={cn('mt-5 max-w-[72ch]', document.kind === 'prd' && vm.writtenByAgent && 'border-l-[3px] border-primary/30 pl-3')}
+            />
           )}
         </article>
 

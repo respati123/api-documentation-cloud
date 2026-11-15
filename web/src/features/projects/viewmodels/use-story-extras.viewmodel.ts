@@ -18,6 +18,7 @@ import { planningKeys } from '@/features/projects/viewmodels/planning-keys'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatRelativeDate } from '@/shared/utils/format'
+import { parseMarkdown } from '@/shared/utils/markdown'
 
 export const storyKey = (workspaceId: string, storyId: string) => ['planning', workspaceId, 'story', storyId] as const
 
@@ -103,6 +104,7 @@ export function useStoryExtrasViewModel(
     stage,
     userStory: data?.userStory ?? null,
     flow: data?.flow ?? '',
+    flowBlocks: parseMarkdown(data?.flow ?? ''),
     dod: data?.definitionOfDone ?? [],
     dodDone,
     dodTotal: data?.definitionOfDone.length ?? 0,
@@ -137,6 +139,8 @@ export function useStoryExtrasViewModel(
         role,
         assignee: tasks[0]?.assigneeEmail ?? null,
         allDone: tasks.length > 0 && tasks.every((task) => task.status === 'done'),
+        done: tasks.filter((task) => task.status === 'done').length,
+        percent: progressOf(tasks.filter((task) => task.status === 'done').length, tasks.length),
         started: tasks.some((task) => task.status !== 'backlog' && task.status !== 'todo'),
         locked: tasks.some((task) => task.locked),
         tasks: tasks.map((task) => ({

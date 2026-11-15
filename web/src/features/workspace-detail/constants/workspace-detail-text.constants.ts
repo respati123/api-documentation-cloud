@@ -8,6 +8,7 @@ export const WORKSPACE_TEXT = {
   header: {
     subtitle: 'workspace:header.subtitle',
     invite: 'workspace:header.invite',
+    adminView: 'workspace:header.adminView',
   },
   tabs: {
     label: 'workspace:tabs.label',

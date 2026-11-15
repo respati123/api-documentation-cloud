@@ -6,13 +6,14 @@ import { useAuthSessionStore } from '@/features/auth'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import { planningChangedSchema } from '@/features/projects/models/planning.model'
 import type { ProjectMember, Task } from '@/features/projects/models/project.model'
-import { storyStage } from '@/features/projects/models/story.model'
 import { resetDemoState } from '@/features/projects/services/mock/planning-mock-api'
 import { planningService } from '@/features/projects/services/planning.service'
 import { usePlanningDemoStore, useSampleMode } from '@/features/projects/stores/planning-demo.store'
+import { buildEpicRows } from '@/features/projects/utils/epics'
 import { itemCodes, pipelineCounts, type WaitingEntry, waitingQueue } from '@/features/projects/utils/planning'
 import { planningKeys } from '@/features/projects/viewmodels/planning-keys'
 import { useDocumentDetailViewModel } from '@/features/projects/viewmodels/use-document-detail.viewmodel'
+import { useEpicsListViewModel } from '@/features/projects/viewmodels/use-epics-list.viewmodel'
 import { useItemDetailViewModel } from '@/features/projects/viewmodels/use-item-detail.viewmodel'
 import { type CommentTarget, usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { usePlanningDialogsViewModel } from '@/features/projects/viewmodels/use-planning-dialogs.viewmodel'
@@ -62,6 +63,8 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
   const canManage = documentsQuery.data?.canManage ?? false
   const canApprove = documentsQuery.data?.canApprove ?? canManage
   const access = { canManage, canApprove }
+  // Only the PM, the tech lead, and backend read BRDs and PRDs. Other roles do not see the Documents section.
+  const canReadDocuments = documentsQuery.data?.canReadDocuments ?? canManage
   // Only a PM may read the planning activity log, so others never ask for it.
   const eventsQuery = useQuery({
     queryKey: planningKeys.events(workspaceId),
@@ -73,8 +76,22 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
   const items = itemsQuery.data?.items ?? []
   const tasks = itemsQuery.data?.tasks ?? []
   const events = eventsQuery.data ?? []
+  const activityFor = (targetId: string | undefined) =>
+    events
+      .filter((event) => event.targetId === targetId)
+      .slice(0, 12)
+      .map((event) => ({
+        id: event.id,
+        actor: members.find((member) => member.id === event.actorId)?.email ?? '',
+        action: event.action.startsWith('status:') ? 'status' : event.action,
+        viaAgent: event.apiKeyId !== null,
+        keyName: event.apiKeyName,
+        when: formatRelativeDate(event.createdAt, i18n.language) ?? '',
+      }))
   const codes = itemCodes(items)
   const epics = items.filter((item) => item.kind === 'epic')
+  const sourceTitle = (id: string | null) => documents.find((document) => document.id === id)?.title ?? null
+  const epicsList = useEpicsListViewModel(buildEpicRows({ items, tasks, members, codes, sourceTitle }))
 
   const documentDetail = useDocumentDetailViewModel(workspaceId, detail?.kind === 'document' ? detail.id : null, documents, events, access)
   const itemDetail = useItemDetailViewModel(
@@ -95,7 +112,7 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
   const dialogs = usePlanningDialogsViewModel(workspaceId, documents, epics, members, () => setSection('documents'))
 
   const go = (next: ProjectSection) => {
-    setSection(next)
+    setSection(next === 'documents' && !canReadDocuments ? 'flow' : next)
     setDetail(null)
     documentDetail.reset()
     itemDetail.reset()
@@ -124,7 +141,6 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
     }
   }
 
-  const sourceTitle = (id: string | null) => documents.find((document) => document.id === id)?.title ?? null
   const failure = documentsQuery.error ?? itemsQuery.error
 
   return {
@@ -142,7 +158,7 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
     codes,
     storyExtras,
     section,
-    sections: PROJECT_SECTIONS.map((id) => ({
+    sections: PROJECT_SECTIONS.filter((id) => id !== 'documents' || canReadDocuments).map((id) => ({
       id,
       count: id === 'documents' ? documents.length : id === 'epics' ? epics.length : null,
     })),
@@ -168,24 +184,7 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
       open: openDocument,
     },
     epics: {
-      rows: epics.map((epic) => {
-        const stories = items.filter((item) => item.parentId === epic.id)
-        return {
-          id: epic.id,
-          code: codes[epic.id] ?? '',
-          title: epic.title,
-          status: epic.status,
-          published: Boolean(epic.publishedAt),
-          outdated: Boolean(epic.sourceOutdated),
-          stories: stories.map((story) => ({
-            id: story.id,
-            code: codes[story.id] ?? '',
-            title: story.title,
-            status: story.status,
-            stage: story.stage ?? storyStage(story.status),
-          })),
-        }
-      }),
+      ...epicsList,
       canCreate: dialogs.item.canCreateEpic,
       open: openItem,
     },
@@ -193,16 +192,8 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
     itemDetail,
     comments,
     dialogs,
-    activity: events
-      .filter((event) => event.targetId === detail?.id)
-      .slice(0, 12)
-      .map((event) => ({
-        id: event.id,
-        actor: members.find((member) => member.id === event.actorId)?.email ?? '',
-        action: event.action.startsWith('status:') ? 'status' : event.action,
-        viaAgent: event.apiKeyId !== null,
-        when: formatRelativeDate(event.createdAt, i18n.language) ?? '',
-      })),
+    activity: activityFor(detail?.id),
+    activityFor,
     openDocument,
     openItem,
   }

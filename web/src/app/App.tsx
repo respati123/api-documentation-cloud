@@ -61,7 +61,7 @@ export default function App() {
         {shell.route.page === 'workspaces' && <WorkspacesPage variant="list" onOpenWorkspace={openWorkspace} />}
         {shell.route.page === 'mcp' && <MyMcpKeyPage />}
         {shell.route.page === 'admin-mcp' && <AdminMcpKeysPage />}
-        {shell.route.page === 'admin-workspaces' && <AdminWorkspacesPage />}
+        {shell.route.page === 'admin-workspaces' && <AdminWorkspacesPage onOpenWorkspace={openWorkspace} />}
         {shell.route.page === 'workspace' && (
           <Suspense fallback={<LoadingState label={t(WORKSPACE_TEXT.state.loading)} />}>
             <WorkspacePage

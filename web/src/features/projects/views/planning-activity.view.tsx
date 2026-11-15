@@ -23,7 +23,8 @@ export function PlanningActivityView({ activity }: { activity: Activity }) {
                 <span className="font-medium">{entry.actor.split('@')[0]}</span>{' '}
                 {action ? t(PLANNING_TEXT.activity.action[action]) : entry.action}
                 <div className="text-xs text-muted-foreground">
-                  {entry.viaAgent && `${t(PLANNING_TEXT.activity.viaAgent)} · `}
+                  {entry.viaAgent &&
+                    `${entry.keyName ? t(PLANNING_TEXT.activity.viaKey, { name: entry.keyName }) : t(PLANNING_TEXT.activity.viaAgent)} · `}
                   {entry.when}
                 </div>
               </div>

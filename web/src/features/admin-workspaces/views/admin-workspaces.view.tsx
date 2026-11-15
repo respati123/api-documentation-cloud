@@ -4,13 +4,16 @@ import { ADMIN_WORKSPACES_TEXT } from '@/features/admin-workspaces/constants/adm
 import type { useAdminWorkspacesViewModel } from '@/features/admin-workspaces/viewmodels/use-admin-workspaces.viewmodel'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
+import { Button } from '@/shared/components/primitives/button'
 import { Card } from '@/shared/components/primitives/card'
 import { Input } from '@/shared/components/primitives/input'
 import { Skeleton } from '@/shared/components/primitives/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/primitives/table'
 import { formatDate } from '@/shared/utils/format'
 
-export type AdminWorkspacesViewProps = ReturnType<typeof useAdminWorkspacesViewModel>
+export type AdminWorkspacesViewProps = ReturnType<typeof useAdminWorkspacesViewModel> & {
+  onOpenWorkspace: (workspaceId: string) => void
+}
 
 export function AdminWorkspacesView(vm: AdminWorkspacesViewProps) {
   const { t, i18n } = useTranslation('admin')
@@ -75,7 +78,14 @@ export function AdminWorkspacesView(vm: AdminWorkspacesViewProps) {
               vm.workspaces.map((workspace) => (
                 <TableRow key={workspace.id} data-testid={`admin-workspaces-row-${workspace.id}`}>
                   <TableCell className="max-w-72">
-                    <span className="block truncate font-medium">{workspace.name}</span>
+                    <Button
+                      variant="link"
+                      className="block h-auto max-w-full truncate px-0 text-left text-foreground"
+                      data-testid={`admin-workspaces-open-${workspace.id}`}
+                      onClick={() => vm.onOpenWorkspace(workspace.id)}
+                    >
+                      {workspace.name}
+                    </Button>
                     <span className="block truncate text-xs text-muted-foreground md:hidden">{workspace.ownerEmail}</span>
                   </TableCell>
                   <TableCell className="hidden max-w-64 truncate text-muted-foreground md:table-cell">{workspace.ownerEmail}</TableCell>
