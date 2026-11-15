@@ -18,7 +18,8 @@
     "confirmTitle": "Pulihkan versi ini?",
     "confirmDetail": "Versi ini menjadi versi terbaru untuk semua orang di workspace ini.",
     "confirm": "Pulihkan",
-    "cancel": "Batal"
+    "cancel": "Batal",
+    "retry": "Coba lagi"
   },
   "detail": {
     "loading": "Memuat perbedaan commit…",
@@ -35,5 +36,49 @@
     "afterCommit": "Setelah commit",
     "empty": "(kosong)"
   },
-  "kind": { "added": "Ditambahkan", "modified": "Diubah", "deleted": "Dihapus" }
+  "kind": {
+    "added": "Ditambahkan",
+    "modified": "Diubah",
+    "deleted": "Dihapus"
+  },
+  "list": {
+    "title": "Commit",
+    "count_one": "{{count}} commit",
+    "count_other": "{{count}} commit",
+    "day": "Commit pada {{date}}",
+    "latest": "Terbaru",
+    "copyId": "Salin ID commit",
+    "copied": "Tersalin",
+    "open": "Lihat commit {{id}}",
+    "unknownAuthor": "Penulis tidak diketahui"
+  },
+  "commit": {
+    "back": "Semua commit",
+    "committed": "{{author}} membuat commit {{when}}",
+    "parent": "Induk",
+    "commitId": "Commit",
+    "summary_one": "Menampilkan {{count}} item yang berubah",
+    "summary_other": "Menampilkan {{count}} item yang berubah",
+    "additions": "{{count}} baris ditambah",
+    "deletions": "{{count}} baris dihapus",
+    "tree": "Item yang berubah",
+    "root": "Akar koleksi",
+    "viewed": "Sudah dilihat",
+    "collapse": "Sembunyikan perubahan di {{name}}",
+    "expand": "Tampilkan perubahan di {{name}}",
+    "expandLines_one": "Tampilkan {{count}} baris tersembunyi",
+    "expandLines_other": "Tampilkan {{count}} baris tersembunyi",
+    "folder": "Folder",
+    "jumpTo": "Ke {{name}}"
+  },
+  "layout": {
+    "label": "Tampilan diff",
+    "split": "Berdampingan",
+    "unified": "Gabung"
+  },
+  "kindShort": {
+    "added": "A",
+    "modified": "M",
+    "deleted": "D"
+  }
 }

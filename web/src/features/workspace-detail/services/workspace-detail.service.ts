@@ -1,4 +1,5 @@
 import * as z from 'zod/mini'
+import { type CommitDetail, commitDetailSchema } from '@/features/workspace-detail/models/commit-detail.model'
 import {
   type ApiNode,
   apiNodeSchema,
@@ -34,9 +35,7 @@ const branchPullSchema = z.object({ tree: z.array(apiNodeSchema) })
 
 const pullResponseSchema = z.object({ workspace: z.nullable(snapshotSchema) })
 const historyResponseSchema = z.object({ commits: z.array(cloudCommitSchema) })
-const commitResponseSchema = z.object({
-  commit: z.object({ tree: z.array(apiNodeSchema) }),
-})
+const commitResponseSchema = z.object({ commit: commitDetailSchema })
 const membersResponseSchema = z.object({ members: z.array(cloudMemberSchema) })
 const invitesResponseSchema = z.object({ invites: z.array(cloudInviteSchema) })
 const createInviteResponseSchema = z.object({ token: z.string(), email: z.string(), emailSent: z.boolean() })
@@ -67,8 +66,9 @@ export const workspaceDetailService = {
     return { items: z.parse(historyResponseSchema, page.data).commits, nextCursor: page.nextCursor }
   },
 
-  commitTree: async (token: string, workspaceId: string, commitId: string): Promise<ApiNode[]> =>
-    z.parse(commitResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/history/${commitId}`, { token })).commit.tree,
+  commitDetail: async (token: string, workspaceId: string, commitId: string): Promise<CommitDetail> =>
+    z.parse(commitResponseSchema, await apiCall(`/api/workspaces/${workspaceId}/sync/history/${encodeURIComponent(commitId)}`, { token }))
+      .commit,
 
   membersPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudMember>> => {
     const page = await apiPage(`/api/workspaces/${workspaceId}/members${pageQuery(cursor)}`, { token })

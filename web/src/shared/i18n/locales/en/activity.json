@@ -18,7 +18,8 @@
     "confirmTitle": "Restore this version?",
     "confirmDetail": "It becomes the latest version for everyone in this workspace.",
     "confirm": "Restore",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "retry": "Try again"
   },
   "detail": {
     "loading": "Loading commit diff…",
@@ -35,5 +36,49 @@
     "afterCommit": "After commit",
     "empty": "(empty)"
   },
-  "kind": { "added": "Added", "modified": "Modified", "deleted": "Deleted" }
+  "kind": {
+    "added": "Added",
+    "modified": "Modified",
+    "deleted": "Deleted"
+  },
+  "list": {
+    "title": "Commits",
+    "count_one": "{{count}} commit",
+    "count_other": "{{count}} commits",
+    "day": "Commits on {{date}}",
+    "latest": "Latest",
+    "copyId": "Copy commit ID",
+    "copied": "Copied",
+    "open": "View commit {{id}}",
+    "unknownAuthor": "Unknown author"
+  },
+  "commit": {
+    "back": "All commits",
+    "committed": "{{author}} committed {{when}}",
+    "parent": "Parent",
+    "commitId": "Commit",
+    "summary_one": "Showing {{count}} changed item",
+    "summary_other": "Showing {{count}} changed items",
+    "additions": "{{count}} added lines",
+    "deletions": "{{count}} removed lines",
+    "tree": "Changed items",
+    "root": "Collection root",
+    "viewed": "Viewed",
+    "collapse": "Hide changes in {{name}}",
+    "expand": "Show changes in {{name}}",
+    "expandLines_one": "Show {{count}} hidden line",
+    "expandLines_other": "Show {{count}} hidden lines",
+    "folder": "Folder",
+    "jumpTo": "Go to {{name}}"
+  },
+  "layout": {
+    "label": "Diff layout",
+    "split": "Split",
+    "unified": "Unified"
+  },
+  "kindShort": {
+    "added": "A",
+    "modified": "M",
+    "deleted": "D"
+  }
 }

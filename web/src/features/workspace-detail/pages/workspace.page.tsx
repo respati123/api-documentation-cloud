@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { type AppRoute, SHELL_TEXT, type WorkspaceTab } from '@/features/app-shell'
 import { ProjectsView } from '@/features/projects'
+import { CommitDetailView } from '@/features/workspace-detail/views/commit-detail.view'
+import { HistoryListView } from '@/features/workspace-detail/views/history-list.view'
 import { Button } from '@/shared/components/primitives/button'
 import { EmptyState, ErrorState, LoadingState } from '@/shared/components/state-views'
 import { WORKSPACE_TEXT } from '../constants/workspace-detail-text.constants'
 import { useWorkspacePageViewModel } from '../viewmodels/use-workspace-page.viewmodel'
-import { ActivityView } from '../views/activity.view'
 import { ApiDocsView } from '../views/api-docs.view'
 import { InviteDialogView } from '../views/invite-dialog.view'
 import { WorkspaceSettingsView } from '../views/settings.view'
@@ -101,24 +102,41 @@ export function WorkspacePage({ workspaceId, tab, commitId, navigate }: Workspac
               onSelect={vm.selectRequest}
             />
           )}
-          {vm.activeTab === 'history' && (
-            <ActivityView
-              commits={vm.commits}
-              commitsHasMore={vm.commitsHasMore}
-              commitsLoadingMore={vm.commitsLoadingMore}
-              onLoadMoreCommits={vm.loadMoreCommits}
-              // Restore works on the workspace head, which a branch workspace does not move. It is hidden until branch restore exists.
-              canRestore={workspace.role !== 'viewer' && !workspace.usesBranches}
+          {vm.activeTab === 'history' && vm.history.mode === 'list' && (
+            <HistoryListView
+              dayGroups={vm.history.dayGroups}
+              commitCount={vm.history.commitCount}
               usesBranches={Boolean(workspace.usesBranches)}
-              selectedCommit={vm.activity.selectedCommit}
-              latestCommitId={vm.activity.latestCommitId}
-              onSelectCommit={vm.activity.selectCommit}
-              loading={vm.activity.loading}
-              error={vm.activity.error}
-              changes={vm.activity.changes}
-              activeChange={vm.activity.activeChange}
-              onSelectChange={vm.activity.selectChange}
-              onRestore={vm.actions.restoreCommit.mutate}
+              hasMore={vm.commitsHasMore}
+              isLoadingMore={vm.commitsLoadingMore}
+              onLoadMore={vm.loadMoreCommits}
+              onOpenCommit={vm.history.onOpenCommit}
+            />
+          )}
+          {vm.activeTab === 'history' && vm.history.mode === 'detail' && vm.history.commit && (
+            <CommitDetailView
+              commit={vm.history.commit}
+              status={vm.history.status}
+              error={vm.history.error}
+              files={vm.history.files}
+              tree={vm.history.tree}
+              totals={vm.history.totals}
+              layout={vm.history.layout}
+              diffLayout={vm.history.diffLayout}
+              canChooseLayout={vm.history.canChooseLayout}
+              viewedIds={vm.history.viewedIds}
+              collapsedIds={vm.history.collapsedIds}
+              expandedGapKeys={vm.history.expandedGapKeys}
+              canRestore={vm.history.canRestore}
+              onBack={vm.history.onOpenList}
+              onOpenCommit={vm.history.onOpenCommit}
+              onRetry={vm.history.retry}
+              onLayoutChange={vm.history.setLayout}
+              onToggleViewed={vm.history.toggleViewed}
+              onToggleCollapsed={vm.history.toggleCollapsed}
+              onExpandGap={vm.history.expandGap}
+              onJumpToFile={vm.history.onJumpToFile}
+              onRestore={vm.history.onRestore}
             />
           )}
           {vm.activeTab === 'team' && (

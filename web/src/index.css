@@ -68,6 +68,15 @@
     --color-stage-in-progress: var(--stage-in-progress);
     --color-stage-qa: var(--stage-qa);
     --color-stage-done: var(--stage-done);
+    --color-diff-add: var(--diff-add);
+    --color-diff-add-gutter: var(--diff-add-gutter);
+    --color-diff-add-word: var(--diff-add-word);
+    --color-diff-remove: var(--diff-remove);
+    --color-diff-remove-gutter: var(--diff-remove-gutter);
+    --color-diff-remove-word: var(--diff-remove-word);
+    --color-diff-hunk: var(--diff-hunk);
+    --color-diff-hunk-foreground: var(--diff-hunk-foreground);
+    --color-diff-modify: var(--diff-modify);
 }
 
 /* The scrollbar thumb color, registered so it can fade. Not inherited: each scroll container fades on its own. */
@@ -148,6 +157,16 @@
     --stage-in-progress: #e0a23a;
     --stage-qa: #00b0f4;
     --stage-done: #16a34a;
+    /* Commit diff colors, after GitHub's light diff palette. */
+    --diff-add: #e6ffec;
+    --diff-add-gutter: #ccffd8;
+    --diff-add-word: #abf2bc;
+    --diff-remove: #ffebe9;
+    --diff-remove-gutter: #ffd7d5;
+    --diff-remove-word: #ffcecb;
+    --diff-hunk: #ddf4ff;
+    --diff-hunk-foreground: #57606a;
+    --diff-modify: #9a6700;
 }
 
 /* Sign-in page only. Dark tokens from DESIGN.md; the rest of the portal stays on the light palette above. */

@@ -23,7 +23,7 @@ export interface WorkspacePageViewProps {
 export function WorkspacePageView({ workspace, adminView, activeTab, canInvite, onInvite, children }: WorkspacePageViewProps) {
   const { t } = useTranslation('workspace')
   return (
-    <div data-testid="workspace-page" data-section={activeTab} className="grid gap-6">
+    <div data-testid="workspace-page" data-section={activeTab} className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid min-w-0 gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
