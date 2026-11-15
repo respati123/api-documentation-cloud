@@ -286,7 +286,12 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     expect(firstIds).toEqual([third.id, second.id])
     expect(secondIds).toEqual([first])
     expect((secondPage.json.meta as { nextCursor: string | null }).nextCursor).toBeNull()
-    expect((detail.json.data as { commit: { id: string; message: string } }).commit).toMatchObject({ id: third.id, message: 'third' })
+    expect((detail.json.data as { commit: { id: string; message: string } }).commit).toMatchObject({
+      id: third.id,
+      message: 'third',
+      parentIds: [second.id],
+      authorEmail: owner.user.email,
+    })
     expect(missing.status).toBe(404)
     expect(missing.json.code).toBe('COMMIT_NOT_FOUND')
   })

@@ -33,7 +33,14 @@ export async function historyPage(db: SQL, workspaceId: string, limit: number, c
 export async function commitDetail(db: SQL, workspaceId: string, commitId: string) {
   const commit = await findCommitInWorkspace(db, workspaceId, commitId)
   if (!commit) throw new AppError('COMMIT_NOT_FOUND')
-  return { id: commit.id, parentIds: commit.parentIds, message: commit.message, createdAt: commit.createdAt, ...parseSnapshot(commit.snapshot) }
+  return {
+    id: commit.id,
+    parentIds: commit.parentIds,
+    message: commit.message,
+    createdAt: commit.createdAt,
+    authorEmail: commit.authorEmail,
+    ...parseSnapshot(commit.snapshot),
+  }
 }
 
 // A restore is a new commit on top of the head, so the history keeps every version.
