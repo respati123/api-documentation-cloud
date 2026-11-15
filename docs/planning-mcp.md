@@ -4,9 +4,9 @@ Satu workspace adalah satu project. PM mengunggah BRD di tab **Documents** (`PDF
 
 ## Alur PM dan agent
 
-1. Admin aplikasi membuat key untuk PM di **avatar → Admin → Akses MCP** (`/admin/mcp`) dengan role key `pm`. PM menerima email dan notifikasi, lalu mengklaim key di **avatar → Settings → MCP** (`/settings/mcp`). Nilai key hanya muncul sekali saat diklaim. Admin tidak pernah melihatnya.
+1. Owner workspace memberi PM role proyek `pm` di tab **Tim**. PM membuat API key sendiri di **Pengaturan → Akses MCP** (`/settings/mcp`) dengan nama dan masa berlaku 30, 90, atau 365 hari, atau tanpa kedaluwarsa. Nilai key hanya muncul sekali saat dibuat; daftar key hanya menampilkan 4 karakter terakhir. Satu anggota boleh punya maksimal 10 key aktif dan bisa mencabutnya sendiri.
 2. Agent PM terhubung ke `/api/mcp` dengan `Authorization: Bearer <key>`. Halaman `/settings/mcp` menampilkan perintah setup untuk Claude Code dan Codex.
-3. Agent memanggil `workspaces_list`, lalu `planning_list` dengan `workspaceId` untuk menemukan BRD, lalu `planning_read_document` dengan `documentId`. Respons memuat teks BRD dan riwayat versi.
+3. Kalau BRD belum ada di **Documents**, PM bisa memberikan teksnya ke agent. Agent mengunggahnya tanpa diubah dengan `planning_upload_brd` (teks Markdown atau plain text, `fileName` berakhiran `.md` atau `.txt`). BRD ini langsung berstatus Approved seperti unggahan dari portal, dan tercatat di aktivitas beserta nama key-nya. PDF dan DOCX tetap diunggah lewat portal. Agent memanggil `workspaces_list`, lalu `planning_list` dengan `workspaceId` untuk menemukan BRD, lalu `planning_read_document` dengan `documentId`. Respons memuat teks BRD dan riwayat versi.
 4. Agent menulis isi PRD dan memanggil `planning_draft_prd` dengan `sourceDocumentId` BRD, `title`, dan `content`. Cloud menyimpan draf; cloud tidak menjalankan model AI.
 5. PM dan tim membahas PRD di **Documents**. PM memindahkan status `Draft → Review PM → Review tim`, lalu PM, tech lead, atau owner menyetujui ke `Approved`. Setiap revisi membuat versi baru. Perubahan BRD setelah PRD dibuat ditandai untuk ditinjau.
 6. Agent memanggil `planning_draft_item` untuk Epic dari PRD Approved, lalu untuk Story dengan `parentId` Epic. Isi `acceptanceCriteria`, `sourceSection`, dan `participantIds` pada Story. `sourceSection` harus berupa kutipan teks yang benar-benar ada dalam PRD.
@@ -15,23 +15,36 @@ Satu workspace adalah satu project. PM mengunggah BRD di tab **Documents** (`PDF
 
 ## Panduan wajib agent
 
-- Saat `initialize`, server mengirim `instructions` yang meminta agent memanggil `planning_guide` lebih dulu. Panduan ini berbeda per role key: PM mendapat playbook lengkap BRD → PRD → Epic → Story → Task, role lain mendapat panduan singkat untuk tugasnya. `planning_guide` selalu tersedia untuk semua key.
+- Saat `initialize`, server mengirim `instructions` yang meminta agent memanggil `planning_guide` lebih dulu. Panduan disusun dari semua role proyek anggota: PM mendapat playbook lengkap BRD → PRD → Epic → Story → Task, role lain mendapat panduan singkat untuk tugasnya. Anggota dengan beberapa role (misalnya backend dan QA) mendapat panduan tiap role. Anggota tanpa role mendapat panduan dasar. `planning_guide` selalu tersedia.
 - Semua tool tulis ditolak dengan `MCP_GUIDE_REQUIRED` (409) sampai agent membaca panduan versi terbaru dalam 12 jam terakhir. Saat versi panduan naik, agent harus membacanya lagi.
 - Server juga memeriksa hasil yang wajib dari panduan dan menolak dengan `MCP_DRAFT_INCOMPLETE` (400) jika: PRD punya kurang dari 6 bagian `## `; Epic atau Story tanpa `sourceSection`; Story tanpa `acceptanceCriteria`; Task tanpa `role`; atau `story_write_details` tidak berisi user story, flow, dan Definition of Done.
 - Agent PM bisa memakai prompt MCP `pm_brd_to_prd`, `pm_prd_to_epics`, `pm_epic_to_stories`, dan `pm_story_to_tasks` (tech lead mendapat `pm_story_to_tasks`).
-- Anggota melihat panduan untuk role key-nya di `/settings/mcp`, bagian **Panduan wajib agent**.
+- Anggota melihat panduan untuk role-nya di `/settings/mcp`, bagian **Panduan wajib agent**.
 
 ## Kolaborasi dan akses
 
-- Satu key per member berlaku di semua workspace tempat member menjadi anggota. Setiap tool kecuali `workspaces_list` menerima `workspaceId`, dan server memeriksa keanggotaan pada setiap panggilan. Key dicabut otomatis saat member tidak lagi menjadi anggota workspace mana pun.
-- Admin aplikasi melihat semua workspace di **avatar → Admin → Semua workspace** (`/admin/workspaces`): nama, owner, jumlah anggota, dan tanggal dibuat. Isi workspace tetap hanya untuk anggota.
-- Tool yang tersedia ditentukan role key (`pm`, `tech_lead`, `ui_ux`, `backend`, `frontend`, `mobile`, `qa`). Admin bisa menambah atau mengurangi tool per key.
+- Key tidak menyimpan role atau daftar tool. Setiap key berlaku di semua workspace tempat pemiliknya menjadi anggota, dan semua key milik satu anggota punya akses yang sama. Key dicabut otomatis saat pemiliknya tidak lagi menjadi anggota workspace mana pun.
+- Admin aplikasi melihat semua workspace di **avatar → Admin → Semua workspace** (`/admin/workspaces`): nama, owner, jumlah anggota, dan tanggal dibuat. Klik nama workspace untuk membukanya. Admin yang bukan anggota membaca semua tab sebagai viewer (dokumen dan draft planning ikut terlihat), dengan label **Admin · hanya lihat**. Semua perubahan ditolak (`ROLE_NOT_ALLOWED`), dan admin tidak muncul di daftar anggota.
+- Tool yang tersedia mengikuti role proyek yang diberikan owner di tab **Tim** pada tiap workspace (`pm`, `tech_lead`, `ui_ux`, `backend`, `frontend`, `mobile`, `qa`; `devops` dan `other` tidak menambah tool). Satu anggota boleh punya beberapa role, dan tool-nya digabung. Anggota tanpa role mendapat tool dasar: task miliknya, story yang diikutinya, dan panduan.
+- `tools/list` menampilkan gabungan tool dari semua workspace anggota. Setiap panggilan dicek lagi terhadap role di workspace yang disebut; tool yang tidak diizinkan di workspace itu ditolak dengan `MCP_PERMISSION_DENIED`. Perubahan role di tab Tim langsung berlaku untuk key yang sudah ada.
+- Admin melihat semua key di **avatar → Admin → Akses MCP** (`/admin/mcp`) beserta pemiliknya, dan bisa mencabut key. Admin tidak membuat key untuk anggota dan tidak pernah melihat nilai key.
 
 - Diskusi tersedia pada PRD, Epic, Story, dan Task. Komentar mendukung balasan, resolve, dan penanda keputusan oleh PM.
-- Anggota yang menjadi participant dapat membaca dan berkomentar pada Story yang diterbitkan lewat `stories_list_participating`, `stories_read_participating`, dan `stories_comment_participating` jika key memiliki tool tersebut.
-- Agent anggota hanya melihat Task yang ditugaskan kepadanya lewat `tasks_list_assigned` dan `tasks_get_assigned`. `tasks_comment_assigned` serta `tasks_update_assigned_status` juga memeriksa assignee pada setiap panggilan. Menjadi participant Story tidak membuka Task milik anggota lain.
+- Hak baca mengikuti peran kerja di portal, dan role key di MCP:
+
+  | Peran | BRD | PRD | Epic, story, task |
+  |---|---|---|---|
+  | PM dan owner | semua | semua status | semua, termasuk draf |
+  | Tech lead | semua | Review tim dan Approved | yang sudah dipublish |
+  | Backend | semua | Approved | yang sudah dipublish |
+  | UI/UX, frontend, mobile, QA, dan anggota tanpa peran | tidak | tidak | yang sudah dipublish |
+
+  Untuk peran yang tidak membaca dokumen, tab **Documents** disembunyikan. Draf epic, story, dan task hanya terlihat oleh PM.
+- Semua key bisa membaca epic dan story yang sudah dipublish lewat `project_items_list`, task semua anggota lewat `project_tasks_list`, dan detail story lewat `story_read`. Key backend juga mendapat `documents_list` dan `documents_read` untuk BRD dan PRD Approved. Key yang dibuat sebelum tool ini ada otomatis mendapatkannya.
+- Membaca tidak sama dengan menulis. Komentar pada story hanya untuk participant, tech lead, dan PM (`stories_comment_participating`). Komentar dan perubahan status task hanya untuk assignee-nya (`tasks_comment_assigned`, `tasks_update_assigned_status`), yang diperiksa pada setiap panggilan. Siapa pun yang membaca sebuah dokumen boleh berkomentar di dokumen itu.
+- Perubahan realtime dikirim ke orang yang boleh membacanya dengan aturan yang sama.
 - Lewat portal, perencanaan dikelola pemilik workspace atau anggota editor dengan peran kerja PM. Lewat MCP, key yang memegang tool `planning_*` bertindak sebagai PM di workspace tempat member menjadi anggota. Persetujuan PRD, menandai story `Ready`, dan publish epic juga boleh dilakukan tech lead. Perubahan peran kerja dibatasi pada owner atau PM yang sudah ada.
-- Draf agent, revisi, komentar, persetujuan, dan publish dicatat pada aktivitas planning. Catatan mencantumkan ID key untuk tindakan melalui MCP, tanpa menyimpan nilai secret.
+- Draf agent, revisi, komentar, persetujuan, dan publish dicatat pada aktivitas planning. Catatan mencantumkan ID dan nama key untuk tindakan melalui MCP, tanpa menyimpan nilai secret. Nama key disimpan saat aksi terjadi, jadi catatan tetap terbaca setelah key dicabut. Lampiran desain, tautan kontrak, test case, persetujuan desain, perubahan status task, dan sub-task juga masuk catatan. PM melihatnya di panel Aktivitas pada dokumen, story, dan dialog task, misalnya "lewat key claude-code laptop".
 
 ## Story, artefak, dan task
 

@@ -99,6 +99,7 @@ Model key berubah dari per workspace menjadi per member. Key lama yang per works
 - [x] **1.5 S** Endpoint admin: daftar member dan key, buat key dengan link klaim, buat ulang, batalkan klaim, cabut. Endpoint member: daftar key milik saya, klaim key (secret tampil sekali). Link klaim berlaku terbatas dan hanya untuk member yang dituju.
   - Catatan: klaim tidak memakai token di URL. Link di email hanya membuka `/settings/mcp`, dan klaim butuh sesi member yang dituju dalam 7 hari. Endpoint: `GET/POST /api/admin/mcp-keys`, `POST /api/admin/mcp-keys/:id/reissue`, `DELETE /api/admin/mcp-keys/:id` (cabut atau batalkan klaim), `GET /api/admin/mcp-tools`, `GET /api/me/mcp-key`, `POST /api/me/mcp-key/:id/claim` (secret sekali, `Cache-Control: no-store`). `/api/me` sekarang memuat `isAdmin`.
 - [x] **1.5b S** Link klaim dikirim lewat email (memakai `src/services/mail.ts`) dan dicatat sebagai notifikasi portal. Notifikasi butuh tabel baru (penerima, jenis, tautan, sudah dibaca) beserta endpoint daftar dan tandai dibaca. Token klaim disimpan sebagai hash.
+  - Catatan: token klaim sekali pakai ada di fragmen link email (`/settings/mcp#claim=...`), jadi tidak terkirim ke server lewat URL. Portal mengirimnya di body saat klaim, lalu menghapusnya dari address bar. Klaim tetap butuh login member yang dituju. Kalau email gagal terkirim, admin mendapat link itu sekali untuk diteruskan. Migration `0017_mcp_claim_token.sql`.
   - Catatan: karena tidak ada token klaim (lihat 1.5), tidak ada yang perlu di-hash. Tabel `notifications`, endpoint `GET /api/me/notifications`, `POST /api/me/notifications/:id/read`, dan `POST /api/me/notifications/read-all`. Kalau email gagal, key tetap dibuat dan notifikasi tetap tercatat.
 - [x] **1.6 S** Tools MCP menerima `workspaceId` di setiap panggilan, dan tool baru `workspaces_list` untuk workspace tempat member menjadi anggota. Setiap panggilan memeriksa keanggotaan workspace sebelum membaca atau menulis data.
   - Catatan: 15 tools. Key dicabut otomatis saat member keluar atau dikeluarkan dari workspace terakhirnya, atau workspace terakhirnya dihapus.
@@ -160,13 +161,13 @@ Model key berubah dari per workspace menjadi per member. Key lama yang per works
   - Catatan 5.1–5.6 (2026-11-12): tab workspace "Proyek" berisi navigasi Alur, Dokumen, Epic & Story, dan Papan tugas, dengan data dan aksi yang sudah ada di server. Teks pindah ke namespace `planning` (id + en), dan `planning-copy.constants.ts` serta `planning.view.tsx` dihapus. Token baru di `index.css`: `approve` (hijau DESIGN.md) dan warna titik role. Drag-and-drop memakai `@dnd-kit/react` (sensor pointer dan keyboard bawaan), dengan update optimistik dan rollback, plus menu "Pindah ke". Server menambah `canApprove` di daftar dokumen. Yang menunggu tahap 2–4: stepper status desain-dulu, Definition of Done, tab Desain/Kontrak/Test case, role dan kunci task, ketergantungan, dan sub-task.
 - [x] **5.7 W** Dialog task dua kolom untuk buat dan edit, dengan sub-task dan komentar.
   - Catatan: dialog dua kolom, komentar, dan sub-task sudah ada.
-- [ ] **5.8 W** Test viewmodel: filter, kolom Selesai, overdue, penguncian, dan rollback drag.
-  - Catatan: test filter, overdue, antrian, dan kode item sudah ada. Test kolom Selesai, penguncian, dan rollback drag belum.
+- [x] **5.8 W** Test viewmodel: filter, kolom Selesai, overdue, penguncian, dan rollback drag.
+  - Catatan: test kolom Selesai, penguncian, dan rollback drag ada di `use-projects-board.viewmodel.test.tsx`.
 
 ### Tahap 6 · Jejak dan visibilitas agent
 
-- [ ] **6.1 S** Simpan nama key (bukan secret) di catatan aktivitas, supaya portal bisa menampilkan "lewat key claude-code · laptop maya".
-- [ ] **6.2 W** Tampilkan aksi agent beserta nama key di aktivitas story, task, dan dokumen.
+- [x] **6.1 S** Simpan nama key (bukan secret) di catatan aktivitas, supaya portal bisa menampilkan "lewat key claude-code · laptop maya".
+- [x] **6.2 W** Tampilkan aksi agent beserta nama key di aktivitas story, task, dan dokumen.
 
 ### Nanti
 
