@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { type AppRoute, WORKSPACE_TABS, type WorkspaceTab } from '@/features/app-shell'
+import type { AppRoute, WorkspaceTab } from '@/features/app-shell'
 import { useProjectRolesViewModel, useProjectsViewModel } from '@/features/projects'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { TEAM_TEXT } from '../constants/team-text.constants'
@@ -10,16 +10,22 @@ import { useWorkspaceDetailViewModel } from './use-workspace-detail.viewmodel'
 import { useWorkspaceInvitesList } from './use-workspace-lists.viewmodel'
 import { useWorkspaceLiveSync } from './use-workspace-live-sync.viewmodel'
 
-export function useWorkspacePageViewModel(workspaceId: string, tab: WorkspaceTab, navigate: (route: AppRoute, replace?: boolean) => void) {
+export function useWorkspacePageViewModel(
+  workspaceId: string,
+  tab: WorkspaceTab,
+  commitId: string | undefined,
+  navigate: (route: AppRoute, replace?: boolean) => void,
+) {
   const { t } = useTranslation()
   const detail = useWorkspaceDetailViewModel(workspaceId, tab)
-  const visibleTabs: readonly WorkspaceTab[] = detail.isOwner ? WORKSPACE_TABS : WORKSPACE_TABS.filter((item) => item !== 'settings')
   const activeTab: WorkspaceTab = tab === 'settings' && !detail.isOwner ? 'overview' : tab
 
   const invites = useWorkspaceInvitesList(workspaceId, activeTab === 'team' && detail.isOwner)
   const actions = useWorkspaceActionsViewModel(workspaceId, () => navigate({ page: 'workspaces' }))
   const inviteDialog = useInviteDialogViewModel(workspaceId)
-  const activity = useWorkspaceActivityViewModel(workspaceId, detail.commits, activeTab === 'activity')
+  const activity = useWorkspaceActivityViewModel(workspaceId, detail.commits, activeTab === 'history', commitId, (nextCommitId) =>
+    navigate({ page: 'workspace', workspaceId, tab: 'history', commitId: nextCommitId }),
+  )
   const liveStatus = useWorkspaceLiveSync(workspaceId)
   const projects = useProjectsViewModel(
     workspaceId,
@@ -32,7 +38,7 @@ export function useWorkspacePageViewModel(workspaceId: string, tab: WorkspaceTab
   return {
     ...detail,
     activeTab,
-    visibleTabs,
+    canInvite: activeTab === 'team' && detail.workspace?.role === 'owner',
     selectTab: (next: WorkspaceTab) => navigate({ page: 'workspace', workspaceId, tab: next }),
     invites: invites.items,
     invitesHasMore: invites.hasMore,

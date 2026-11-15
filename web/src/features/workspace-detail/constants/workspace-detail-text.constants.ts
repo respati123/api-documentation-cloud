@@ -4,6 +4,15 @@ export const LIVE_STATUS_TEXT = {
   offline: 'workspace:live.offline',
 } as const
 
+export const WORKSPACE_SECTION_DETAIL_TEXT = {
+  overview: 'workspace:sectionDetail.overview',
+  collections: 'workspace:sectionDetail.collections',
+  history: 'workspace:sectionDetail.history',
+  projects: 'workspace:sectionDetail.projects',
+  team: 'workspace:sectionDetail.team',
+  settings: 'workspace:sectionDetail.settings',
+} as const
+
 export const WORKSPACE_TEXT = {
   header: {
     subtitle: 'workspace:header.subtitle',

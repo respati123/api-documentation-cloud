@@ -9,13 +9,18 @@ import { workspaceDetailService } from '../services/workspace-detail.service'
 import { compareSnapshots, type SnapshotChange } from '../utils/snapshot-diff'
 import { workspaceDetailKeys } from './workspace-detail.keys'
 
-export function useWorkspaceActivityViewModel(workspaceId: string, commits: CloudCommit[], enabled: boolean) {
+export function useWorkspaceActivityViewModel(
+  workspaceId: string,
+  commits: CloudCommit[],
+  enabled: boolean,
+  commitId: string | undefined,
+  onOpenCommit: (commitId: string) => void,
+) {
   const { t } = useTranslation()
   const token = useAuthSessionStore((state) => state.token)
   const signedIn = useAuthSessionStore((state) => state.signedIn)
-  const [chosenCommitId, setChosenCommitId] = useState('')
   const [chosenChangeId, setChosenChangeId] = useState('')
-  const selectedCommit = commits.find((commit) => commit.id === chosenCommitId) ?? commits[0] ?? null
+  const selectedCommit = commits.find((commit) => commit.id === commitId) ?? commits[0] ?? null
   const parentId = selectedCommit?.parentIds[0]
   const active = enabled && signedIn && selectedCommit !== null
 
@@ -43,9 +48,10 @@ export function useWorkspaceActivityViewModel(workspaceId: string, commits: Clou
   return {
     selectedCommit,
     latestCommitId: commits[0]?.id ?? '',
-    selectCommit: (commitId: string) => {
-      setChosenCommitId(commitId)
+    // The chosen commit lives in the URL, so a commit can be shared as a link.
+    selectCommit: (nextCommitId: string) => {
       setChosenChangeId('')
+      onOpenCommit(nextCommitId)
     },
     loading,
     error,

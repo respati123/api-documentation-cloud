@@ -46,6 +46,10 @@ export default function App() {
         route={shell.route}
         user={session.user}
         workspaces={shell.workspaces}
+        currentWorkspace={shell.currentWorkspace}
+        sidebarItems={shell.sidebarItems}
+        apiExpanded={shell.apiExpanded}
+        onApiExpandedChange={shell.setApiExpanded}
         apiOnline={shell.apiOnline}
         mobileNavOpen={shell.mobileNavOpen}
         onMobileNavOpenChange={shell.setMobileNavOpen}
@@ -67,6 +71,7 @@ export default function App() {
               key={shell.route.workspaceId}
               workspaceId={shell.route.workspaceId}
               tab={shell.route.tab ?? 'overview'}
+              commitId={shell.route.commitId}
               navigate={shell.navigate}
             />
           </Suspense>

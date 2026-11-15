@@ -7,9 +7,9 @@
   "tabs": {
     "label": "Workspace sections",
     "overview": "Overview",
-    "docs": "API docs",
+    "collections": "Collections",
+    "history": "History",
     "projects": "Project",
-    "activity": "Activity",
     "team": "Team",
     "settings": "Settings"
   },
@@ -70,5 +70,13 @@
     "live": "Live",
     "offline": "Reconnecting…",
     "updated": "{{actor}} pushed a new version."
+  },
+  "sectionDetail": {
+    "overview": "Shared collection, API reference, and change history.",
+    "collections": "Every collection and endpoint, as last pushed from the desktop app.",
+    "history": "Every commit pushed to this workspace, with what changed in each endpoint.",
+    "projects": "Documents, epics, stories, and tasks for this project.",
+    "team": "Members, project roles, and pending invitations.",
+    "settings": "Rename or delete this workspace."
   }
 }

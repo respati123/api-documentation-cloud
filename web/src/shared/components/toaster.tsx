@@ -41,7 +41,7 @@ function ToastStack() {
       <Toast.Viewport
         aria-label={t(COMMON_TEXT.toast.region)}
         data-testid="cloud-toast-viewport"
-        className="fixed top-4 right-4 left-4 z-[100] flex flex-col gap-2 outline-none sm:left-auto sm:w-96"
+        className="fixed top-16 right-4 left-4 z-[100] flex flex-col gap-2 outline-none sm:left-auto sm:w-96"
       >
         {toasts.map((toast) => {
           const kind = readKind(toast.type)

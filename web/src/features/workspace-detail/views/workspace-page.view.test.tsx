@@ -1,7 +1,7 @@
 import '@/shared/i18n'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { WorkspacePageView, type WorkspacePageViewProps } from './workspace-page.view'
+import { WorkspacePageView, type WorkspacePageViewProps } from '@/features/workspace-detail/views/workspace-page.view'
 
 const baseProps: WorkspacePageViewProps = {
   workspace: {
@@ -14,10 +14,8 @@ const baseProps: WorkspacePageViewProps = {
   },
   adminView: false,
   activeTab: 'overview',
-  tabs: ['overview', 'docs', 'team'],
-  memberCount: 3,
+  canInvite: false,
   liveStatus: 'live',
-  onTabChange: vi.fn(),
   onInvite: vi.fn(),
   children: null,
 }
@@ -35,5 +33,26 @@ describe('WorkspacePageView', () => {
 
     expect(screen.getByTestId('workspace-role-badge').textContent).not.toBe(memberBadge)
     expect(screen.getByTestId('workspace-role-badge')).toHaveTextContent('Admin')
+  })
+
+  test('names the open section in the header, with no tab row', () => {
+    const { rerender } = render(<WorkspacePageView {...baseProps} activeTab="history" />)
+    const historyTitle = screen.getByTestId('workspace-section-title').textContent
+
+    rerender(<WorkspacePageView {...baseProps} activeTab="collections" />)
+
+    expect(screen.getByTestId('workspace-section-title').textContent).not.toBe(historyTitle)
+    expect(screen.queryByTestId('workspace-tabs')).not.toBeInTheDocument()
+  })
+
+  test('shows the invite button only when the viewmodel allows it', () => {
+    const onInvite = vi.fn()
+    const { rerender } = render(<WorkspacePageView {...baseProps} onInvite={onInvite} />)
+    expect(screen.queryByTestId('workspace-invite-button')).not.toBeInTheDocument()
+
+    rerender(<WorkspacePageView {...baseProps} canInvite onInvite={onInvite} />)
+    fireEvent.click(screen.getByTestId('workspace-invite-button'))
+
+    expect(onInvite).toHaveBeenCalledTimes(1)
   })
 })

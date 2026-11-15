@@ -7,9 +7,9 @@
   "tabs": {
     "label": "Bagian workspace",
     "overview": "Ringkasan",
-    "docs": "Dokumentasi API",
+    "collections": "Koleksi",
+    "history": "Riwayat",
     "projects": "Proyek",
-    "activity": "Aktivitas",
     "team": "Tim",
     "settings": "Pengaturan"
   },
@@ -70,5 +70,13 @@
     "live": "Langsung",
     "offline": "Menghubungkan ulang…",
     "updated": "{{actor}} mendorong versi baru."
+  },
+  "sectionDetail": {
+    "overview": "Koleksi bersama, referensi API, dan riwayat perubahan.",
+    "collections": "Semua koleksi dan endpoint, sesuai push terakhir dari aplikasi desktop.",
+    "history": "Semua commit yang di-push ke workspace ini, beserta perubahan di tiap endpoint.",
+    "projects": "Dokumen, epic, story, dan task untuk proyek ini.",
+    "team": "Anggota, role proyek, dan undangan yang belum diterima.",
+    "settings": "Ganti nama atau hapus workspace ini."
   }
 }

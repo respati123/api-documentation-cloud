@@ -16,7 +16,16 @@
     "collapseMenu": "Ciutkan sidebar",
     "expandMenu": "Tampilkan sidebar",
     "searchWorkspaces": "Cari workspace…",
-    "version": "Versi {{version}}"
+    "version": "Versi {{version}}",
+    "workspaceMenuLabel": "Menu workspace",
+    "workspaceOverview": "Ringkasan",
+    "api": "API",
+    "collections": "Koleksi",
+    "history": "Riwayat",
+    "projects": "Proyek",
+    "team": "Tim",
+    "settings": "Pengaturan",
+    "toggleApi": "Tampilkan atau sembunyikan bagian API"
   },
   "account": {
     "signOut": "Keluar",
@@ -62,5 +71,14 @@
   },
   "notice": {
     "dismiss": "Tutup"
+  },
+  "switcher": {
+    "label": "Ganti workspace",
+    "placeholder": "Pilih workspace",
+    "yourWorkspaces": "Workspace kamu",
+    "allWorkspaces": "Semua workspace",
+    "createWorkspace": "Buat workspace",
+    "empty": "Belum ada workspace.",
+    "loadMore": "Muat workspace lain"
   }
 }

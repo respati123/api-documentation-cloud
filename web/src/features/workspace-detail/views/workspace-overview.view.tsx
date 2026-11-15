@@ -51,7 +51,7 @@ export function WorkspaceOverviewView({
           <CardTitle>{t(WORKSPACE_TEXT.overview.contentsTitle)}</CardTitle>
           <CardDescription>{summary}</CardDescription>
           <CardAction>
-            <Button variant="link" className="px-0" onClick={() => onTab('docs')}>
+            <Button variant="link" className="px-0" onClick={() => onTab('collections')}>
               {t(WORKSPACE_TEXT.overview.browseDocs)}
             </Button>
           </CardAction>
@@ -61,9 +61,9 @@ export function WorkspaceOverviewView({
             <div className="grid">
               {snapshot.tree.map((node) =>
                 node.kind === 'folder' ? (
-                  <CollectionGroup key={node.id} node={node} onOpen={() => onTab('docs')} />
+                  <CollectionGroup key={node.id} node={node} onOpen={() => onTab('collections')} />
                 ) : (
-                  <EndpointRow key={node.id} request={node} onOpen={() => onTab('docs')} />
+                  <EndpointRow key={node.id} request={node} onOpen={() => onTab('collections')} />
                 ),
               )}
             </div>
@@ -89,7 +89,7 @@ export function WorkspaceOverviewView({
           <CardHeader className="border-b border-border pb-4">
             <CardTitle>{t(WORKSPACE_TEXT.overview.recentTitle)}</CardTitle>
             <CardAction>
-              <Button variant="link" className="px-0" onClick={() => onTab('activity')}>
+              <Button variant="link" className="px-0" onClick={() => onTab('history')}>
                 {t(WORKSPACE_TEXT.overview.viewHistory)}
               </Button>
             </CardAction>

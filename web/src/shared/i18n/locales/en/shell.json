@@ -16,7 +16,16 @@
     "collapseMenu": "Collapse sidebar",
     "expandMenu": "Expand sidebar",
     "searchWorkspaces": "Search workspaces…",
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "workspaceMenuLabel": "Workspace menu",
+    "workspaceOverview": "Overview",
+    "api": "API",
+    "collections": "Collections",
+    "history": "History",
+    "projects": "Project",
+    "team": "Team",
+    "settings": "Settings",
+    "toggleApi": "Show or hide API sections"
   },
   "account": {
     "signOut": "Sign out",
@@ -62,5 +71,14 @@
   },
   "notice": {
     "dismiss": "Dismiss"
+  },
+  "switcher": {
+    "label": "Switch workspace",
+    "placeholder": "Choose a workspace",
+    "yourWorkspaces": "Your workspaces",
+    "allWorkspaces": "All workspaces",
+    "createWorkspace": "Create workspace",
+    "empty": "No workspaces yet.",
+    "loadMore": "Load more workspaces"
   }
 }

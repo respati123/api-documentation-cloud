@@ -19,6 +19,24 @@ export const SHELL_TEXT = {
     expandMenu: 'shell:nav.expandMenu',
     collapseMenu: 'shell:nav.collapseMenu',
     searchWorkspaces: 'shell:nav.searchWorkspaces',
+    workspaceMenuLabel: 'shell:nav.workspaceMenuLabel',
+    workspaceOverview: 'shell:nav.workspaceOverview',
+    api: 'shell:nav.api',
+    collections: 'shell:nav.collections',
+    history: 'shell:nav.history',
+    projects: 'shell:nav.projects',
+    team: 'shell:nav.team',
+    settings: 'shell:nav.settings',
+    toggleApi: 'shell:nav.toggleApi',
+  },
+  switcher: {
+    label: 'shell:switcher.label',
+    placeholder: 'shell:switcher.placeholder',
+    yourWorkspaces: 'shell:switcher.yourWorkspaces',
+    allWorkspaces: 'shell:switcher.allWorkspaces',
+    createWorkspace: 'shell:switcher.createWorkspace',
+    empty: 'shell:switcher.empty',
+    loadMore: 'shell:switcher.loadMore',
   },
   account: {
     signOut: 'shell:account.signOut',
@@ -78,9 +96,9 @@ export const SHELL_PAGE_TITLE: Record<AppRoute['page'], string> = {
 
 export const WORKSPACE_TAB_TEXT: Record<WorkspaceTab, string> = {
   overview: 'workspace:tabs.overview',
-  docs: 'workspace:tabs.docs',
+  collections: 'workspace:tabs.collections',
+  history: 'workspace:tabs.history',
   projects: 'workspace:tabs.projects',
-  activity: 'workspace:tabs.activity',
   team: 'workspace:tabs.team',
   settings: 'workspace:tabs.settings',
 }

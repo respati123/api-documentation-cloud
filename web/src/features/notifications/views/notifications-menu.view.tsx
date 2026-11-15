@@ -42,7 +42,7 @@ export function NotificationsMenuView(vm: NotificationsMenuViewProps) {
           </span>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="top" className="w-80">
+      <DropdownMenuContent align="end" side="bottom" className="w-80">
         <DropdownMenuGroup>
           <DropdownMenuLabel>{t(NOTIFICATIONS_TEXT.title)}</DropdownMenuLabel>
           {vm.error && <p className="px-2 py-1.5 text-sm text-destructive">{vm.error}</p>}

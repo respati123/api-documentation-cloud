@@ -16,12 +16,13 @@ import { WorkspacePageView } from '../views/workspace-page.view'
 export interface WorkspacePageProps {
   workspaceId: string
   tab: WorkspaceTab
+  commitId?: string
   navigate: (route: AppRoute, replace?: boolean) => void
 }
 
-export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps) {
+export function WorkspacePage({ workspaceId, tab, commitId, navigate }: WorkspacePageProps) {
   const { t } = useTranslation()
-  const vm = useWorkspacePageViewModel(workspaceId, tab, navigate)
+  const vm = useWorkspacePageViewModel(workspaceId, tab, commitId, navigate)
 
   if (vm.detailStatus === 'loading') return <LoadingState label={t(WORKSPACE_TEXT.state.loading)} testId="workspace-loading-state" />
   if (!vm.workspace && vm.detailStatus === 'error') {
@@ -56,10 +57,8 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
       workspace={workspace}
       adminView={vm.snapshot?.adminView === true}
       activeTab={vm.activeTab}
-      tabs={vm.visibleTabs}
-      memberCount={vm.members.length}
+      canInvite={vm.canInvite}
       liveStatus={vm.liveStatus}
-      onTabChange={vm.selectTab}
       onInvite={vm.inviteDialog.open}
     >
       {vm.detailStatus === 'loading' && <LoadingState label={t(WORKSPACE_TEXT.state.loadingView)} testId="workspace-view-loading" />}
@@ -92,7 +91,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
               onTab={vm.selectTab}
             />
           )}
-          {vm.activeTab === 'docs' && (
+          {vm.activeTab === 'collections' && (
             <ApiDocsView
               tree={vm.tree}
               totalRequests={vm.counts.requests}
@@ -102,7 +101,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
               onSelect={vm.selectRequest}
             />
           )}
-          {vm.activeTab === 'activity' && (
+          {vm.activeTab === 'history' && (
             <ActivityView
               commits={vm.commits}
               commitsHasMore={vm.commitsHasMore}
