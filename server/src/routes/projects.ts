@@ -30,8 +30,10 @@ export async function handleProjectRoutes(ctx: AppContext, request: Request, met
   }
   if (projectMembersMatch && method === 'POST') {
     const body = await bodyOf(request)
-    if (typeof body.userId !== 'string' || typeof body.discipline !== 'string' || !disciplines.includes(body.discipline as ProjectDiscipline)) throw new AppError('PROJECT_INPUT_INVALID')
-    return ok({ member: await assignProjectMember(db, workspaceId, projectMembersMatch[1], user.id, body.userId, body.discipline as ProjectDiscipline) })
+    // `disciplines` sets every role at once. A single `discipline` is still accepted from older clients.
+    const roles = Array.isArray(body.disciplines) ? body.disciplines : typeof body.discipline === 'string' ? [body.discipline] : null
+    if (typeof body.userId !== 'string' || !roles || roles.some((value) => typeof value !== 'string' || !disciplines.includes(value as ProjectDiscipline))) throw new AppError('PROJECT_INPUT_INVALID')
+    return ok({ member: await assignProjectMember(db, workspaceId, projectMembersMatch[1], user.id, body.userId, roles as ProjectDiscipline[]) })
   }
 
   const taskCollection = action.match(/^projects\/([\w-]+)\/tasks$/)

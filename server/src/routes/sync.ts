@@ -5,14 +5,14 @@ import { bodyOf } from '@/lib/http-body'
 import { created, ok } from '@/lib/http'
 import { decodeCursor, readLimit } from '@/lib/pagination'
 import { emptyWorkspaceVariables, validateTree, validateWorkspaceVariables } from '@/lib/validation'
-import { requireRole } from '@/services/access'
+import { requireAccess, requireRole } from '@/services/access'
 import { commitDetail, historyPage, pullWorkspace, pushCommits, restoreCommit, type PushCommit } from '@/services/sync'
 
 export async function handleSync(ctx: AppContext, request: Request, url: URL, method: string, workspaceId: string, action: string, user: AuthUser): Promise<Response | undefined> {
   const { db } = ctx
   if (method === 'GET' && action === 'sync/pull') {
-    await requireRole(db, workspaceId, user.id, ['owner', 'editor', 'viewer'])
-    return ok({ workspace: await pullWorkspace(db, workspaceId, user.id) })
+    const access = await requireAccess(db, workspaceId, user.id, ['owner', 'editor', 'viewer'])
+    return ok({ workspace: await pullWorkspace(db, workspaceId, access) })
   }
 
   if (method === 'GET' && action === 'sync/history') {

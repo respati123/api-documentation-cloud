@@ -21,6 +21,7 @@ import {
   setDodDone,
   updateStoryText,
 } from '@/repositories/stories.repository'
+import { insertPlanningEvent } from '@/repositories/planning-events.repository'
 import { findUserById } from '@/repositories/users.repository'
 import { notify } from '@/services/notifications'
 import { canManagePlanning, getPlanningItem, type PlanningVia, requirePlanningApprover, requirePlanningPm } from '@/services/planning'
@@ -150,6 +151,7 @@ export async function approveStoryDesign(db: SQL, workspaceId: string, storyId: 
   await storyOf(db, workspaceId, storyId)
   if ((await countDesigns(db, storyId)) === 0) throw new AppError('PLANNING_CONFLICT')
   if (!(await setDesignApproval(db, storyId, userId))) throw new AppError('PLANNING_CONFLICT')
+  await storyEvent(db, workspaceId, storyId, userId, 'design_approved')
   const story = await storyOf(db, workspaceId, storyId)
   const actor = await findUserById(db, userId)
   for (const participantId of await listStoryParticipantIds(db, storyId)) {
@@ -172,6 +174,7 @@ export async function attachStoryDesign(db: SQL, workspaceId: string, storyId: s
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new AppError('PLANNING_INPUT_INVALID')
   const id = randomUUID()
   await insertDesign(db, { id, storyId, title: textOf(input.title, 180, true), url, note: textOf(input.note ?? '', 500), createdBy: userId, apiKeyId: via?.apiKeyId ?? null })
+  await storyEvent(db, workspaceId, storyId, userId, 'design_attached', via)
   return { id }
 }
 
@@ -182,6 +185,7 @@ export async function linkStoryContract(db: SQL, workspaceId: string, storyId: s
   if (!collectionRequests(await findHeadSnapshot(db, workspaceId)).has(requestId)) throw new AppError('CONTRACT_REQUEST_NOT_FOUND')
   const id = randomUUID()
   if (!(await insertContractLink(db, { id, storyId, requestId, createdBy: userId, apiKeyId: via?.apiKeyId ?? null }))) throw new AppError('PLANNING_CONFLICT')
+  await storyEvent(db, workspaceId, storyId, userId, 'contract_linked', via)
   return { id }
 }
 
@@ -193,5 +197,10 @@ export async function addStoryTestCase(db: SQL, workspaceId: string, storyId: st
   if (steps.length === 0 || expected.length === 0) throw new AppError('PLANNING_INPUT_INVALID')
   const id = randomUUID()
   const number = await insertTestCase(db, { id, storyId, title: textOf(input.title, 180, true), precondition: textOf(input.precondition ?? '', 2000), steps, expected, createdBy: userId, apiKeyId: via?.apiKeyId ?? null })
+  await storyEvent(db, workspaceId, storyId, userId, 'test_case_added', via)
   return { id, code: `TC-${number}` }
+}
+
+function storyEvent(db: SQL, workspaceId: string, storyId: string, actorId: string, action: string, via?: PlanningVia) {
+  return insertPlanningEvent(db, { workspaceId, actorId, apiKeyId: via?.apiKeyId ?? null, targetKind: 'story', targetId: storyId, action })
 }

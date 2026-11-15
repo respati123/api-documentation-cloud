@@ -28,7 +28,6 @@ export interface WorkspaceMemberRow {
 export interface WorkspaceSnapshotRow {
   id: string
   name: string
-  role: Role
   headCommitId: string | null
   parentIds: unknown
   message: string | null
@@ -54,8 +53,9 @@ export async function findWorkspaceForMember(db: SQL, workspaceId: string, userI
 }
 
 // The head commit's parents, message, and snapshot, for the pull response.
-export async function findWorkspaceSnapshotRow(db: SQL, workspaceId: string, userId: string): Promise<WorkspaceSnapshotRow | undefined> {
-  const [row] = await db`SELECT w.id, w.name, m.role, w.head_commit_id AS "headCommitId", c.parent_ids AS "parentIds", c.message, c.snapshot, c.created_at AS "createdAt" FROM workspaces w JOIN memberships m ON m.workspace_id = w.id LEFT JOIN commits c ON c.id = w.head_commit_id AND c.workspace_id = w.id WHERE w.id = ${workspaceId} AND m.user_id = ${userId}`
+// The caller's access is checked before this is read, so the row does not carry a role.
+export async function findWorkspaceSnapshotRow(db: SQL, workspaceId: string): Promise<WorkspaceSnapshotRow | undefined> {
+  const [row] = await db`SELECT w.id, w.name, w.head_commit_id AS "headCommitId", c.parent_ids AS "parentIds", c.message, c.snapshot, c.created_at AS "createdAt" FROM workspaces w LEFT JOIN commits c ON c.id = w.head_commit_id AND c.workspace_id = w.id WHERE w.id = ${workspaceId}`
   return row
 }
 

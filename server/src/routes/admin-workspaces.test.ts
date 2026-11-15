@@ -47,13 +47,66 @@ describe.skipIf(!databaseEnabled)('admin workspace overview', () => {
     expect(Object.keys(workspaces[0]).sort()).toEqual(['createdAt', 'id', 'memberCount', 'name', 'ownerEmail'])
   })
 
-  test('the admin still cannot open the content of a workspace they are not a member of', async () => {
-    const owner = await http.signUp('overview-closed')
-    const workspaceId = await http.createWorkspace(owner, 'Overview Closed')
+  test('the admin reads a workspace they are not a member of as a viewer, flagged as an admin view', async () => {
+    const owner = await http.signUp('overview-read')
+    const workspaceId = await http.createWorkspace(owner, 'Overview Read')
 
-    const response = await http.call('GET', `/api/workspaces/${workspaceId}`, { token: admin.token })
+    const pull = await http.call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: admin.token })
+    const members = await http.call('GET', `/api/workspaces/${workspaceId}/members`, { token: admin.token })
+    const history = await http.call('GET', `/api/workspaces/${workspaceId}/sync/history`, { token: admin.token })
+    const projects = await http.call('GET', `/api/workspaces/${workspaceId}/projects`, { token: admin.token })
+    const documents = await http.call('GET', `/api/workspaces/${workspaceId}/planning/documents`, { token: admin.token })
 
-    expect(response.status).toBe(404)
+    expect(pull.status).toBe(200)
+    expect((pull.json.data as { workspace: unknown }).workspace).toMatchObject({ id: workspaceId, name: 'Overview Read', role: 'viewer', adminView: true })
+    expect((members.json.data as { members: Array<{ id: string }> }).members.map((member) => member.id)).toEqual([owner.user.id])
+    expect(history.status).toBe(200)
+    expect(projects.status).toBe(200)
+    expect(documents.json.data).toMatchObject({ canManage: false, canApprove: false, canReadDocuments: true })
+  })
+
+  test('a member pull is not flagged as an admin view', async () => {
+    const owner = await http.signUp('overview-member')
+    const workspaceId = await http.createWorkspace(owner, 'Overview Member')
+
+    const pull = await http.call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+
+    expect((pull.json.data as { workspace: unknown }).workspace).toMatchObject({ role: 'owner', adminView: false })
+  })
+
+  test('the admin cannot change a workspace they are not a member of', async () => {
+    const owner = await http.signUp('overview-write')
+    const workspaceId = await http.createWorkspace(owner, 'Overview Write')
+
+    const rename = await http.call('PATCH', `/api/workspaces/${workspaceId}`, { token: admin.token, body: { name: 'Taken' } })
+    const invite = await http.call('POST', `/api/workspaces/${workspaceId}/invites`, { token: admin.token, body: { email: 'x@test.dev', role: 'editor' } })
+    const remove = await http.call('DELETE', `/api/workspaces/${workspaceId}/members/${owner.user.id}`, { token: admin.token })
+    const comment = await http.call('POST', `/api/workspaces/${workspaceId}/planning/document/any/comments`, { token: admin.token, body: { body: 'hi' } })
+
+    for (const response of [rename, invite, remove, comment]) {
+      expect(response.status).toBe(403)
+      expect(response.json.code).toBe('ROLE_NOT_ALLOWED')
+    }
+    const pull = await http.call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: owner.token })
+    expect((pull.json.data as { workspace: { name: string } }).workspace.name).toBe('Overview Write')
+  })
+
+  test('an ordinary account still gets not found for a workspace it is not a member of', async () => {
+    const owner = await http.signUp('overview-stranger-owner')
+    const stranger = await http.signUp('overview-stranger')
+    const workspaceId = await http.createWorkspace(owner, 'Overview Stranger')
+
+    const read = await http.call('GET', `/api/workspaces/${workspaceId}/sync/pull`, { token: stranger.token })
+    const write = await http.call('PATCH', `/api/workspaces/${workspaceId}`, { token: stranger.token, body: { name: 'Taken' } })
+
+    expect(read.json.code).toBe('WORKSPACE_NOT_FOUND')
+    expect(write.json.code).toBe('WORKSPACE_NOT_FOUND')
+  })
+
+  test('the admin gets not found for a workspace that does not exist', async () => {
+    const response = await http.call('GET', `/api/workspaces/${crypto.randomUUID()}/sync/pull`, { token: admin.token })
+
+    expect(response.json.code).toBe('WORKSPACE_NOT_FOUND')
   })
 
   test('the list searches by owner email and pages with a cursor', async () => {

@@ -4,7 +4,7 @@ import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
 import { created, noContent, ok } from '@/lib/http'
 import { addStoryTestCase, approveStoryDesign, attachStoryDesign, getStoryDetails, linkStoryContract, setStoryDodItem, updateStoryDetails } from '@/services/stories'
-import { addPlanningComment, canApprovePlanning, canManagePlanning, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, getPlanningDocument, getPlanningDocumentFile, getPlanningDocumentVersion, listPlanningComments, listPlanningDocuments, listPlanningEvents, listPlanningItems, listPlanningTasks, publishPlanningEpic, rebasePlanningEpic, requirePlanningPm, resolvePlanningComment, revisePlanningDocument, setPlanningDocumentStatus, updatePlanningItem, updatePlanningTaskDraft, type TargetKind } from '@/services/planning'
+import { addPlanningComment, canApprovePlanning, canManagePlanning, canReadPlanningDocuments, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, getPlanningDocument, getPlanningDocumentFile, getPlanningDocumentVersion, listPlanningComments, listPlanningDocuments, listPlanningEvents, listPlanningItems, listPlanningTasks, publishPlanningEpic, rebasePlanningEpic, requirePlanningPm, resolvePlanningComment, revisePlanningDocument, setPlanningDocumentStatus, updatePlanningItem, updatePlanningTaskDraft, type TargetKind } from '@/services/planning'
 import { extractDocumentFile } from '@/services/document-upload'
 
 const targetKinds: TargetKind[] = ['document', 'epic', 'story', 'task']
@@ -14,7 +14,7 @@ export async function handlePlanningRoutes(ctx: AppContext, request: Request, me
   const db = ctx.db
   const actorId = user.id
   if (action === 'planning/documents') {
-    if (method === 'GET') return ok({ documents: await listPlanningDocuments(db, workspaceId, actorId), canManage: await canManagePlanning(db, workspaceId, actorId), canApprove: await canApprovePlanning(db, workspaceId, actorId) })
+    if (method === 'GET') return ok({ documents: await listPlanningDocuments(db, workspaceId, actorId), canManage: await canManagePlanning(db, workspaceId, actorId), canApprove: await canApprovePlanning(db, workspaceId, actorId), canReadDocuments: await canReadPlanningDocuments(db, workspaceId, actorId) })
     if (method === 'POST') {
       const body = await bodyOf(request)
       return created({ document: await createPlanningDocument(db, workspaceId, actorId, { kind: body.kind, title: body.title, content: body.content, sourceDocumentId: body.sourceDocumentId }) })

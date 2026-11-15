@@ -25,15 +25,29 @@ export async function listMemberProjects(db: SQL, workspaceId: string, userId: s
 }
 
 export async function addProjectMember(db: SQL, projectId: string, userId: string, discipline: string): Promise<void> {
-  await db`INSERT INTO project_members (project_id, user_id, discipline) VALUES (${projectId}, ${userId}, ${discipline}) ON CONFLICT (project_id, user_id) DO UPDATE SET discipline = EXCLUDED.discipline`
+  await db`INSERT INTO project_members (project_id, user_id, discipline) VALUES (${projectId}, ${userId}, ${discipline}) ON CONFLICT DO NOTHING`
 }
 
-export async function listProjectMembers(db: SQL, projectId: string): Promise<Array<{ id: string; email: string; discipline: string }>> {
-  return db`SELECT u.id, u.email, pm.discipline FROM project_members pm JOIN users u ON u.id = pm.user_id WHERE pm.project_id = ${projectId} ORDER BY u.email`
+// Replaces the member's roles in the project. An empty list takes the member out of the project.
+export async function setProjectMemberDisciplines(db: SQL, projectId: string, userId: string, disciplines: string[]): Promise<void> {
+  await db.begin(async (tx) => {
+    await tx`DELETE FROM project_members WHERE project_id = ${projectId} AND user_id = ${userId}`
+    for (const discipline of disciplines) await tx`INSERT INTO project_members (project_id, user_id, discipline) VALUES (${projectId}, ${userId}, ${discipline})`
+  })
 }
 
-export async function listWorkspaceMembers(db: SQL, workspaceId: string): Promise<Array<{ id: string; email: string; discipline: string | null }>> {
-  return db`SELECT u.id, u.email, (SELECT pm.discipline FROM project_members pm JOIN projects p ON p.id = pm.project_id WHERE p.workspace_id = ${workspaceId} AND pm.user_id = u.id ORDER BY p.created_at, p.id LIMIT 1) AS discipline FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${workspaceId} ORDER BY u.email`
+// `discipline` is the first role, kept for clients that read one role. `disciplines` holds them all.
+export async function listProjectMembers(db: SQL, projectId: string): Promise<Array<{ id: string; email: string; discipline: string; disciplines: string[] }>> {
+  return db`SELECT u.id, u.email, (array_agg(pm.discipline ORDER BY pm.created_at, pm.discipline))[1] AS discipline, array_agg(pm.discipline ORDER BY pm.created_at, pm.discipline) AS disciplines FROM project_members pm JOIN users u ON u.id = pm.user_id WHERE pm.project_id = ${projectId} GROUP BY u.id, u.email ORDER BY u.email`
+}
+
+export async function listWorkspaceMembers(db: SQL, workspaceId: string): Promise<Array<{ id: string; email: string; discipline: string | null; disciplines: string[] }>> {
+  return db`SELECT u.id, u.email, r.disciplines[1] AS discipline, COALESCE(r.disciplines, '{}') AS disciplines FROM memberships m JOIN users u ON u.id = m.user_id LEFT JOIN LATERAL (SELECT array_agg(pm.discipline ORDER BY p.created_at, pm.created_at, pm.discipline) AS disciplines FROM project_members pm JOIN projects p ON p.id = pm.project_id WHERE p.workspace_id = ${workspaceId} AND pm.user_id = u.id) r ON true WHERE m.workspace_id = ${workspaceId} ORDER BY u.email`
+}
+
+// Each workspace the member belongs to, with the roles the owner gave them there.
+export async function listUserRolesByWorkspace(db: SQL, userId: string): Promise<Array<{ id: string; name: string; roles: string[] }>> {
+  return db`SELECT w.id, w.name, COALESCE(array_agg(DISTINCT pm.discipline) FILTER (WHERE pm.discipline IS NOT NULL), '{}') AS roles FROM memberships m JOIN workspaces w ON w.id = m.workspace_id LEFT JOIN projects p ON p.workspace_id = w.id LEFT JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = m.user_id WHERE m.user_id = ${userId} GROUP BY w.id, w.name ORDER BY w.name, w.id LIMIT 200`
 }
 
 // Shared columns for a task on the board. A task is locked while its story waits for design approval, unless it is UI/UX work.

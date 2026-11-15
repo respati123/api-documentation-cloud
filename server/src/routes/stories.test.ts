@@ -176,13 +176,12 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     expect(refused.json.code).toBe('TASK_INPUT_INVALID')
   })
 
-  async function keyFor(member: TestAccount, role: string) {
-    const admin = await http.signInAdmin()
-    const issued = await http.call('POST', '/api/admin/mcp-keys', { token: admin.token, body: { userId: member.user.id, name: 'Agent', role, validDays: 30 } })
-    const keyId = (issued.json.data as { key: { id: string } }).key.id
-    const claimed = await http.call('POST', `/api/me/mcp-key/${keyId}/claim`, { token: member.token })
-    return (claimed.json.data as { secret: string }).secret
+  async function keyFor(member: TestAccount, _role: string, name = 'Agent') {
+    // The key carries no role: what it may do follows the roles the member already holds in the workspace.
+    const created = await http.call('POST', '/api/me/mcp-keys', { token: member.token, body: { name: name, validDays: 30 } })
+    return (created.json.data as { secret: string }).secret
   }
+
 
   function toolResult(response: { json: Record<string, unknown> }) {
     const result = response.json.result as { content: Array<{ text: string }>; isError: boolean }
@@ -290,7 +289,8 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
 
     expect((await planningAudience(db, workspaceId, { kind: 'document', id: prdId })).sort()).toEqual([owner.user.id].sort())
     for (const status of ['review_pm', 'review_team', 'approved']) await call('POST', `/documents/${prdId}/status`, { status })
-    expect(await planningAudience(db, workspaceId, { kind: 'document', id: prdId })).toEqual(expect.arrayContaining([participant.user.id, bystander.user.id]))
+    // An approved PRD reaches the PM, the tech lead, and backend. Frontend does not read documents.
+    expect((await planningAudience(db, workspaceId, { kind: 'document', id: prdId })).sort()).toEqual([owner.user.id, participant.user.id, lead.user.id].sort())
 
     const epicId = ((await call('POST', '/items', { kind: 'epic', title: 'E', sourceDocumentId: prdId })).json.data as { item: { id: string } }).item.id
     const storyId = ((await call('POST', '/items', { kind: 'story', parentId: epicId, title: 'S', acceptanceCriteria: 'ok', sourceDocumentId: prdId, participantIds: [participant.user.id] })).json.data as { item: { id: string } }).item.id
@@ -303,13 +303,12 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
       await call('PATCH', `/items/${epicId}`, { status })
     }
     await call('POST', `/items/${epicId}/publish`)
-    const published = await planningAudience(db, workspaceId, { kind: 'item', id: storyId })
-    expect(published.sort()).toEqual([owner.user.id, lead.user.id, participant.user.id].sort())
-    expect(published).not.toContain(bystander.user.id)
+    // Published work is read by every member, so every member hears about it.
+    const everyone = [owner.user.id, lead.user.id, participant.user.id, bystander.user.id].sort()
+    expect((await planningAudience(db, workspaceId, { kind: 'item', id: storyId })).sort()).toEqual(everyone)
 
     const task = (await boardTasks(owner, workspaceId))[0]
-    const thread = await planningAudience(db, workspaceId, { kind: 'task-thread', id: task.id })
-    expect(thread.sort()).toEqual([owner.user.id, participant.user.id].sort())
+    expect((await planningAudience(db, workspaceId, { kind: 'task-thread', id: task.id })).sort()).toEqual(everyone)
   })
 
   test('a PM agent writes story details, and a task draft without a role is refused', async () => {
@@ -339,5 +338,28 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     expect(details.value).toMatchObject({ userStory: { role: 'owner' }, definitionOfDone: [{ text: 'Design approved', role: 'ui_ux' }] })
     expect(toolResult(await tool('planning_draft_task', { storyId: story.value.id, title: 'Design dialog' })).value.code).toBe('MCP_DRAFT_INCOMPLETE')
     expect(toolResult(await tool('planning_draft_task', { storyId: story.value.id, title: 'Design dialog', role: 'ui_ux' })).isError).toBe(false)
+  })
+
+  test('agent work on stories and tasks shows in the activity log with the key name, and portal work without one', async () => {
+    const { owner, workspaceId, storyId, call } = await project('story-activity')
+    const designer = await memberWithRole(owner, workspaceId, 'activity-designer', 'ui_ux')
+    await call('PATCH', `/items/${storyId}`, { participantIds: [designer.user.id] })
+    const designTask = (await boardTasks(owner, workspaceId)).find((task) => task.role === 'ui_ux') as BoardTask
+    await http.call('PATCH', `/api/workspaces/${workspaceId}/tasks/${designTask.id}`, { token: owner.token, body: { assigneeId: designer.user.id } })
+
+    const key = await keyFor(designer, 'ui_ux', 'claude-code laptop')
+    await http.mcp(key, 'tools/call', { name: 'planning_guide', arguments: {} })
+    expect(toolResult(await http.mcp(key, 'tools/call', { name: 'story_attach_design', arguments: { workspaceId, storyId, title: 'Dialog', url: 'https://design.test/dialog' } })).isError).toBe(false)
+    expect(toolResult(await http.mcp(key, 'tools/call', { name: 'tasks_update_assigned_status', arguments: { workspaceId, taskId: designTask.id, status: 'in_progress' } })).isError).toBe(false)
+    expect(toolResult(await http.mcp(key, 'tools/call', { name: 'subtask_add', arguments: { workspaceId, taskId: designTask.id, title: 'Empty state' } })).isError).toBe(false)
+    await call('POST', `/stories/${storyId}/approve-design`)
+
+    const events = ((await call('GET', '/events')).json.data as { events: Array<{ action: string; targetId: string; apiKeyName: string | null }> }).events
+    const find = (action: string, targetId: string) => events.find((entry) => entry.action === action && entry.targetId === targetId)
+
+    expect(find('design_attached', storyId)?.apiKeyName).toBe('claude-code laptop')
+    expect(find('status:in_progress', designTask.id)?.apiKeyName).toBe('claude-code laptop')
+    expect(find('subtask_added', designTask.id)?.apiKeyName).toBe('claude-code laptop')
+    expect(find('design_approved', storyId)).toMatchObject({ apiKeyName: null })
   })
 })

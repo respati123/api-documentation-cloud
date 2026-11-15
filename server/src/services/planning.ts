@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
+import { insertPlanningEvent, listPlanningEventRows } from '@/repositories/planning-events.repository'
 import { AppError } from '@/lib/errors/app-error'
 import { findRole } from '@/repositories/memberships.repository'
+import { resolveAccess } from '@/services/access'
 import { findUserById } from '@/repositories/users.repository'
 import { notify } from '@/services/notifications'
 import { ensureAssigneeInWorkspace, ensureWorkspaceProject } from '@/repositories/projects.repository'
+import { findTaskVisibility, listUserDisciplines } from '@/repositories/planning-audience.repository'
+import { isItemParticipant } from '@/repositories/planning.repository'
 import { isWorkRole, storyStage } from '@/models/story'
 
 export type DocumentKind = 'brd' | 'prd'
@@ -22,10 +26,11 @@ function validText(value: unknown, max: number): value is string {
 
 // Set when the call comes through an MCP key. A key whose role holds planning tools works on planning as a PM,
 // even where the member's workspace role alone would not allow it. Workspace membership is still required.
-export type PlanningVia = { apiKeyId: string; planning: boolean }
+// The member's roles in the workspace decide which documents it reads.
+export type PlanningVia = { apiKeyId: string; planning: boolean; roles?: string[] }
 
 async function isPm(db: SQL, workspaceId: string, userId: string, via?: PlanningVia): Promise<boolean> {
-  const role = await findRole(db, workspaceId, userId)
+  const role = (await resolveAccess(db, workspaceId, userId))?.role
   if (!role) throw new AppError('WORKSPACE_NOT_FOUND')
   if (role === 'owner' || via?.planning) return true
   if (role === 'viewer') return false
@@ -35,13 +40,19 @@ async function isPm(db: SQL, workspaceId: string, userId: string, via?: Planning
 
 export const canManagePlanning = isPm
 
+// The admin reading a workspace they are not a member of sees what a PM sees, but writes nothing.
+async function readsAsPm(db: SQL, workspaceId: string, userId: string, via?: PlanningVia): Promise<boolean> {
+  if (await isPm(db, workspaceId, userId, via)) return true
+  return !via && (await resolveAccess(db, workspaceId, userId))?.viaAdmin === true
+}
+
 export async function requirePlanningPm(db: SQL, workspaceId: string, userId: string, via?: PlanningVia) {
   if (!(await isPm(db, workspaceId, userId, via))) throw new AppError('ROLE_NOT_ALLOWED')
 }
 
 // Approving a PRD, marking a story ready, and publishing an epic: the workspace owner, a PM, or a tech lead.
 async function isApprover(db: SQL, workspaceId: string, userId: string): Promise<boolean> {
-  const role = await findRole(db, workspaceId, userId)
+  const role = (await resolveAccess(db, workspaceId, userId))?.role
   if (!role) throw new AppError('WORKSPACE_NOT_FOUND')
   if (role === 'owner') return true
   if (role === 'viewer') return false
@@ -56,7 +67,7 @@ export async function requirePlanningApprover(db: SQL, workspaceId: string, user
 }
 
 async function event(db: SQL, workspaceId: string, actorId: string, targetKind: string, targetId: string, action: string, apiKeyId?: string, details: Record<string, unknown> = {}) {
-  await db`INSERT INTO planning_events (id, workspace_id, actor_id, api_key_id, target_kind, target_id, action, details) VALUES (${randomUUID()}, ${workspaceId}, ${actorId}, ${apiKeyId ?? null}, ${targetKind}, ${targetId}, ${action}, (${JSON.stringify(details)}::text)::jsonb)`
+  await insertPlanningEvent(db, { workspaceId, actorId, apiKeyId: apiKeyId ?? null, targetKind, targetId, action, details })
 }
 
 async function documentRow(db: SQL, workspaceId: string, documentId: string) {
@@ -65,16 +76,39 @@ async function documentRow(db: SQL, workspaceId: string, documentId: string) {
   return row
 }
 
+// The PM reads every document. The tech lead reads the BRD and PRDs from team review on, since it approves them.
+// Backend reads the BRD and approved PRDs. Other roles read epics, stories, and tasks only.
+type DocumentAccess = 'all' | 'review' | 'approved' | 'none'
+
+async function documentAccess(db: SQL, workspaceId: string, userId: string, via?: PlanningVia): Promise<DocumentAccess> {
+  if (await readsAsPm(db, workspaceId, userId, via)) return 'all'
+  const roles = via?.roles ?? (await listUserDisciplines(db, workspaceId, userId))
+  if (roles.includes('tech_lead')) return 'review'
+  return roles.includes('backend') ? 'approved' : 'none'
+}
+
+function documentVisible(access: DocumentAccess, kind: string, status: string): boolean {
+  if (access === 'all') return true
+  if (access === 'none') return false
+  if (kind === 'brd' || status === 'approved') return true
+  return access === 'review' && status === 'review_team'
+}
+
+export async function canReadPlanningDocuments(db: SQL, workspaceId: string, userId: string): Promise<boolean> {
+  return (await documentAccess(db, workspaceId, userId)) !== 'none'
+}
+
 async function canReadDocument(db: SQL, workspaceId: string, documentId: string, userId: string, via?: PlanningVia) {
   const row = await documentRow(db, workspaceId, documentId)
-  if (await isPm(db, workspaceId, userId, via)) return row
-  if (row.kind === 'prd' && (row.status === 'review_team' || row.status === 'approved')) return row
+  if (documentVisible(await documentAccess(db, workspaceId, userId, via), row.kind, row.status)) return row
   throw new AppError('PLANNING_NOT_FOUND')
 }
 
 export async function listPlanningDocuments(db: SQL, workspaceId: string, userId: string, via?: PlanningVia) {
-  const pm = await isPm(db, workspaceId, userId, via)
-  return db`SELECT d.id, d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_at AS "approvedAt", d.updated_at AS "updatedAt", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.workspace_id = ${workspaceId} AND (${pm} OR (d.kind = 'prd' AND d.status IN ('review_team', 'approved'))) ORDER BY d.updated_at DESC LIMIT 100`
+  const access = await documentAccess(db, workspaceId, userId, via)
+  if (access === 'none') return []
+  const rows = await db`SELECT d.id, d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_at AS "approvedAt", d.updated_at AS "updatedAt", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.workspace_id = ${workspaceId} ORDER BY d.updated_at DESC LIMIT 100`
+  return rows.filter((row: { kind: string; status: string }) => documentVisible(access, row.kind, row.status))
 }
 
 export async function getPlanningDocument(db: SQL, workspaceId: string, documentId: string, userId: string, via?: PlanningVia) {
@@ -157,12 +191,9 @@ async function itemRow(db: SQL, workspaceId: string, itemId: string) {
 
 async function canReadItem(db: SQL, workspaceId: string, itemId: string, userId: string, via?: PlanningVia) {
   const row = await itemRow(db, workspaceId, itemId)
-  if (await isPm(db, workspaceId, userId, via)) return row
-  if (row.publishedAt && (await isApprover(db, workspaceId, userId))) return row
-  if (!row.publishedAt) throw new AppError('PLANNING_NOT_FOUND')
-  const [participant] = await db`SELECT 1 FROM planning_participants pp JOIN planning_items i ON i.id = pp.item_id WHERE pp.user_id = ${userId} AND i.workspace_id = ${workspaceId} AND (i.id = ${itemId} OR (i.kind = 'story' AND i.parent_id = ${itemId})) LIMIT 1`
-  if (!participant) throw new AppError('PLANNING_NOT_FOUND')
-  return row
+  // Every member reads published epics and stories. Drafts stay with the PM.
+  if (row.publishedAt || (await readsAsPm(db, workspaceId, userId, via))) return row
+  throw new AppError('PLANNING_NOT_FOUND')
 }
 
 export async function getPlanningItem(db: SQL, workspaceId: string, itemId: string, userId: string, via?: PlanningVia) {
@@ -170,8 +201,8 @@ export async function getPlanningItem(db: SQL, workspaceId: string, itemId: stri
 }
 
 export async function listPlanningItems(db: SQL, workspaceId: string, userId: string, via?: PlanningVia) {
-  const pm = await isPm(db, workspaceId, userId, via)
-  const rows = await db`SELECT i.id, i.kind, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.status, i.published_at AS "publishedAt", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", (d.current_version > i.source_version) AS "sourceOutdated", i.created_at AS "createdAt", i.design_approved_at AS "designApprovedAt", (SELECT count(*)::int FROM story_designs sd WHERE sd.story_id = i.id) AS "designCount", COALESCE((SELECT array_agg(pp.user_id) FROM planning_participants pp WHERE pp.item_id = i.id), ARRAY[]::text[]) AS "participantIds" FROM planning_items i LEFT JOIN planning_documents d ON d.id = i.source_document_id WHERE i.workspace_id = ${workspaceId} AND (${pm} OR (i.published_at IS NOT NULL AND (EXISTS (SELECT 1 FROM planning_participants pp WHERE pp.item_id = i.id AND pp.user_id = ${userId}) OR (i.kind = 'epic' AND EXISTS (SELECT 1 FROM planning_items s JOIN planning_participants pp ON pp.item_id = s.id WHERE s.parent_id = i.id AND s.published_at IS NOT NULL AND pp.user_id = ${userId}))))) ORDER BY i.created_at LIMIT 500`
+  const pm = await readsAsPm(db, workspaceId, userId, via)
+  const rows = await db`SELECT i.id, i.kind, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.status, i.published_at AS "publishedAt", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", (d.current_version > i.source_version) AS "sourceOutdated", i.created_at AS "createdAt", i.design_approved_at AS "designApprovedAt", (SELECT count(*)::int FROM story_designs sd WHERE sd.story_id = i.id) AS "designCount", COALESCE((SELECT array_agg(pp.user_id) FROM planning_participants pp WHERE pp.item_id = i.id), ARRAY[]::text[]) AS "participantIds" FROM planning_items i LEFT JOIN planning_documents d ON d.id = i.source_document_id WHERE i.workspace_id = ${workspaceId} AND (${pm} OR i.published_at IS NOT NULL) ORDER BY i.created_at LIMIT 500`
   return rows.map(({ designApprovedAt, designCount, ...item }: Record<string, unknown> & { kind: string; status: string; designApprovedAt: Date | null; designCount: number }) =>
     item.kind === 'story' ? { ...item, stage: storyStage(item.status, designApprovedAt, designCount) } : item,
   )
@@ -265,8 +296,8 @@ export async function updatePlanningTaskDraft(db: SQL, workspaceId: string, task
 }
 
 export async function listPlanningTasks(db: SQL, workspaceId: string, userId: string, via?: PlanningVia) {
-  const pm = await isPm(db, workspaceId, userId, via)
-  return db`SELECT t.id, t.story_id AS "storyId", t.title, t.description, t.status, t.priority, t.assignee_id AS "assigneeId", t.published_at AS "publishedAt" FROM tasks t JOIN projects p ON p.id = t.project_id WHERE p.workspace_id = ${workspaceId} AND t.story_id IS NOT NULL AND (${pm} OR (t.published_at IS NOT NULL AND t.assignee_id = ${userId})) ORDER BY t.created_at LIMIT 500`
+  const pm = await readsAsPm(db, workspaceId, userId, via)
+  return db`SELECT t.id, t.story_id AS "storyId", t.title, t.description, t.status, t.priority, t.assignee_id AS "assigneeId", t.published_at AS "publishedAt" FROM tasks t JOIN projects p ON p.id = t.project_id WHERE p.workspace_id = ${workspaceId} AND t.story_id IS NOT NULL AND (${pm} OR t.published_at IS NOT NULL) ORDER BY t.created_at LIMIT 500`
 }
 
 export async function publishPlanningEpic(db: SQL, workspaceId: string, epicId: string, actorId: string) {
@@ -309,9 +340,19 @@ async function canReadTarget(db: SQL, workspaceId: string, targetKind: TargetKin
     if (row.kind !== targetKind) throw new AppError('PLANNING_NOT_FOUND')
     return row
   }
-  const [task] = await db`SELECT t.id, t.assignee_id AS "assigneeId", t.published_at AS "publishedAt" FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = ${targetId} AND p.workspace_id = ${workspaceId}`
-  if (!task || (!(await isPm(db, workspaceId, userId, via)) && (task.assigneeId !== userId || !task.publishedAt))) throw new AppError('PLANNING_NOT_FOUND')
+  const task = await findTaskVisibility(db, workspaceId, targetId)
+  if (!task || (!task.published && !(await readsAsPm(db, workspaceId, userId, via)))) throw new AppError('PLANNING_NOT_FOUND')
   return task
+}
+
+// Reading a discussion is open to everyone who reads its target. Writing in one is not: on a task only its assignee,
+// on an epic or story its participants and approvers, and on a document everyone who reads it.
+async function requireCommentWriter(db: SQL, workspaceId: string, targetKind: TargetKind, targetId: string, userId: string, via?: PlanningVia) {
+  if (targetKind === 'document' || (await isPm(db, workspaceId, userId, via))) return
+  if (targetKind === 'task') {
+    if ((await findTaskVisibility(db, workspaceId, targetId))?.assigneeId === userId) return
+  } else if ((await isApprover(db, workspaceId, userId)) || (await isItemParticipant(db, workspaceId, targetId, userId))) return
+  throw new AppError('ROLE_NOT_ALLOWED')
 }
 
 export async function listPlanningComments(db: SQL, workspaceId: string, actorId: string, targetKind: TargetKind, targetId: string) {
@@ -321,6 +362,7 @@ export async function listPlanningComments(db: SQL, workspaceId: string, actorId
 
 export async function addPlanningComment(db: SQL, workspaceId: string, actorId: string, targetKind: TargetKind, targetId: string, input: { body?: unknown; parentId?: unknown; isDecision?: unknown; mentionIds?: unknown }, via?: PlanningVia) {
   await canReadTarget(db, workspaceId, targetKind, targetId, actorId, via)
+  await requireCommentWriter(db, workspaceId, targetKind, targetId, actorId, via)
   if (input.mentionIds !== undefined && (!Array.isArray(input.mentionIds) || input.mentionIds.length > 20 || input.mentionIds.some((id) => typeof id !== 'string'))) throw new AppError('PLANNING_INPUT_INVALID')
   if (!validText(input.body, 8000) || (input.parentId !== undefined && typeof input.parentId !== 'string') || (input.isDecision !== undefined && typeof input.isDecision !== 'boolean')) throw new AppError('PLANNING_INPUT_INVALID')
   if (input.isDecision && !(await isPm(db, workspaceId, actorId, via))) throw new AppError('ROLE_NOT_ALLOWED')
@@ -372,5 +414,5 @@ export async function resolvePlanningComment(db: SQL, workspaceId: string, actor
 
 export async function listPlanningEvents(db: SQL, workspaceId: string, actorId: string) {
   await requirePlanningPm(db, workspaceId, actorId)
-  return db`SELECT id, actor_id AS "actorId", api_key_id AS "apiKeyId", target_kind AS "targetKind", target_id AS "targetId", action, created_at AS "createdAt" FROM planning_events WHERE workspace_id = ${workspaceId} ORDER BY created_at DESC LIMIT 100`
+  return listPlanningEventRows(db, workspaceId, 200)
 }

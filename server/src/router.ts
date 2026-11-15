@@ -25,6 +25,7 @@ import { handleAdminWorkspaceRoutes } from '@/routes/admin-workspaces'
 import { handleMcpKeyRoutes } from '@/routes/mcp-keys'
 import { handleNotificationRoutes } from '@/routes/notifications'
 import { handlePlanningRoutes } from '@/routes/planning'
+import { refuseAdminWrite } from '@/services/access'
 
 // Order matters. Public routes come first, then the socket upgrade, then routes that need a signed-in user.
 // A route module returns undefined when the method and path do not match, so the next module gets a turn.
@@ -38,7 +39,9 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (method === 'OPTIONS') return preflightResponse(request.headers.get('Origin'), ctx.config.corsOrigins)
 
   // A write that carries only the session cookie must come from a trusted origin.
-  if (refusesCookieWrite(request, trustedOrigins(ctx.config.corsOrigins, ctx.config.publicWebUrl))) throw new AppError('CSRF_ORIGIN_REFUSED')
+  // Logout is exempt: the most a foreign page can do with it is sign the user out, and a refused logout would leave the cookie behind.
+  const isLogout = method === 'POST' && path === '/api/auth/logout'
+  if (!isLogout && refusesCookieWrite(request, trustedOrigins(ctx.config.corsOrigins, ctx.config.publicWebUrl))) throw new AppError('CSRF_ORIGIN_REFUSED')
 
   if (method === 'GET' && path === '/api/sync/events') {
     if (!server) throw new AppError('WEBSOCKET_UNAVAILABLE')
@@ -73,6 +76,7 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (!workspaceMatch) throw new AppError('ROUTE_NOT_FOUND')
   const workspaceId = workspaceMatch[1]
   const action = workspaceMatch[2] || ''
+  if (method !== 'GET') await refuseAdminWrite(ctx.db, workspaceId, user.id)
 
   const recordResponse = await handleWorkspaceRecord(ctx, request, method, workspaceId, action, user)
   if (recordResponse) return recordResponse

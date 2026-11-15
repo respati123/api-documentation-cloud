@@ -27,6 +27,11 @@ export const MCP_TOOLS = [
   'subtask_set_done',
   'planning_guide',
   'story_write_details',
+  'planning_upload_brd',
+  'project_items_list',
+  'project_tasks_list',
+  'documents_list',
+  'documents_read',
 ] as const
 export type McpTool = (typeof MCP_TOOLS)[number]
 
@@ -49,16 +54,21 @@ const memberTools: McpTool[] = [
   'subtask_add',
   'subtask_set_done',
   'planning_guide',
+  'project_items_list',
+  'project_tasks_list',
 ]
+
+// Backend reads the BRD and approved PRDs it builds the API from.
+const documentTools: McpTool[] = ['documents_list', 'documents_read']
 
 const artifactTools: McpTool[] = ['story_attach_design', 'story_link_api_contract', 'story_write_test_case']
 const storyDetailTools: McpTool[] = ['story_write_details']
 
 const roleTools: Record<McpKeyRole, McpTool[]> = {
-  pm: [...memberTools, ...PLANNING_TOOLS, ...artifactTools, ...storyDetailTools],
+  pm: [...memberTools, ...PLANNING_TOOLS, 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools],
   tech_lead: [...memberTools, 'planning_list', 'planning_read_document', 'planning_draft_task', 'planning_comment', ...artifactTools, ...storyDetailTools],
   ui_ux: [...memberTools, 'story_attach_design'],
-  backend: [...memberTools, 'story_link_api_contract'],
+  backend: [...memberTools, ...documentTools, 'story_link_api_contract'],
   frontend: memberTools,
   mobile: memberTools,
   qa: [...memberTools, 'story_write_test_case'],
@@ -68,37 +78,41 @@ export function defaultToolsFor(role: McpKeyRole): McpTool[] {
   return [...roleTools[role]]
 }
 
-export type McpKeyStatus = 'pending' | 'claim_expired' | 'active' | 'expired' | 'revoked'
+export function isMcpRole(value: string): value is McpKeyRole {
+  return (MCP_KEY_ROLES as readonly string[]).includes(value)
+}
+
+// What a member may do through MCP in one workspace: the member tools, plus the tools of each role the owner gave them
+// there. A role without its own tools (devops, other) adds nothing, so a member without a role keeps the member tools.
+export function toolsForRoles(roles: readonly string[]): McpTool[] {
+  const result = new Set<McpTool>(memberTools)
+  for (const role of roles) if (isMcpRole(role)) for (const tool of roleTools[role]) result.add(tool)
+  return [...result]
+}
+
+export const MCP_KEY_LIMIT = 10
+export const MCP_KEY_VALID_DAYS = [30, 90, 365] as const
+
+export type McpKeyStatus = 'active' | 'expired' | 'revoked'
 
 export interface McpKeyRow {
   id: string
   userId: string
-  createdBy: string | null
   name: string
-  role: McpKeyRole
-  tools: McpTool[]
-  validDays: number
-  claimExpiresAt: Date
-  claimedAt: Date | null
+  keySuffix: string | null
   expiresAt: Date | null
   lastUsedAt: Date | null
   revokedAt: Date | null
   createdAt: Date
 }
 
+// roles and tools are the union over every workspace the member belongs to, for tools/list and the playbook.
+// Each call is checked again against the roles in the workspace it names.
 export interface McpPrincipal {
   keyId: string
   userId: string
-  role: McpKeyRole
+  roles: McpKeyRole[]
   tools: McpTool[]
   guideVersion?: string | null
   guideReadAt?: Date | null
-}
-
-// Every key may read its playbook, and a key that drafts epics and stories may also write their details,
-// so keys issued before these tools existed keep working without a reissue.
-export function effectiveTools(tools: McpTool[]): McpTool[] {
-  const result = new Set<McpTool>([...tools, 'planning_guide'])
-  if (tools.includes('planning_draft_item')) result.add('story_write_details')
-  return [...result]
 }

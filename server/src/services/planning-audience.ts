@@ -3,8 +3,9 @@ import { listMemberIds } from '@/repositories/memberships.repository'
 import {
   findCommentTarget,
   findDocumentVisibility,
-  findItemVisibility,
-  findTaskAssigneeInWorkspace,
+  findItemPublished,
+  findTaskVisibility,
+  listMembersWithAnyDiscipline,
   listMembersWithDiscipline,
 } from '@/repositories/planning-audience.repository'
 
@@ -40,7 +41,10 @@ export function commentTarget(targetKind: string, targetId: string): AudienceTar
 }
 
 const managers = (db: SQL, workspaceId: string) => listMembersWithDiscipline(db, workspaceId, ['pm'])
-const approvers = (db: SQL, workspaceId: string) => listMembersWithDiscipline(db, workspaceId, ['pm', 'tech_lead'])
+// Besides the PM, the tech lead reads the BRD and PRDs from team review on, and backend reads the BRD and approved PRDs.
+async function documentReaders(db: SQL, workspaceId: string, disciplines: string[]): Promise<string[]> {
+  return unique([...(await managers(db, workspaceId)), ...(await listMembersWithAnyDiscipline(db, workspaceId, disciplines))])
+}
 
 // The member ids that may read the target, following the read rules of the planning service.
 export async function planningAudience(db: SQL, workspaceId: string, target: AudienceTarget): Promise<string[]> {
@@ -52,16 +56,16 @@ export async function planningAudience(db: SQL, workspaceId: string, target: Aud
   }
   if (target.kind === 'document') {
     const document = await findDocumentVisibility(db, workspaceId, target.id)
-    if (document?.kind === 'prd' && (document.status === 'review_team' || document.status === 'approved')) return listMemberIds(db, workspaceId)
+    if (document?.kind === 'brd' || document?.status === 'approved') return documentReaders(db, workspaceId, ['tech_lead', 'backend'])
+    if (document?.kind === 'prd' && document.status === 'review_team') return documentReaders(db, workspaceId, ['tech_lead'])
     return managers(db, workspaceId)
   }
+  // Published epics, stories, and tasks, with their discussions, are open to every member. Drafts stay with the PM.
   if (target.kind === 'task-thread') {
-    const assigneeId = await findTaskAssigneeInWorkspace(db, workspaceId, target.id)
-    return unique([...(await managers(db, workspaceId)), ...(assigneeId ? [assigneeId] : [])])
+    const task = await findTaskVisibility(db, workspaceId, target.id)
+    return task?.published ? listMemberIds(db, workspaceId) : managers(db, workspaceId)
   }
-  const item = await findItemVisibility(db, workspaceId, target.id)
-  if (!item?.published) return managers(db, workspaceId)
-  return unique([...(await approvers(db, workspaceId)), ...item.participantIds])
+  return (await findItemPublished(db, workspaceId, target.id)) ? listMemberIds(db, workspaceId) : managers(db, workspaceId)
 }
 
 function unique(ids: string[]): string[] {

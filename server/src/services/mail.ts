@@ -49,18 +49,3 @@ export async function sendInviteEmail(config: AppConfig, to: string, workspaceNa
     html: message.html,
   })
 }
-
-// The link opens the member's MCP page. The key is claimed there while signed in, so the email carries no secret.
-export function mcpKeyMessage(key: { keyName: string; claimUrl: string; claimDays: number }) {
-  const safeKeyName = escapeHtml(key.keyName)
-  const safeClaimUrl = escapeHtml(key.claimUrl)
-  return {
-    text: `An MCP key named "${key.keyName}" is ready for you.\n\nOpen this link, sign in, and claim it within ${key.claimDays} days. The key is shown once, when you claim it:\n${key.claimUrl}`,
-    html: `<p>An MCP key named <strong>${safeKeyName}</strong> is ready for you.</p><p><a href="${safeClaimUrl}">Open the MCP page</a>, sign in, and claim it within ${key.claimDays} days.</p><p>The key is shown once, when you claim it.</p>`,
-  }
-}
-
-export async function sendMcpKeyEmail(config: AppConfig, to: string, keyName: string, claimUrl: string, claimDays: number): Promise<void> {
-  const message = mcpKeyMessage({ keyName, claimUrl, claimDays })
-  await createMailer(config).sendMail({ from: config.smtp.from, to, subject: 'Your MCP key is ready to claim', text: message.text, html: message.html })
-}

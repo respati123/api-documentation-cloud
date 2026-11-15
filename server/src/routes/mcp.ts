@@ -9,13 +9,15 @@ import { type AudienceTarget, commentTarget, planningAudience } from '@/services
 import { guideIsFresh, readMcpGuide, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
 import { addMcpSubtask, attachMcpDesign, linkMcpContract, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
-import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpProjects, listMcpWorkspaces, readMcpDocument, readMcpParticipatingStory } from '@/services/mcp-access'
+import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpProjects, listMcpWorkspaces, readMcpDocument, readMcpParticipatingStory, uploadMcpBrd } from '@/services/mcp-access'
+import { listMcpDocuments, listMcpProjectItems, listMcpProjectTasks, readMcpReadableDocument } from '@/services/mcp-access'
 
 // Tools that change project data: which part of the project open pages should reload, and who may read the change.
 const MCP_WRITES: Partial<Record<McpTool, { scope: PlanningScope; target: (args: Args) => AudienceTarget }>> = {
   tasks_update_assigned_status: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
   tasks_comment_assigned: { scope: 'comments', target: (a) => ({ kind: 'task-thread', id: String(a.taskId) }) },
   stories_comment_participating: { scope: 'comments', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
+  planning_upload_brd: { scope: 'documents', target: () => ({ kind: 'managers' }) },
   planning_draft_prd: { scope: 'documents', target: () => ({ kind: 'managers' }) },
   planning_draft_item: { scope: 'items', target: () => ({ kind: 'managers' }) },
   planning_draft_task: { scope: 'items', target: () => ({ kind: 'managers' }) },
@@ -49,11 +51,21 @@ const tools: Record<McpTool, ToolDefinition> = {
   stories_list_participating: inWorkspace({}, [], 'List published stories where this member is a participant.', (db, p, a) => listMcpParticipatingStories(db, p, a.workspaceId)),
   stories_read_participating: inWorkspace({ storyId: text }, ['storyId'], 'Read a published story where this member is a participant.', (db, p, a) => readMcpParticipatingStory(db, p, a.workspaceId, a.storyId)),
   stories_comment_participating: inWorkspace({ storyId: text, body: text }, ['storyId', 'body'], 'Comment on a published story where this member is a participant.', (db, p, a) => commentMcpParticipatingStory(db, p, a.workspaceId, a.storyId, a.body)),
+  project_items_list: inWorkspace({}, [], 'List the published epics and stories of the workspace, read-only. Drafts are not included.', (db, p, a) => listMcpProjectItems(db, p, a.workspaceId)),
+  project_tasks_list: inWorkspace({}, [], 'List the published tasks of every member in the workspace, read-only. Use tasks_list_assigned for your own work.', (db, p, a) => listMcpProjectTasks(db, p, a.workspaceId)),
+  documents_list: inWorkspace({}, [], 'List the BRDs and approved PRDs this key may read.', (db, p, a) => listMcpDocuments(db, p, a.workspaceId)),
+  documents_read: inWorkspace({ documentId: text }, ['documentId'], 'Read a BRD or an approved PRD and its version history.', (db, p, a) => readMcpReadableDocument(db, p, a.workspaceId, a.documentId)),
   planning_list: inWorkspace({}, [], 'List planning documents, epics, stories and draft tasks of the workspace.', (db, p, a) => listMcpPlanning(db, p, a.workspaceId)),
   planning_read_document: inWorkspace({ documentId: text }, ['documentId'], 'Read a BRD or PRD and its version history.', (db, p, a) => readMcpDocument(db, p, a.workspaceId, a.documentId)),
+  planning_upload_brd: inWorkspace(
+    { title: text, content: { type: 'string', description: 'The full BRD text, exactly as the person gave it. Markdown or plain text.' }, fileName: { type: 'string', description: 'Original file name, ending in .md or .txt.' } },
+    ['title', 'content'],
+    'Upload a BRD that the person gave you, unchanged, following step 1 of planning_guide. It is stored as approved, like a BRD uploaded in the web app. Never write a BRD yourself.',
+    (db, p, a) => uploadMcpBrd(db, p, a.workspaceId, { title: a.title, content: a.content, fileName: a.fileName }),
+  ),
   planning_draft_prd: inWorkspace({ title: text, content: text, sourceDocumentId: text }, ['title', 'content', 'sourceDocumentId'], 'Save a PRD draft linked to a BRD. Review and approval happen in the web app.', (db, p, a) => draftMcpPrd(db, p, a.workspaceId, { title: a.title, content: a.content, sourceDocumentId: a.sourceDocumentId })),
   planning_draft_item: inWorkspace(
-    { kind: { type: 'string', enum: ['epic', 'story'] }, parentId: text, title: text, description: text, acceptanceCriteria: text, sourceDocumentId: text, sourceSection: text, participantIds: { type: 'array', items: text } },
+    { kind: { type: 'string', enum: ['epic', 'story'] }, parentId: text, title: text, description: { type: 'string', description: 'For an epic, the labelled lines of step 3 of planning_guide: Tujuan, Mencakup, Di luar cakupan, Ukuran sukses, Kriteria selesai, Risiko & dependensi.' }, acceptanceCriteria: text, sourceDocumentId: text, sourceSection: text, participantIds: { type: 'array', items: text } },
     ['kind', 'title', 'sourceDocumentId', 'sourceSection'],
     'Create a draft epic or story from an approved PRD, following step 3 or 4 of planning_guide. sourceSection is a line copied exactly from the PRD. A story needs parentId of an epic and acceptanceCriteria.',
     (db, p, a) => draftMcpItem(db, p, a.workspaceId, { kind: a.kind, parentId: a.parentId, title: a.title, description: a.description, acceptanceCriteria: a.acceptanceCriteria, sourceDocumentId: a.sourceDocumentId, sourceSection: a.sourceSection, participantIds: a.participantIds }),
@@ -148,14 +160,14 @@ export async function handleMcpRequest(ctx: AppContext, request: Request, method
         protocolVersion: '2025-03-26',
         capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } },
         serverInfo: { name: 'api-documentation-cloud', version: '1.0.0' },
-        instructions: serverInstructions(principal.role),
+        instructions: serverInstructions(principal.roles),
       },
     })
   if (rpc.method === 'prompts/list')
-    return rpcResponse({ jsonrpc: '2.0', id, result: { prompts: promptsFor(principal.role).map(({ text: _text, ...prompt }) => prompt) } })
+    return rpcResponse({ jsonrpc: '2.0', id, result: { prompts: promptsFor(principal.roles).map(({ text: _text, ...prompt }) => prompt) } })
   if (rpc.method === 'prompts/get') {
     const params = isRecord(rpc.params) ? rpc.params : {}
-    const prompt = promptsFor(principal.role).find((item) => item.name === params.name)
+    const prompt = promptsFor(principal.roles).find((item) => item.name === params.name)
     if (!prompt) return errorResponse(rpc.id, -32602, 'Prompt not found.')
     const values = isRecord(params.arguments) ? Object.fromEntries(Object.entries(params.arguments).map(([key, value]) => [key, String(value)])) : {}
     if (prompt.arguments.some((argument) => argument.required && !values[argument.name])) return errorResponse(rpc.id, -32602, 'Prompt arguments are missing.')
