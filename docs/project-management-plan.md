@@ -40,15 +40,15 @@ Setiap task di dokumen ini mengikuti aturan di `cloud/AGENTS.md`, `cloud/web/AGE
 | Test case | Teks terstruktur: judul, prasyarat, langkah, hasil yang diharapkan. Dipakai frontend untuk Playwright |
 | Project | Satu project per workspace |
 | Sprint dan estimasi | Ditunda sampai alur utama berjalan |
-| API key MCP | Satu key per member, berlaku di semua workspace tempat member itu anggota |
+| API key MCP | Key milik member, berlaku di semua workspace tempat member itu anggota |
 | Admin aplikasi | Dibuat lewat seeder. Email dan password admin diambil dari env, bukan ditulis di kode |
-| Pembuat key | Admin aplikasi membuat key untuk member. Member mengambilnya lewat link klaim, dan admin tidak pernah melihat secret |
-| Link klaim | Dikirim lewat email dan juga muncul di notifikasi portal |
-| Jumlah key | Satu key aktif per member, dipakai untuk semua agent (Claude Code, Codex, dan lainnya). Membuat key baru mencabut key lama |
-| Member tanpa key | Admin melihatnya dari tabel di halaman admin. Tidak ada notifikasi tambahan |
-| Member keluar workspace | Key member dicabut otomatis |
-| Izin key | Per tool MCP (endpoint), ditentukan oleh role pada key. Role key berlaku sama di semua workspace. Keanggotaan workspace tetap wajib |
-| Halaman MCP member | Avatar → Settings → MCP: key milik member, tombol klaim, dan cara setup untuk Claude Code, Codex, dan klien lain. Member tidak membuat key sendiri |
+| Pembuat key | Member membuat key sendiri di `/settings/mcp`, dengan nama dan masa berlaku 30, 90, atau 365 hari, atau tanpa kedaluwarsa. Secret tampil sekali. Admin hanya melihat dan mencabut key, dan tidak pernah melihat secret |
+| Jumlah key | Maksimal 10 key aktif per member, misalnya satu per agent atau per perangkat |
+| Member keluar workspace | Key member dicabut otomatis saat ia keluar dari workspace terakhirnya |
+| Izin key | Per tool MCP. Key tidak menyimpan role: tool mengikuti role member di tiap workspace dan dicek ulang di setiap panggilan. Viewer workspace hanya membaca |
+| Tech lead | Membaca semua dokumen dan draf seperti PM, di portal dan lewat MCP |
+| BRD dari agent | Berstatus Draft sampai owner, PM, atau tech lead mengonfirmasinya di portal |
+| Halaman MCP member | Avatar → Settings → MCP: daftar key, buat dan cabut key, akses per workspace, panduan wajib agent, dan cara setup untuk Claude Code, Codex, dan klien lain |
 | Task board | Drag-and-drop antar kolom dengan @dnd-kit, plus menu "Pindah ke…". Urutan di dalam kolom ditunda |
 | Detail task | Dialog besar di tengah, dua kolom: kiri deskripsi, sub-task, dan komentar; kanan properti |
 | Buat task | Lewat dialog saja |
@@ -68,8 +68,8 @@ Sudah ada di server dan web (lihat migration `0007` sampai `0010` dan `planning-
 - Peserta story (`planning_participants`), komentar dengan penanda keputusan, dan catatan aktivitas (`planning_events`) yang mencantumkan ID key MCP.
 - Task dengan `story_id` dan `published_at`. `story_id` belum dibaca portal.
 - Role anggota project di `project_members.discipline`: `backend`, `frontend`, `mobile`, `pm`, `qa`, `ui_ux`, `devops`, `other`. UI-nya sempat dihapus dari Papan tugas.
-- 15 tools MCP di `server/src/routes/mcp.ts`, semuanya menerima `workspaceId` kecuali `workspaces_list`.
-- Satu key MCP per member, dibuat admin dan diklaim member (`/admin/mcp` dan `/settings/mcp`).
+- Tools MCP di `server/src/routes/mcp.ts` (daftar lengkap dan matriks role di `server/src/models/mcp.ts`). Semuanya menerima `workspaceId`, kecuali `workspaces_list`, `planning_guide`, dan tool notifikasi.
+- Key MCP dibuat member sendiri, maksimal 10 aktif (`/settings/mcp`). Admin melihat dan mencabut di `/admin/mcp`.
 
 Belum ada: Definition of Done terstruktur, lampiran desain, tautan kontrak API, test case, penguncian task, sub-task, dan halaman portal sesuai prototype.
 
@@ -88,6 +88,8 @@ Setiap tahap punya task server (S) dan web (W). Task di tahap yang sama boleh di
 
 Model key berubah dari per workspace menjadi per member. Key lama yang per workspace tetap valid sampai kedaluwarsa atau dicabut, supaya agent yang sudah terhubung tidak putus di tengah jalan.
 
+> Catatan: alur admin membuat key dan member mengklaimnya (1.3, 1.5, 1.5b, 1.8, 1.9) sudah diganti oleh key yang dibuat member sendiri, maksimal 10 aktif, di migration `0018_self_service_mcp_keys.sql`. Endpoint klaim dan pembuatan key oleh admin sudah dihapus. Task di bawah dibiarkan sebagai riwayat.
+
 - [x] **1.1 S** Tambah role `tech_lead` di constraint `project_members.discipline` lewat migration baru. Role ini dipakai untuk persetujuan dan tampilan tim, terpisah dari role key.
   Catatan: migration `0011_tech_lead_discipline.sql`, daftar disiplin disatukan di `PROJECT_DISCIPLINES` (`models/project.ts`), test route pertama untuk projects di `routes/projects.test.ts`, dan helper HTTP bersama di `testing/http.ts`. Web: schema, constants, dan label `Tech lead`.
 - [x] **1.2 S** Admin aplikasi: kolom admin di tabel user lewat migration, dan seeder yang membuat atau memperbarui akun admin dari env (misalnya `ADMIN_SEED_EMAIL` dan `ADMIN_SEED_PASSWORD`). Password di-hash dengan argon2id. Seeder aman dijalankan berulang, dan nilai contoh di `.env.example` hanya placeholder. Admin dicek di service, bukan di route.
@@ -102,7 +104,7 @@ Model key berubah dari per workspace menjadi per member. Key lama yang per works
   - Catatan: token klaim sekali pakai ada di fragmen link email (`/settings/mcp#claim=...`), jadi tidak terkirim ke server lewat URL. Portal mengirimnya di body saat klaim, lalu menghapusnya dari address bar. Klaim tetap butuh login member yang dituju. Kalau email gagal terkirim, admin mendapat link itu sekali untuk diteruskan. Migration `0017_mcp_claim_token.sql`.
   - Catatan: karena tidak ada token klaim (lihat 1.5), tidak ada yang perlu di-hash. Tabel `notifications`, endpoint `GET /api/me/notifications`, `POST /api/me/notifications/:id/read`, dan `POST /api/me/notifications/read-all`. Kalau email gagal, key tetap dibuat dan notifikasi tetap tercatat.
 - [x] **1.6 S** Tools MCP menerima `workspaceId` di setiap panggilan, dan tool baru `workspaces_list` untuk workspace tempat member menjadi anggota. Setiap panggilan memeriksa keanggotaan workspace sebelum membaca atau menulis data.
-  - Catatan: 15 tools. Key dicabut otomatis saat member keluar atau dikeluarkan dari workspace terakhirnya, atau workspace terakhirnya dihapus.
+  - Catatan: saat itu 15 tools (sekarang lihat Tahap 7). Key dicabut otomatis saat member keluar atau dikeluarkan dari workspace terakhirnya, atau workspace terakhirnya dihapus.
 - [x] **1.7 S** Persetujuan dokumen, story, dan publish lewat portal boleh dilakukan owner, PM, atau tech lead workspace. Test penolakan untuk role lain.
   - Catatan: berlaku untuk status PRD `approved`, menandai story atau epic `ready` (kalau hanya status yang diubah), dan publish epic. Langkah review lain tetap hanya owner atau PM.
 - [x] **1.8 W** Halaman admin untuk key MCP: tabel member dengan status key (Belum ada, Menunggu klaim, Aktif, Kedaluwarsa, Dicabut), dialog buat key (member, nama key, role, tool, masa berlaku), dan aksi cabut, buat ulang, serta batalkan klaim.
@@ -169,6 +171,24 @@ Model key berubah dari per workspace menjadi per member. Key lama yang per works
 - [x] **6.1 S** Simpan nama key (bukan secret) di catatan aktivitas, supaya portal bisa menampilkan "lewat key claude-code · laptop maya".
 - [x] **6.2 W** Tampilkan aksi agent beserta nama key di aktivitas story, task, dan dokumen.
 
+### Tahap 7 · Perapian akses dan protokol MCP
+
+- [x] **7.1 S** Tech lead membaca semua dokumen dan draf seperti PM: portal, MCP, dan siaran realtime.
+- [x] **7.2 S** Viewer workspace hanya membaca lewat MCP, walaupun ia punya role PM.
+- [x] **7.3 S** Protokol: `401` dengan body JSON-RPC dan `WWW-Authenticate`, notifikasi dijawab `202`, negosiasi versi `2025-06-18` dan `2025-03-26`, dan header `MCP-Protocol-Version` dicek.
+- [x] **7.4 S** SQL di `services/planning.ts` dan `services/projects.ts` dipindah ke `repositories/` (`planning-documents`, `planning-items`, `planning-comments`).
+- [x] **7.5 S** Tool `api_requests_search` untuk mencari ID request yang ditautkan dengan `story_link_api_contract`.
+- [x] **7.6 S** Anotasi tool (`readOnlyHint`, `destructiveHint`, `idempotentHint`) dan `title`.
+- [x] **7.7 S** Hasil tool sebagai `structuredContent`.
+- [x] **7.8 S** `projects_list`, `stories_read_participating`, dan `planning_read_document` disembunyikan dari daftar tool, tapi tetap menjawab. PM dan tech lead mendapat `documents_list` dan `documents_read`.
+- [x] **7.9 S** `clientRequestId` untuk tool tulis yang menambah sesuatu (migration `0019_mcp_request_replays.sql`).
+- [x] **7.10 S** Penolakan `MCP_GUIDE_REQUIRED` memuat panduannya.
+- [x] **7.11 S+W** BRD dari agent berstatus Draft sampai dikonfirmasi; tombol **Konfirmasi BRD** dan antrian **Menunggu kamu** di portal.
+- [x] **7.12 S** BRD dan PRD sebagai MCP resource.
+- [x] **7.13 S** Tool `notifications_list` dan `notifications_mark_read`.
+- [x] **7.14 S** Batas 240 panggilan per menit per key, dan `last_used_at` diperbarui paling sering sekali per menit.
+  - Catatan: `outputSchema` per tool belum dibuat. Spesifikasi mewajibkan hasil sesuai schema kalau schema diberikan, jadi schema ditambahkan per tool setelah bentuk respons tiap tool dikunci dengan test.
+
 ### Nanti
 
 - Integrasi Stitchkit untuk lampiran desain.
@@ -178,7 +198,6 @@ Model key berubah dari per workspace menjadi per member. Key lama yang per works
 
 ## Pertanyaan terbuka
 
-- Dengan role key berlaku sama di semua workspace, key PM bisa draft PRD di workspace tempat member itu hanya viewer. Ini sudah diputuskan; catat di sini kalau nanti perlu dibatasi.
 - Status story di 2.1: apakah urutan usulan sudah sesuai?
 - Filter due date di papan tugas: "Lewat tenggat", "Minggu ini", dan "Tanpa due date"?
 - Kolom Selesai: berapa task yang ditampilkan sebelum "Tampilkan semua"?
