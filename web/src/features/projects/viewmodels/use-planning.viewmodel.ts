@@ -93,7 +93,17 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
   const sourceTitle = (id: string | null) => documents.find((document) => document.id === id)?.title ?? null
   const epicsList = useEpicsListViewModel(buildEpicRows({ items, tasks, members, codes, sourceTitle }))
 
-  const documentDetail = useDocumentDetailViewModel(workspaceId, detail?.kind === 'document' ? detail.id : null, documents, events, access)
+  const documentDetail = useDocumentDetailViewModel(
+    workspaceId,
+    detail?.kind === 'document' ? detail.id : null,
+    documents,
+    events,
+    access,
+    () => {
+      setDetail(null)
+      setSection('documents')
+    },
+  )
   const itemDetail = useItemDetailViewModel(
     workspaceId,
     detail?.kind === 'item' ? detail.id : null,

@@ -16,6 +16,7 @@ export const DOCUMENT_TONE: Record<DocumentStatus, { icon: StatusTone; badge: Ba
   review_team: { icon: 'review', badge: 'accent' },
   approved: { icon: 'done', badge: 'success' },
   superseded: { icon: 'locked', badge: 'outline' },
+  discarded: { icon: 'locked', badge: 'outline' },
 }
 
 export const ITEM_TONE: Record<PlanningStatus, { icon: StatusTone; badge: BadgeTone }> = {

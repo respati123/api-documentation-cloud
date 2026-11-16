@@ -19,7 +19,8 @@
       "review_pm": "Review PM",
       "review_team": "Menunggu persetujuan",
       "approved": "Disetujui",
-      "superseded": "Digantikan"
+      "superseded": "Digantikan",
+      "discarded": "Dibuang"
     },
     "item": {
       "draft": "Draft",
@@ -44,6 +45,7 @@
     "empty": "Tidak ada yang menunggu keputusanmu sekarang.",
     "open": "Buka",
     "reason": {
+      "confirm_brd": "BRD dari agent menunggu konfirmasi dari owner, PM, atau tech lead.",
       "approve_prd": "PRD menunggu persetujuan. Cukup satu persetujuan dari owner, PM, atau tech lead.",
       "review_prd": "Draft PRD perlu direview sebelum dilihat tim.",
       "refine_item": "Draft perlu dirapikan sebelum siap.",
@@ -79,6 +81,26 @@
   "document": {
     "crumbProject": "Proyek",
     "toc": "Isi dokumen",
+    "viewLabel": "Tampilan dokumen",
+    "discard": "Buang draf",
+    "discardTitle": "Buang draf ini?",
+    "discardDetail": "Dokumen tetap tersimpan untuk riwayat, tapi tidak bisa diubah, direview, atau dipakai agent lagi.",
+    "discardedTitle": "Draf ini sudah dibuang",
+    "discardedDetail": "Disimpan untuk riwayat dan tidak dipakai agent. Owner atau PM bisa menghapusnya permanen.",
+    "delete": "Hapus",
+    "deleteTitle": "Hapus “{{title}}”?",
+    "deleteDetail": "Dokumen, semua versinya, dan diskusinya dihapus permanen. Ini tidak bisa dibatalkan.",
+    "table": {
+      "id": "ID",
+      "requirement": "Kebutuhan",
+      "priority": "Prioritas",
+      "reference": "Rujukan"
+    },
+    "viewOriginal": "PDF asli",
+    "viewText": "Teks yang dibaca agent",
+    "extractedHint": "Teks ini diambil dari file yang diunggah, dan inilah yang dibaca agent. Tabel dan tata letak bisa berubah, jadi bandingkan dengan file aslinya sebelum mengonfirmasi.",
+    "pdfPreview": "Pratinjau PDF {{name}}",
+    "pdfFailed": "PDF tidak bisa ditampilkan di sini. Unduh filenya untuk membukanya.",
     "derived": "Turunan",
     "derivedEmpty": "Belum ada PRD dari dokumen ini.",
     "source": "Sumber: {{title}} v{{version}}",
@@ -104,6 +126,9 @@
     "approvedOn": "Disetujui {{date}}",
     "notYet": "Belum",
     "approve": "Setujui PRD",
+    "brdDraftTitle": "BRD dari agent menunggu konfirmasi",
+    "brdDraftDetail": "Pastikan isinya sama dengan BRD asli. Setelah dikonfirmasi owner, PM, atau tech lead, agent bisa menyusun PRD darinya.",
+    "confirmBrd": "Konfirmasi BRD",
     "sendBack": "Kembalikan ke draft",
     "move": {
       "review_pm": "Kirim ke review PM",

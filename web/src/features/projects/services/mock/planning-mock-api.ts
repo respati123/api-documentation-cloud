@@ -228,6 +228,13 @@ export async function demoRequest(method: string, path: string, body: unknown): 
     record('document', id, 'revised')
     return {}
   }
+  match = route.match(/^DELETE \/planning\/documents\/([\w-]+)$/)
+  if (match) {
+    const id = match[1]
+    state.documents = state.documents.filter((document) => document.id !== id)
+    record('document', id, 'deleted')
+    return {}
+  }
   match = route.match(/^POST \/planning\/documents\/([\w-]+)\/status$/)
   if (match) {
     const id = match[1]

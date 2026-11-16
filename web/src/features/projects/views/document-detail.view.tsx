@@ -1,4 +1,4 @@
-import { Download, Pencil } from 'lucide-react'
+import { Archive, Download, Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { useDocumentDetailViewModel } from '@/features/projects/viewmodels/use-document-detail.viewmodel'
@@ -18,9 +18,21 @@ import {
 } from '@/features/projects/views/planning-marks.view'
 import { MarkdownContent } from '@/shared/components/markdown-content'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/shared/components/primitives/alert-dialog'
 import { Badge } from '@/shared/components/primitives/badge'
 import { Button } from '@/shared/components/primitives/button'
 import { Skeleton } from '@/shared/components/primitives/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/primitives/tabs'
 import { Textarea } from '@/shared/components/primitives/textarea'
 import { cn } from '@/shared/utils/cn'
 
@@ -66,6 +78,15 @@ export function DocumentDetailView({ planning }: { planning: Planning }) {
           ]}
         />
         {vm.isPrd && <PrdNotice vm={vm} />}
+        {vm.isBrdDraft && <BrdNotice vm={vm} />}
+        {vm.isDiscarded && (
+          <Notice tone="warning" testId="projects-document-discarded">
+            <div>
+              <p className="font-semibold">{t(PLANNING_TEXT.document.discardedTitle)}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t(PLANNING_TEXT.document.discardedDetail)}</p>
+            </div>
+          </Notice>
+        )}
       </div>
 
       {vm.error && (
@@ -83,7 +104,7 @@ export function DocumentDetailView({ planning }: { planning: Planning }) {
                 variant="ghost"
                 data-testid={`projects-document-toc-${heading.id}`}
                 className={cn(
-                  'h-auto justify-start rounded-none border-l-2 border-border py-1.5 text-left font-normal whitespace-normal text-muted-foreground hover:border-primary hover:bg-transparent hover:text-foreground',
+                  'h-auto justify-start rounded-none border-0 border-l-2 border-border py-1.5 text-left font-normal whitespace-normal text-muted-foreground hover:border-primary hover:bg-transparent hover:text-foreground',
                   heading.level === 3 ? 'pl-6' : 'pl-3',
                 )}
                 onClick={() => window.document.getElementById(heading.id)?.scrollIntoView({ block: 'start' })}
@@ -118,6 +139,31 @@ export function DocumentDetailView({ planning }: { planning: Planning }) {
                   <Pencil data-icon="inline-start" />
                   {t(PLANNING_TEXT.document.edit)}
                 </Button>
+              )}
+              {vm.canDiscard && !vm.editing && (
+                <ConfirmButton
+                  testId="projects-document-discard"
+                  icon={<Archive data-icon="inline-start" />}
+                  label={t(PLANNING_TEXT.document.discard)}
+                  title={t(PLANNING_TEXT.document.discardTitle)}
+                  detail={t(PLANNING_TEXT.document.discardDetail)}
+                  confirm={t(PLANNING_TEXT.document.discard)}
+                  disabled={vm.isBusy}
+                  onConfirm={vm.onDiscard}
+                />
+              )}
+              {vm.canDelete && !vm.editing && (
+                <ConfirmButton
+                  testId="projects-document-delete"
+                  icon={<Trash2 data-icon="inline-start" />}
+                  label={t(PLANNING_TEXT.document.delete)}
+                  title={t(PLANNING_TEXT.document.deleteTitle, { title: document.title })}
+                  detail={t(PLANNING_TEXT.document.deleteDetail)}
+                  confirm={t(PLANNING_TEXT.document.delete)}
+                  disabled={vm.isBusy}
+                  destructive
+                  onConfirm={vm.onDelete}
+                />
               )}
             </span>
           </div>
@@ -156,13 +202,8 @@ export function DocumentDetailView({ planning }: { planning: Planning }) {
                 </Button>
               </div>
             </div>
-          ) : vm.blocks.length === 0 ? (
-            <p className="mt-5 text-sm text-muted-foreground">{t(PLANNING_TEXT.document.empty)}</p>
           ) : (
-            <MarkdownContent
-              blocks={vm.blocks}
-              className={cn('mt-5 max-w-[72ch]', document.kind === 'prd' && vm.writtenByAgent && 'border-l-[3px] border-primary/30 pl-3')}
-            />
+            <DocumentBody vm={vm} />
           )}
         </article>
 
@@ -237,6 +278,154 @@ export function DocumentDetailView({ planning }: { planning: Planning }) {
         <PlanningActivityView activity={planning.activity} />
       </div>
     </div>
+  )
+}
+
+function ConfirmButton(props: {
+  testId: string
+  icon: React.ReactNode
+  label: string
+  title: string
+  detail: string
+  confirm: string
+  disabled: boolean
+  destructive?: boolean
+  onConfirm: () => void
+}) {
+  const { t } = useTranslation('planning')
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger
+        render={
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(props.destructive && 'text-destructive')}
+            disabled={props.disabled}
+            data-testid={props.testId}
+          />
+        }
+      >
+        {props.icon}
+        {props.label}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{props.title}</AlertDialogTitle>
+          <AlertDialogDescription>{props.detail}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid={`${props.testId}-cancel`}>{t(PLANNING_TEXT.document.cancel)}</AlertDialogCancel>
+          <AlertDialogAction
+            variant={props.destructive ? 'destructive' : 'default'}
+            data-testid={`${props.testId}-confirm`}
+            onClick={props.onConfirm}
+          >
+            {props.confirm}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function DocumentBody({ vm }: { vm: Detail }) {
+  const { t } = useTranslation('planning')
+  const document = vm.document
+  if (!document) return null
+  if (vm.content.trim() === '' && !vm.hasOriginal)
+    return <p className="mt-5 text-sm text-muted-foreground">{t(PLANNING_TEXT.document.empty)}</p>
+  if (vm.format === 'markdown')
+    return (
+      <MarkdownContent
+        blocks={vm.blocks}
+        className={cn('mt-5 max-w-[72ch]', document.kind === 'prd' && vm.writtenByAgent && 'border-l-[3px] border-primary/30 pl-3')}
+      />
+    )
+  if (!vm.hasOriginal) return <ExtractedText vm={vm} />
+  return (
+    <Tabs value={vm.view} onValueChange={(value) => vm.onView(String(value))} className="mt-5">
+      <TabsList aria-label={t(PLANNING_TEXT.document.viewLabel)}>
+        <TabsTrigger value="original" data-testid="projects-document-view-original">
+          {t(PLANNING_TEXT.document.viewOriginal)}
+        </TabsTrigger>
+        <TabsTrigger value="text" data-testid="projects-document-view-text">
+          {t(PLANNING_TEXT.document.viewText)}
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="original">
+        <PdfFrame vm={vm} />
+      </TabsContent>
+      <TabsContent value="text">
+        <ExtractedText vm={vm} />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+function PdfFrame({ vm }: { vm: Detail }) {
+  const { t } = useTranslation('planning')
+  if (vm.pdf.status === 'loading')
+    return <Skeleton className="mt-2 h-[75vh] w-full rounded-lg" data-testid="projects-document-pdf-loading" />
+  if (vm.pdf.status === 'error' || !vm.pdf.url)
+    return (
+      <Notice tone="warning" testId="projects-document-pdf-failed">
+        <span className="text-sm">{t(PLANNING_TEXT.document.pdfFailed)}</span>
+        {vm.canDownload && (
+          <Button size="sm" variant="outline" data-testid="projects-document-pdf-download" onClick={vm.onDownload}>
+            <Download data-icon="inline-start" />
+            {t(PLANNING_TEXT.document.download)}
+          </Button>
+        )}
+      </Notice>
+    )
+  // The browser's own PDF viewer gives search, zoom, and print without a PDF library.
+  return (
+    <iframe
+      src={vm.pdf.url}
+      title={t(PLANNING_TEXT.document.pdfPreview, { name: vm.document?.fileName ?? '' })}
+      data-testid="projects-document-pdf"
+      className="mt-2 h-[75vh] w-full rounded-lg border border-border bg-muted"
+    />
+  )
+}
+
+function ExtractedText({ vm }: { vm: Detail }) {
+  const { t } = useTranslation('planning')
+  return (
+    <div className="mt-5 grid gap-3">
+      {vm.document?.kind === 'brd' && <p className="text-[12.5px] text-muted-foreground">{t(PLANNING_TEXT.document.extractedHint)}</p>}
+      <div className="max-w-[72ch] text-sm leading-relaxed whitespace-pre-wrap break-words" data-testid="projects-document-text">
+        {vm.content}
+      </div>
+    </div>
+  )
+}
+
+function BrdNotice({ vm }: { vm: Detail }) {
+  const { t } = useTranslation('planning')
+  return (
+    <Notice tone="review" testId="projects-document-brd-notice">
+      <div className="flex items-start gap-3">
+        {vm.writtenByAgent && <AgentAvatar />}
+        <div>
+          <p className="font-semibold">{t(PLANNING_TEXT.document.brdDraftTitle)}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t(PLANNING_TEXT.document.brdDraftDetail)}</p>
+        </div>
+      </div>
+      {vm.canApprove && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="approve"
+            data-testid="projects-document-confirm-brd"
+            disabled={vm.isBusy}
+            onClick={() => vm.onAction('approved')}
+          >
+            {t(PLANNING_TEXT.document.confirmBrd)}
+          </Button>
+        </div>
+      )}
+    </Notice>
   )
 }
 

@@ -90,7 +90,12 @@
     "project_items_list": "Lihat epic dan story",
     "project_tasks_list": "Lihat semua task",
     "documents_list": "Lihat daftar BRD dan PRD",
-    "documents_read": "Baca BRD dan PRD"
+    "documents_read": "Baca BRD dan PRD",
+    "api_requests_search": "Cari request API",
+    "notifications_list": "Lihat notifikasi",
+    "notifications_mark_read": "Tandai notifikasi dibaca",
+    "team_members_list": "Lihat daftar tim",
+    "discussion_read": "Baca diskusi"
   },
   "guide": {
     "title": "Panduan wajib agent",

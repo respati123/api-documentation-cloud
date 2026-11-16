@@ -1,7 +1,7 @@
 import * as z from 'zod/mini'
 import { STORY_STAGES } from '@/features/projects/models/story.model'
 
-export const DOCUMENT_STATUSES = ['draft', 'review_pm', 'review_team', 'approved', 'superseded'] as const
+export const DOCUMENT_STATUSES = ['draft', 'review_pm', 'review_team', 'approved', 'superseded', 'discarded'] as const
 export const PLANNING_STATUSES = ['draft', 'refinement', 'ready', 'in_progress', 'review', 'done'] as const
 
 export const documentStatusSchema = z.enum(DOCUMENT_STATUSES)
@@ -34,7 +34,12 @@ export const documentSchema = z.extend(documentSummarySchema, {
   createdAt: z.optional(z.string()),
   versions: z.array(z.object({ version: z.number(), fileName: z.nullable(z.string()), createdAt: z.string() })),
 })
-export const documentVersionSchema = z.object({ version: z.number(), content: z.string(), createdAt: z.string() })
+export const documentVersionSchema = z.object({
+  version: z.number(),
+  content: z.string(),
+  mimeType: z.optional(z.nullable(z.string())),
+  createdAt: z.string(),
+})
 
 export const planningItemSchema = z.object({
   id: z.string(),

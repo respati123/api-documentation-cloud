@@ -19,7 +19,8 @@
       "review_pm": "PM review",
       "review_team": "Waiting for approval",
       "approved": "Approved",
-      "superseded": "Superseded"
+      "superseded": "Superseded",
+      "discarded": "Discarded"
     },
     "item": {
       "draft": "Draft",
@@ -44,6 +45,7 @@
     "empty": "Nothing needs your decision right now.",
     "open": "Open",
     "reason": {
+      "confirm_brd": "BRD from an agent waiting for confirmation by the owner, a PM, or a tech lead.",
       "approve_prd": "PRD waiting for approval. One approval from the owner, a PM, or a tech lead is enough.",
       "review_prd": "PRD draft to review before the team sees it.",
       "refine_item": "Draft to refine before it is ready.",
@@ -79,6 +81,26 @@
   "document": {
     "crumbProject": "Project",
     "toc": "Contents",
+    "viewLabel": "Document view",
+    "discard": "Discard draft",
+    "discardTitle": "Discard this draft?",
+    "discardDetail": "The document stays in the record, but it can no longer be edited, reviewed, or used by agents.",
+    "discardedTitle": "This draft was discarded",
+    "discardedDetail": "Kept for the record and not used by agents. The owner or a PM can delete it for good.",
+    "delete": "Delete",
+    "deleteTitle": "Delete “{{title}}”?",
+    "deleteDetail": "The document, all its versions, and its discussion are deleted for good. This cannot be undone.",
+    "table": {
+      "id": "ID",
+      "requirement": "Requirement",
+      "priority": "Priority",
+      "reference": "Reference"
+    },
+    "viewOriginal": "Original PDF",
+    "viewText": "Text agents read",
+    "extractedHint": "This text was taken from the uploaded file, and it is what agents read. Tables and layout can change, so compare it with the original before you confirm.",
+    "pdfPreview": "PDF preview of {{name}}",
+    "pdfFailed": "The PDF cannot be shown here. Download the file to open it.",
     "derived": "Derived documents",
     "derivedEmpty": "No PRD is based on this document yet.",
     "source": "Source: {{title}} v{{version}}",
@@ -104,6 +126,9 @@
     "approvedOn": "Approved {{date}}",
     "notYet": "Not yet",
     "approve": "Approve PRD",
+    "brdDraftTitle": "BRD from an agent waits for confirmation",
+    "brdDraftDetail": "Check that it matches the original BRD. Once the owner, a PM, or a tech lead confirms it, an agent can draft a PRD from it.",
+    "confirmBrd": "Confirm BRD",
     "sendBack": "Back to draft",
     "move": {
       "review_pm": "Send to PM review",

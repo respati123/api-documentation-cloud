@@ -132,4 +132,9 @@ export const MCP_TOOL_TEXT: Record<string, string> = {
   project_tasks_list: 'mcp:tool.project_tasks_list',
   documents_list: 'mcp:tool.documents_list',
   documents_read: 'mcp:tool.documents_read',
+  api_requests_search: 'mcp:tool.api_requests_search',
+  notifications_list: 'mcp:tool.notifications_list',
+  notifications_mark_read: 'mcp:tool.notifications_mark_read',
+  team_members_list: 'mcp:tool.team_members_list',
+  discussion_read: 'mcp:tool.discussion_read',
 }

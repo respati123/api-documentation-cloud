@@ -53,6 +53,8 @@ export const planningService = {
   },
   reviseDocument: (token: string, workspaceId: string, id: string, content: string, expectedVersion: number) =>
     workspaceCall(workspaceId, `/planning/documents/${id}`, { token, method: 'PATCH', body: { content, expectedVersion } }),
+  deleteDocument: (token: string, workspaceId: string, id: string) =>
+    workspaceCall(workspaceId, `/planning/documents/${id}`, { token, method: 'DELETE' }),
   documentStatus: (token: string, workspaceId: string, id: string, status: DocumentStatus) =>
     workspaceCall(workspaceId, `/planning/documents/${id}/status`, { token, method: 'POST', body: { status } }),
   items: async (token: string, workspaceId: string) =>
