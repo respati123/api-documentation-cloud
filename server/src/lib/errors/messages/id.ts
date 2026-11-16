@@ -39,6 +39,7 @@ export const id = {
   PLANNING_INPUT_INVALID: 'Detail perencanaan tidak valid.',
   PLANNING_NOT_FOUND: 'Item perencanaan tidak ditemukan.',
   PLANNING_CONFLICT: 'Item perencanaan berubah atau belum siap untuk aksi ini.',
+  PLANNING_DOCUMENT_IN_USE: 'Dokumen ini masih menjadi sumber PRD atau epic lain, jadi tidak bisa dihapus. Buang draf ini saja.',
   MCP_KEY_INPUT_INVALID: 'Pengaturan API key tidak valid.',
   MCP_KEY_INVALID: 'MCP API key tidak valid atau sudah kedaluwarsa.',
   MCP_PERMISSION_DENIED: 'Role proyek kamu di workspace ini tidak mengizinkan aksi tersebut. Minta role ke owner workspace.',
@@ -70,7 +71,9 @@ export const id = {
   TASK_LOCKED: 'Task ini masih terkunci sampai desain story disetujui.',
   SUBTASK_NOT_FOUND: 'Sub-task tidak ditemukan.',
   CONTRACT_REQUEST_NOT_FOUND: 'Request itu tidak ada di koleksi workspace.',
-  MCP_GUIDE_REQUIRED: 'Baca panduan perencanaan dulu: panggil planning_guide, ikuti isinya, lalu coba lagi.',
+  MCP_GUIDE_REQUIRED: 'Baca panduan perencanaan dulu. Panduannya ada di field guide pada respons ini (atau panggil planning_guide); ikuti isinya, lalu coba lagi.',
   MCP_DRAFT_INCOMPLETE: 'Draft ini belum memuat field yang diwajibkan panduan perencanaan. Panggil planning_guide lalu lengkapi.',
+  MCP_RATE_LIMITED: 'Terlalu banyak panggilan MCP dengan key ini. Tunggu satu menit lalu coba lagi.',
+  MCP_REQUEST_IN_PROGRESS: 'Permintaan dengan clientRequestId ini masih diproses. Tunggu sebentar lalu kirim ulang dengan clientRequestId yang sama.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>

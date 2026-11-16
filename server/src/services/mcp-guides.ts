@@ -2,7 +2,7 @@ import type { McpKeyRole } from '@/models/mcp'
 
 // The playbook every agent must read through planning_guide before it writes project data.
 // Bump GUIDE_VERSION whenever a guide changes, so agents that read an older version have to read it again.
-export const GUIDE_VERSION = '2026-11-14.3'
+export const GUIDE_VERSION = '2026-11-16.4'
 
 const shared = `## Rules for every agent
 
@@ -11,7 +11,17 @@ const shared = `## Rules for every agent
 - Write in the language the BRD is written in.
 - Everything you write is a draft. People review, approve, and publish in the web app. Never claim something is approved.
 - Pass workspaceId on every call. Use workspaces_list to find it.
-- Keep secrets out of every document and comment.`
+- At the start of a session, check notifications_list for comments and assignments waiting for you, and mark them read with notifications_mark_read once handled.
+- Give every write that adds something a clientRequestId. If a call times out, send it again with the same clientRequestId, so nothing is created twice.
+- Keep secrets out of every document and comment.
+- A document a person discarded is no longer worked on. Do not draft from it or quote it.
+
+## Discussions
+
+- Before you comment on a document, epic, story, or task, read its thread with discussion_read. Answer an existing comment by passing its id as parentId instead of starting a new thread.
+- To ask a specific person, write @handle in the comment. Find handles and roles with team_members_list, and pick the person by role: the PM for scope, the tech lead for technical decisions, the assignee for a task.
+- Mention only the people who must act, usually one or two. Everyone mentioned gets a notification.
+- The result lists mentioned handles and unknownMentions. If a handle matched no one, check team_members_list and send a short follow-up instead of guessing.`
 
 const pm = `# Planning playbook for the PM agent
 
@@ -23,9 +33,9 @@ ${shared}
 
 | Step | Read with | Write with | Who approves |
 |---|---|---|---|
-| 1. BRD | planning_list, planning_read_document | uploaded by people in the web app, or planning_upload_brd with the text a person gave you | approved when uploaded |
-| 2. PRD | planning_read_document (the BRD) | planning_draft_prd | owner, PM, or tech lead in the web app |
-| 3. Epics | planning_read_document (the approved PRD) | planning_draft_item kind "epic" | PM in the web app |
+| 1. BRD | planning_list, documents_read | uploaded by people in the web app, or planning_upload_brd with the text a person gave you | approved when a person uploads it; one you upload waits until the owner, a PM, or a tech lead confirms it |
+| 2. PRD | documents_read (the confirmed BRD) | planning_draft_prd | owner, PM, or tech lead in the web app |
+| 3. Epics | documents_read (the approved PRD) | planning_draft_item kind "epic" | PM in the web app |
 | 4. Stories | planning_list | planning_draft_item kind "story", then story_write_details | owner, PM, or tech lead marks them ready |
 | 5. Tasks | story_read | planning_draft_task | PM publishes the epic, which puts tasks on the board |
 
@@ -35,24 +45,29 @@ Do the steps in order. Do not start epics before the PRD is approved, and do not
 
 If the BRD is not in planning_list yet and the person gave you its file or text, upload it with planning_upload_brd: the full text, unchanged, with its file name when there is one. Never write or edit a BRD yourself, and never upload one without being asked. For a PDF or DOCX, ask the person to upload it in the web app.
 
+A BRD you upload waits as a draft. Tell the person to confirm it in the web app (the owner, a PM, or a tech lead can). The server refuses a PRD drafted from a BRD that is not confirmed yet.
+
 Read the BRD. Before writing a PRD, make sure it states three things: the problem, who has it, and how success is measured. If one is missing, ask at most three short questions, then wait. If the person tells you to continue anyway, write the gaps under "Open questions and assumptions" and mark each as an assumption.
 
 ## Step 2. Write the PRD
 
-Keep it to one or two pages. Use these level-2 headings, in this order, translated into the BRD's language:
+Do not interview the person. Write the PRD from what you already have: the BRD, what the person told you in this session, and what the workspace already holds. Before you write, look at the published epics and stories with planning_list, and at the existing API with api_requests_search, so the PRD fits what is already there. Use the names the BRD and the workspace already use for things, and keep the same name for the same thing everywhere. The only questions you ask are the ones in step 1.
 
-1. Summary: what is being built and why, in three to five sentences.
-2. Problem: the user's problem in their own terms, with evidence from the BRD.
-3. Goals and success metrics: each metric is measurable, with today's value and the target when the BRD gives them.
-4. Users: the personas and what each needs.
-5. User flows: numbered steps for the main flow, plus the failure cases that matter.
-6. Requirements: one line each, as "R1 <requirement> (must)", "R2 ... (should)". Every requirement can be tested. Priorities are must, should, or could.
-7. Non-functional requirements: limits, performance, security, and accessibility that apply.
-8. Out of scope: what this PRD does not cover.
-9. Risks and dependencies.
-10. Open questions and assumptions.
+Follow the team's product requirements template (the Confluence one). Use these level-2 headings, in this order, translated into the BRD's language. Keep each section short; the requirements table may run long. Where a section has a table, write it as a markdown table with exactly the columns given, one row per line.
 
-Save it with planning_draft_prd, with sourceDocumentId set to the BRD. Then tell the person it is waiting for review in the web app.
+1. Product overview: a list of labelled lines, one per line: "- Target date: ...", "- Team members: ...", "- Designs: ...", "- Loom demo: ...", "- Work tracker: ...". Take the target date from the BRD, or write TBD. For team members, look the project up with team_members_list and write each person as "@handle (role)". Designs, Loom demo, and Work tracker hold links the BRD or the person gave; write "-" when there is none. Leave out the document status; the web app tracks it.
+2. Objective: the context of the project and how it fits the organization's strategic goals. Say what problem the user faces, with evidence from the BRD, and what changes for them, in a few short paragraphs.
+3. Success metrics: a table "| Goal | Metric |". Each metric is measurable, with today's value and the target when the BRD gives them, as "name (now → target)".
+4. Assumptions: what you assume about users, technical constraints, or business goals, one per line. Mark each as an assumption so a reviewer can confirm or correct it.
+5. Milestones: the phases or releases in order, one per line, with dates only when the BRD gives them, and the roadmap link when there is one.
+6. Requirements: a table "| ID | Requirement | User story | Importance | Jira issue | Notes |". Number the IDs R1, R2, and so on. Each requirement can be tested; include non-functional ones such as performance, security, accessibility, and limits. The user story is "As <actor>, I want <feature>, so that <benefit>"; cover every actor, including admins, limits, and what happens when something fails. Importance is High, Medium, or Low. Leave Jira issue empty; it is filled when the work is tracked. Notes hold the BRD reference or a short clarification. Write every row on one line with one space on each side of each pipe, as "| R1 | <requirement> | ... |", because epics quote the start of a row: "R1 | <requirement>".
+7. Out of scope: features discussed that this PRD does not cover, or that may come in a later release, one per line.
+8. Design: Figma links or diagrams the BRD or the person gave. When there is none yet, write that the UI/UX member adds them, and name the screens the requirements need.
+9. Technical decisions: two short parts. Implementation: only decisions the BRD or the people already made, such as the areas that change, API contracts, data that changes, and integrations. No file paths or code; they go stale quickly. When nothing is decided yet, write that the tech lead decides. Testing: where the feature will be tested. Prefer places that already exist, test at the highest level (through the API or the screen a user uses), and keep it to as few places as possible, ideally one. Name similar existing tests or API requests when you know them.
+10. Open questions: a table "| Question | Answer | Date answered |" with what the BRD does not answer, one question per row. Leave Answer and Date answered empty until someone answers.
+11. Reference links: the BRD, related API requests found with api_requests_search, related epics and stories, and any research or meeting notes the person gave, one per line.
+
+Save it with planning_draft_prd, with sourceDocumentId set to the BRD. Then tell the person it is waiting for review in the web app, and ask the reviewer to confirm the technical decisions and the assumptions match what they expect.
 
 ## Step 3. Draft epics from the approved PRD
 
@@ -65,7 +80,7 @@ Save it with planning_draft_prd, with sourceDocumentId set to the BRD. Then tell
   - Kriteria selesai: the conditions for the whole epic to be done, including performance, security, or accessibility needs.
   - Risiko & dependensi: what can block it, and which other epic, team, or system it waits on.
   Use the PRD's language for the text. English labels also work: Goal, Scope, Out of scope, Success metrics, Done when, Risks & dependencies.
-- sourceSection is one requirement line copied exactly from the PRD, character for character. The server rejects text that is not in the PRD.
+- sourceSection is the start of one row of the PRD's requirements table, from the ID through the requirement text, copied exactly, character for character: "R1 | <requirement>". The server rejects text that is not in the PRD.
 - Prefer two to five epics. If you need more, the PRD may be too big; say so.
 
 ## Step 4. Split each epic into stories
@@ -137,7 +152,9 @@ ${shared}
 
 ## Your work
 
-- Review PRD drafts and stories with planning_read_document and story_read. Post risks and questions with planning_comment.
+- You read every draft the PM reads: PRDs in any status, and epics, stories, and tasks before they are published. Find them with planning_list and documents_list.
+- Review PRD drafts and stories with documents_read and story_read. Post risks and questions with planning_comment.
+- In a PRD draft, check Technical decisions first: the areas and contracts named are right, nothing names a file path or code, and the tests sit in as few places as possible, at the highest level that works. Comment with what you would change.
 - Break stories into tasks with planning_draft_task, following the task rules below.
 - You may approve designs and PRDs, but only a person does that, in the web app.
 
@@ -146,7 +163,7 @@ ${shared}
 - Design comes first: the UI/UX task, then backend, frontend, mobile, and QA.
 - One task per role unless the work does not fit one session. Titles start with a verb; descriptions say what "done" looks like.
 - Set role, assigneeId (a member with that project role), and priority on every task.
-- Link contracts with story_link_api_contract and test cases with story_write_test_case when you have them.`
+- Link contracts with story_link_api_contract (find the request id with api_requests_search) and test cases with story_write_test_case when you have them.`
 
 const uiUx = `# Playbook for the UI/UX agent
 
@@ -169,11 +186,11 @@ ${shared}
 
 - Find work with tasks_list_ready. Read the story, its approved design, and its acceptance criteria with story_read.
 - Read the BRD and the approved PRD behind the story with documents_list and documents_read, so the API covers the business rules and limits they state.
-- Keep the API contract in the workspace API docs, then link each request to the story with story_link_api_contract and its request id.
+- Keep the API contract in the workspace API docs. Find each request's id with api_requests_search (by name, path, or method), then link it to the story with story_link_api_contract.
 - Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status.
 
 ${projectView}
-- documents_list shows the BRDs and the approved PRDs only. PRDs still in review are not shown.`
+- documents_list shows the confirmed BRDs and the approved PRDs only. Drafts and PRDs still in review are not shown.`
 
 const builder = `# Playbook for the frontend and mobile agents
 
@@ -207,7 +224,7 @@ ${shared}
 ## Your work
 
 - The workspace owner has not given you a project role yet, so you have the member tools only.
-- Read your assigned tasks with tasks_list_assigned and the stories you take part in with stories_list_participating.
+- Read your assigned tasks with tasks_list_assigned and the stories you take part in with stories_list_participating, then story_read for the details.
 - Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status.
 - To draft, attach designs, link contracts, or write test cases, ask the workspace owner for a project role.
 
@@ -227,7 +244,7 @@ export function guideFor(roles: readonly McpKeyRole[]): string {
 // Sent in the MCP initialize result. Clients put it in the agent's context when the server connects.
 export function serverInstructions(roles: readonly McpKeyRole[]): string {
   const who = roles.length === 0 ? 'a member without a project role' : `the ${roles.map((role) => `"${role}"`).join(', ')} role${roles.length > 1 ? 's' : ''}`
-  return `API Documentation cloud: project planning for ${who}. Your tools in each workspace follow the roles the owner gave you there, so a tool can be refused in a workspace where you lack the role. Before writing anything, call planning_guide and follow it; write tools refuse until you have read the current guide (version ${GUIDE_VERSION}). Pass workspaceId on every call (see workspaces_list). Everything you write is a draft that people review and approve in the web app.`
+  return `API Documentation cloud: project planning for ${who}. Your tools in each workspace follow the roles the owner gave you there, so a tool can be refused in a workspace where you lack the role. Before writing anything, call planning_guide and follow it; write tools refuse until you have read the current guide (version ${GUIDE_VERSION}), and a refused write carries the guide in its response. Pass workspaceId on every call (see workspaces_list). Everything you write is a draft that people review and approve in the web app.`
 }
 
 export interface GuidePrompt {
@@ -246,7 +263,7 @@ const pmPrompts: GuidePrompt[] = [
     title: 'Write a PRD from a BRD',
     description: 'Reads a BRD and drafts the PRD, following the PM playbook.',
     arguments: [workspaceArg, { name: 'brdId', description: 'Id of the BRD document.', required: true }],
-    text: (a) => `Call planning_guide first. Then, in workspace ${a.workspaceId}, read BRD ${a.brdId} with planning_read_document, check it as in step 1 of the playbook, and draft the PRD as in step 2 with planning_draft_prd.`,
+    text: (a) => `Call planning_guide first. Then, in workspace ${a.workspaceId}, read BRD ${a.brdId} with documents_read, check it as in step 1 of the playbook, and draft the PRD as in step 2 with planning_draft_prd.`,
   },
   {
     name: 'pm_prd_to_epics',

@@ -9,40 +9,70 @@ import { notify } from '@/services/notifications'
 import { ensureAssigneeInWorkspace, ensureWorkspaceProject } from '@/repositories/projects.repository'
 import { findTaskVisibility, listUserDisciplines } from '@/repositories/planning-audience.repository'
 import { isItemParticipant } from '@/repositories/planning.repository'
+import {
+  bumpPlanningDocumentVersion,
+  countDocumentDependents,
+  deletePlanningDocumentRows,
+  findPlanningDocument,
+  findPlanningDocumentFile,
+  findPlanningDocumentVersion,
+  insertPlanningDocument,
+  insertPlanningDocumentVersion,
+  listPlanningDocumentRows,
+  listPlanningDocumentVersions,
+  updatePlanningDocumentStatus,
+} from '@/repositories/planning-documents.repository'
+import {
+  findEpicPublishBlockers,
+  findItemDesignApprovedAt,
+  findPlanningItem,
+  findTaskAssignee,
+  insertPlanningItem,
+  insertTaskDraft,
+  listPlanningItemRows,
+  listPlanningTaskRows,
+  publishEpicRows,
+  rebaseEpicSource,
+  replacePlanningParticipants,
+  updatePlanningItemFields,
+  updateTaskDraftRow,
+} from '@/repositories/planning-items.repository'
+import { commentExistsOnTarget, findCommentAuthor, findPlanningComment, insertPlanningComment, listPlanningCommentRows, resolvePlanningCommentRow } from '@/repositories/planning-comments.repository'
 import { isWorkRole, storyStage } from '@/models/story'
 
 export type DocumentKind = 'brd' | 'prd'
-export type DocumentStatus = 'draft' | 'review_pm' | 'review_team' | 'approved' | 'superseded'
+export type DocumentStatus = 'draft' | 'review_pm' | 'review_team' | 'approved' | 'superseded' | 'discarded'
 export type PlanningKind = 'epic' | 'story'
 export type PlanningStatus = 'draft' | 'refinement' | 'ready' | 'in_progress' | 'review' | 'done'
 export type TargetKind = 'document' | 'epic' | 'story' | 'task'
 
-const documentStatuses: DocumentStatus[] = ['draft', 'review_pm', 'review_team', 'approved', 'superseded']
+const documentStatuses: DocumentStatus[] = ['draft', 'review_pm', 'review_team', 'approved', 'superseded', 'discarded']
 const itemStatuses: PlanningStatus[] = ['draft', 'refinement', 'ready', 'in_progress', 'review', 'done']
 
 function validText(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= max
 }
 
-// Set when the call comes through an MCP key. A key whose role holds planning tools works on planning as a PM,
-// even where the member's workspace role alone would not allow it. Workspace membership is still required.
+// Set when the call comes through an MCP key. A key whose role holds planning tools works on planning as a PM.
+// Workspace membership is still required, and a viewer stays read-only.
 // The member's roles in the workspace decide which documents it reads.
 export type PlanningVia = { apiKeyId: string; planning: boolean; roles?: string[] }
 
 async function isPm(db: SQL, workspaceId: string, userId: string, via?: PlanningVia): Promise<boolean> {
   const role = (await resolveAccess(db, workspaceId, userId))?.role
   if (!role) throw new AppError('WORKSPACE_NOT_FOUND')
-  if (role === 'owner' || via?.planning) return true
+  if (role === 'owner') return true
   if (role === 'viewer') return false
-  const [row] = await db`SELECT 1 FROM project_members pm JOIN projects p ON p.id = pm.project_id WHERE p.workspace_id = ${workspaceId} AND pm.user_id = ${userId} AND pm.discipline = 'pm' LIMIT 1`
-  return Boolean(row)
+  if (via?.planning) return true
+  return (await listUserDisciplines(db, workspaceId, userId)).includes('pm')
 }
 
 export const canManagePlanning = isPm
 
-// The admin reading a workspace they are not a member of sees what a PM sees, but writes nothing.
+// The tech lead reads every draft the PM reads, since it approves them. The admin reading a workspace they are not
+// a member of sees the same, but writes nothing.
 async function readsAsPm(db: SQL, workspaceId: string, userId: string, via?: PlanningVia): Promise<boolean> {
-  if (await isPm(db, workspaceId, userId, via)) return true
+  if ((await isPm(db, workspaceId, userId, via)) || (await isApprover(db, workspaceId, userId))) return true
   return !via && (await resolveAccess(db, workspaceId, userId))?.viaAdmin === true
 }
 
@@ -56,8 +86,8 @@ async function isApprover(db: SQL, workspaceId: string, userId: string): Promise
   if (!role) throw new AppError('WORKSPACE_NOT_FOUND')
   if (role === 'owner') return true
   if (role === 'viewer') return false
-  const [row] = await db`SELECT 1 FROM project_members pm JOIN projects p ON p.id = pm.project_id WHERE p.workspace_id = ${workspaceId} AND pm.user_id = ${userId} AND pm.discipline IN ('pm', 'tech_lead') LIMIT 1`
-  return Boolean(row)
+  const roles = await listUserDisciplines(db, workspaceId, userId)
+  return roles.includes('pm') || roles.includes('tech_lead')
 }
 
 export const canApprovePlanning = isApprover
@@ -71,13 +101,13 @@ async function event(db: SQL, workspaceId: string, actorId: string, targetKind: 
 }
 
 async function documentRow(db: SQL, workspaceId: string, documentId: string) {
-  const [row] = await db`SELECT d.id, d.workspace_id AS "workspaceId", d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_by AS "approvedBy", d.approved_at AS "approvedAt", d.created_at AS "createdAt", d.updated_at AS "updatedAt", v.content, v.file_name AS "fileName", v.mime_type AS "mimeType", v.source_version AS "sourceVersion", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.id = ${documentId} AND d.workspace_id = ${workspaceId}`
+  const row = await findPlanningDocument(db, workspaceId, documentId)
   if (!row) throw new AppError('PLANNING_NOT_FOUND')
   return row
 }
 
-// The PM reads every document. The tech lead reads the BRD and PRDs from team review on, since it approves them.
-// Backend reads the BRD and approved PRDs. Other roles read epics, stories, and tasks only.
+// The PM and the tech lead read every document. A viewer holding the tech lead role reads the BRD and PRDs from team
+// review on. Backend reads the BRD and approved PRDs. Other roles read epics, stories, and tasks only.
 type DocumentAccess = 'all' | 'review' | 'approved' | 'none'
 
 async function documentAccess(db: SQL, workspaceId: string, userId: string, via?: PlanningVia): Promise<DocumentAccess> {
@@ -87,10 +117,11 @@ async function documentAccess(db: SQL, workspaceId: string, userId: string, via?
   return roles.includes('backend') ? 'approved' : 'none'
 }
 
-function documentVisible(access: DocumentAccess, kind: string, status: string): boolean {
+// A BRD is approved when a person uploads it, or when an approver confirms one an agent uploaded.
+function documentVisible(access: DocumentAccess, status: string): boolean {
   if (access === 'all') return true
   if (access === 'none') return false
-  if (kind === 'brd' || status === 'approved') return true
+  if (status === 'approved') return true
   return access === 'review' && status === 'review_team'
 }
 
@@ -100,35 +131,34 @@ export async function canReadPlanningDocuments(db: SQL, workspaceId: string, use
 
 async function canReadDocument(db: SQL, workspaceId: string, documentId: string, userId: string, via?: PlanningVia) {
   const row = await documentRow(db, workspaceId, documentId)
-  if (documentVisible(await documentAccess(db, workspaceId, userId, via), row.kind, row.status)) return row
+  if (documentVisible(await documentAccess(db, workspaceId, userId, via), row.status)) return row
   throw new AppError('PLANNING_NOT_FOUND')
 }
 
 export async function listPlanningDocuments(db: SQL, workspaceId: string, userId: string, via?: PlanningVia) {
   const access = await documentAccess(db, workspaceId, userId, via)
   if (access === 'none') return []
-  const rows = await db`SELECT d.id, d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_at AS "approvedAt", d.updated_at AS "updatedAt", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.workspace_id = ${workspaceId} ORDER BY d.updated_at DESC LIMIT 100`
-  return rows.filter((row: { kind: string; status: string }) => documentVisible(access, row.kind, row.status))
+  // Agents work only on documents that go on, so a discarded one is left out for them.
+  return (await listPlanningDocumentRows(db, workspaceId)).filter((row) => documentVisible(access, row.status) && !(via && row.status === 'discarded'))
 }
 
 export async function getPlanningDocument(db: SQL, workspaceId: string, documentId: string, userId: string, via?: PlanningVia) {
   const document = await canReadDocument(db, workspaceId, documentId, userId, via)
-  const versions = await db`SELECT version, file_name AS "fileName", mime_type AS "mimeType", source_version AS "sourceVersion", created_at AS "createdAt" FROM planning_document_versions WHERE document_id = ${documentId} ORDER BY version DESC`
-  return { ...document, versions }
+  return { ...document, versions: await listPlanningDocumentVersions(db, documentId) }
 }
 
 export async function getPlanningDocumentVersion(db: SQL, workspaceId: string, documentId: string, version: number, userId: string) {
   await canReadDocument(db, workspaceId, documentId, userId)
-  const [row] = await db`SELECT version, content, file_name AS "fileName", mime_type AS "mimeType", source_version AS "sourceVersion", created_at AS "createdAt" FROM planning_document_versions WHERE document_id = ${documentId} AND version = ${version}`
+  const row = await findPlanningDocumentVersion(db, documentId, version)
   if (!row) throw new AppError('PLANNING_NOT_FOUND')
   return row
 }
 
 export async function getPlanningDocumentFile(db: SQL, workspaceId: string, documentId: string, userId: string) {
   const document = await canReadDocument(db, workspaceId, documentId, userId)
-  const [version] = await db`SELECT file_bytes AS "fileBytes", file_name AS "fileName", mime_type AS "mimeType" FROM planning_document_versions WHERE document_id = ${documentId} AND version = ${document.currentVersion}`
+  const version = await findPlanningDocumentFile(db, documentId, document.currentVersion)
   if (!version?.fileBytes) throw new AppError('PLANNING_NOT_FOUND')
-  return { bytes: version.fileBytes as Uint8Array, fileName: String(version.fileName), mimeType: String(version.mimeType) }
+  return { bytes: version.fileBytes, fileName: String(version.fileName), mimeType: String(version.mimeType) }
 }
 
 export async function createPlanningDocument(db: SQL, workspaceId: string, actorId: string, input: { kind?: unknown; title?: unknown; content?: unknown; sourceDocumentId?: unknown; fileName?: unknown; mimeType?: unknown; fileBytes?: Uint8Array }, via?: PlanningVia) {
@@ -141,12 +171,22 @@ export async function createPlanningDocument(db: SQL, workspaceId: string, actor
     if (!sourceId) throw new AppError('PLANNING_INPUT_INVALID')
     const source = await documentRow(db, workspaceId, sourceId)
     if (source.kind !== 'brd') throw new AppError('PLANNING_INPUT_INVALID')
+    if (source.status !== 'approved') throw new AppError('PLANNING_CONFLICT')
     sourceVersion = Number(source.currentVersion)
   } else if (sourceId) throw new AppError('PLANNING_INPUT_INVALID')
   const id = randomUUID()
   await db.begin(async (tx) => {
-    await tx`INSERT INTO planning_documents (id, workspace_id, kind, title, status, source_document_id, created_by) VALUES (${id}, ${workspaceId}, ${kind}, ${String(input.title).trim()}, ${kind === 'brd' ? 'approved' : 'draft'}, ${sourceId}, ${actorId})`
-    await tx`INSERT INTO planning_document_versions (document_id, version, content, file_name, mime_type, file_bytes, source_version, created_by) VALUES (${id}, 1, ${String(input.content).trim()}, ${typeof input.fileName === 'string' ? input.fileName : null}, ${typeof input.mimeType === 'string' ? input.mimeType : null}, ${input.fileBytes ?? null}, ${sourceVersion}, ${actorId})`
+    await insertPlanningDocument(tx, { id, workspaceId, kind, title: String(input.title).trim(), status: kind === 'brd' && !via ? 'approved' : 'draft', sourceDocumentId: sourceId, createdBy: actorId })
+    await insertPlanningDocumentVersion(tx, {
+      documentId: id,
+      version: 1,
+      content: String(input.content).trim(),
+      fileName: typeof input.fileName === 'string' ? input.fileName : null,
+      mimeType: typeof input.mimeType === 'string' ? input.mimeType : null,
+      fileBytes: input.fileBytes ?? null,
+      sourceVersion,
+      createdBy: actorId,
+    })
     await event(tx, workspaceId, actorId, 'document', id, 'created', via?.apiKeyId)
   })
   return documentRow(db, workspaceId, id)
@@ -156,42 +196,59 @@ export async function revisePlanningDocument(db: SQL, workspaceId: string, docum
   await requirePlanningPm(db, workspaceId, actorId)
   if (!validText(input.content, 500_000) || !Number.isInteger(input.expectedVersion) || (input.title !== undefined && !validText(input.title, 180))) throw new AppError('PLANNING_INPUT_INVALID')
   const current = await documentRow(db, workspaceId, documentId)
-  if (Number(current.currentVersion) !== input.expectedVersion || current.status === 'superseded') throw new AppError('PLANNING_CONFLICT')
+  if (Number(current.currentVersion) !== input.expectedVersion || current.status === 'superseded' || current.status === 'discarded') throw new AppError('PLANNING_CONFLICT')
   const sourceVersion = current.kind === 'prd' && current.sourceDocumentId ? (await documentRow(db, workspaceId, current.sourceDocumentId)).currentVersion : null
   await db.begin(async (tx) => {
-    const [updated] = await tx`UPDATE planning_documents SET title = ${typeof input.title === 'string' ? input.title.trim() : current.title}, current_version = current_version + 1, status = ${current.kind === 'brd' ? 'approved' : 'draft'}, approved_by = NULL, approved_at = NULL, updated_at = now() WHERE id = ${documentId} AND workspace_id = ${workspaceId} AND current_version = ${input.expectedVersion} RETURNING current_version AS "currentVersion"`
-    if (!updated) throw new AppError('PLANNING_CONFLICT')
-    await tx`INSERT INTO planning_document_versions (document_id, version, content, source_version, created_by) VALUES (${documentId}, ${updated.currentVersion}, ${String(input.content).trim()}, ${sourceVersion}, ${actorId})`
+    const title = typeof input.title === 'string' ? input.title.trim() : current.title
+    const version = await bumpPlanningDocumentVersion(tx, { workspaceId, documentId, expectedVersion: input.expectedVersion as number, title, status: current.kind === 'brd' ? 'approved' : 'draft' })
+    if (version === undefined) throw new AppError('PLANNING_CONFLICT')
+    await insertPlanningDocumentVersion(tx, { documentId, version, content: String(input.content).trim(), sourceVersion, createdBy: actorId })
     await event(tx, workspaceId, actorId, 'document', documentId, 'revised', apiKeyId)
   })
   return documentRow(db, workspaceId, documentId)
 }
 
 export async function setPlanningDocumentStatus(db: SQL, workspaceId: string, documentId: string, actorId: string, status: unknown) {
-  if (status === 'approved') await requirePlanningApprover(db, workspaceId, actorId)
+  if (status === 'approved' || status === 'discarded') await requirePlanningApprover(db, workspaceId, actorId)
   else await requirePlanningPm(db, workspaceId, actorId)
   if (typeof status !== 'string' || !documentStatuses.includes(status as DocumentStatus)) throw new AppError('PLANNING_INPUT_INVALID')
   const current = await documentRow(db, workspaceId, documentId)
-  const next: Record<string, string[]> = { draft: ['review_pm'], review_pm: ['review_team', 'draft'], review_team: ['approved', 'draft'], approved: ['superseded'], superseded: [] }
-  if (current.kind !== 'prd' || !next[current.status]?.includes(status)) throw new AppError('PLANNING_CONFLICT')
+  // A draft or one in review that should not go on is discarded. An approved document is superseded instead.
+  const next: Record<string, string[]> = { draft: ['review_pm', 'discarded'], review_pm: ['review_team', 'draft', 'discarded'], review_team: ['approved', 'draft', 'discarded'], approved: ['superseded'], superseded: [], discarded: [] }
+  // A BRD an agent uploaded waits as a draft until an approver confirms or discards it.
+  const allowed = current.kind === 'prd' ? next[current.status] : current.status === 'draft' ? ['approved', 'discarded'] : []
+  if (!allowed?.includes(status)) throw new AppError('PLANNING_CONFLICT')
   if (status === 'approved' && current.sourceOutdated) throw new AppError('PLANNING_CONFLICT')
   await db.begin(async (tx) => {
-    const [updated] = await tx`UPDATE planning_documents SET status = ${status}, approved_by = ${status === 'approved' ? actorId : null}, approved_at = ${status === 'approved' ? new Date() : null}, updated_at = now() WHERE id = ${documentId} AND workspace_id = ${workspaceId} AND status = ${current.status} AND current_version = ${current.currentVersion} RETURNING id`
+    const approved = status === 'approved'
+    const updated = await updatePlanningDocumentStatus(tx, { workspaceId, documentId, from: current.status, version: current.currentVersion, status, approvedBy: approved ? actorId : null, approvedAt: approved ? new Date() : null })
     if (!updated) throw new AppError('PLANNING_CONFLICT')
     await event(tx, workspaceId, actorId, 'document', documentId, `status:${status}`, undefined, { from: current.status, to: status, version: current.currentVersion })
   })
   return documentRow(db, workspaceId, documentId)
 }
 
+// Only a draft or a discarded document goes, and only when no PRD, epic, or story was drafted from it.
+export async function deletePlanningDocument(db: SQL, workspaceId: string, documentId: string, actorId: string) {
+  await requirePlanningPm(db, workspaceId, actorId)
+  const current = await documentRow(db, workspaceId, documentId)
+  if (current.status !== 'draft' && current.status !== 'discarded') throw new AppError('PLANNING_CONFLICT')
+  if ((await countDocumentDependents(db, workspaceId, documentId)) > 0) throw new AppError('PLANNING_DOCUMENT_IN_USE')
+  await db.begin(async (tx) => {
+    await deletePlanningDocumentRows(tx, workspaceId, documentId)
+    await event(tx, workspaceId, actorId, 'document', documentId, 'deleted', undefined, { kind: current.kind, title: current.title })
+  })
+}
+
 async function itemRow(db: SQL, workspaceId: string, itemId: string) {
-  const [row] = await db`SELECT id, workspace_id AS "workspaceId", kind, parent_id AS "parentId", title, description, acceptance_criteria AS "acceptanceCriteria", status, published_at AS "publishedAt", source_document_id AS "sourceDocumentId", source_version AS "sourceVersion", source_section AS "sourceSection", created_at AS "createdAt", updated_at AS "updatedAt" FROM planning_items WHERE id = ${itemId} AND workspace_id = ${workspaceId}`
+  const row = await findPlanningItem(db, workspaceId, itemId)
   if (!row) throw new AppError('PLANNING_NOT_FOUND')
   return row
 }
 
 async function canReadItem(db: SQL, workspaceId: string, itemId: string, userId: string, via?: PlanningVia) {
   const row = await itemRow(db, workspaceId, itemId)
-  // Every member reads published epics and stories. Drafts stay with the PM.
+  // Every member reads published epics and stories. Drafts stay with the PM and the tech lead.
   if (row.publishedAt || (await readsAsPm(db, workspaceId, userId, via))) return row
   throw new AppError('PLANNING_NOT_FOUND')
 }
@@ -201,11 +258,8 @@ export async function getPlanningItem(db: SQL, workspaceId: string, itemId: stri
 }
 
 export async function listPlanningItems(db: SQL, workspaceId: string, userId: string, via?: PlanningVia) {
-  const pm = await readsAsPm(db, workspaceId, userId, via)
-  const rows = await db`SELECT i.id, i.kind, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.status, i.published_at AS "publishedAt", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", (d.current_version > i.source_version) AS "sourceOutdated", i.created_at AS "createdAt", i.design_approved_at AS "designApprovedAt", (SELECT count(*)::int FROM story_designs sd WHERE sd.story_id = i.id) AS "designCount", COALESCE((SELECT array_agg(pp.user_id) FROM planning_participants pp WHERE pp.item_id = i.id), ARRAY[]::text[]) AS "participantIds" FROM planning_items i LEFT JOIN planning_documents d ON d.id = i.source_document_id WHERE i.workspace_id = ${workspaceId} AND (${pm} OR i.published_at IS NOT NULL) ORDER BY i.created_at LIMIT 500`
-  return rows.map(({ designApprovedAt, designCount, ...item }: Record<string, unknown> & { kind: string; status: string; designApprovedAt: Date | null; designCount: number }) =>
-    item.kind === 'story' ? { ...item, stage: storyStage(item.status, designApprovedAt, designCount) } : item,
-  )
+  const rows = await listPlanningItemRows(db, workspaceId, await readsAsPm(db, workspaceId, userId, via))
+  return rows.map(({ designApprovedAt, designCount, ...item }) => (item.kind === 'story' ? { ...item, stage: storyStage(item.status, designApprovedAt, designCount) } : item))
 }
 
 export async function createPlanningItem(db: SQL, workspaceId: string, actorId: string, input: { kind?: unknown; parentId?: unknown; title?: unknown; description?: unknown; acceptanceCriteria?: unknown; sourceDocumentId?: unknown; sourceSection?: unknown; participantIds?: unknown }, via?: PlanningVia) {
@@ -225,8 +279,20 @@ export async function createPlanningItem(db: SQL, workspaceId: string, actorId: 
   for (const id of participants) if (!(await ensureAssigneeInWorkspace(db, workspaceId, id))) throw new AppError('PLANNING_INPUT_INVALID')
   const id = randomUUID()
   await db.begin(async (tx) => {
-    await tx`INSERT INTO planning_items (id, workspace_id, kind, parent_id, title, description, acceptance_criteria, source_document_id, source_version, source_section, created_by) VALUES (${id}, ${workspaceId}, ${input.kind}, ${parentId}, ${String(input.title).trim()}, ${typeof input.description === 'string' ? input.description.trim() : ''}, ${typeof input.acceptanceCriteria === 'string' ? input.acceptanceCriteria.trim() : ''}, ${document.id}, ${document.currentVersion}, ${typeof input.sourceSection === 'string' ? input.sourceSection.trim() : null}, ${actorId})`
-    for (const userId of participants) await tx`INSERT INTO planning_participants (item_id, user_id) VALUES (${id}, ${userId})`
+    await insertPlanningItem(tx, {
+      id,
+      workspaceId,
+      kind: input.kind as PlanningKind,
+      parentId,
+      title: String(input.title).trim(),
+      description: typeof input.description === 'string' ? input.description.trim() : '',
+      acceptanceCriteria: typeof input.acceptanceCriteria === 'string' ? input.acceptanceCriteria.trim() : '',
+      sourceDocumentId: document.id,
+      sourceVersion: document.currentVersion,
+      sourceSection: typeof input.sourceSection === 'string' ? input.sourceSection.trim() : null,
+      createdBy: actorId,
+    })
+    await replacePlanningParticipants(tx, id, participants, { clear: false })
     await event(tx, workspaceId, actorId, input.kind as PlanningKind, id, 'draft_created', via?.apiKeyId)
   })
   return itemRow(db, workspaceId, id)
@@ -245,19 +311,20 @@ export async function updatePlanningItem(db: SQL, workspaceId: string, itemId: s
   const next: Record<string, string[]> = { draft: ['refinement'], refinement: ['draft', 'ready'], ready: ['refinement', 'in_progress'], in_progress: ['review'], review: ['in_progress', 'done'], done: [] }
   if (input.status && !next[current.status]?.includes(input.status as string)) throw new AppError('PLANNING_CONFLICT')
   if (input.status && ['in_progress', 'review', 'done'].includes(input.status as string) && !current.publishedAt) throw new AppError('PLANNING_CONFLICT')
-  if (input.status === 'in_progress' && current.kind === 'story') {
-    const [design] = await db`SELECT design_approved_at AS "approvedAt" FROM planning_items WHERE id = ${itemId}`
-    if (!design?.approvedAt) throw new AppError('PLANNING_CONFLICT')
-  }
+  if (input.status === 'in_progress' && current.kind === 'story' && !(await findItemDesignApprovedAt(db, itemId))) throw new AppError('PLANNING_CONFLICT')
   if (input.status === 'ready' && current.kind === 'story' && !String(input.acceptanceCriteria ?? current.acceptanceCriteria).trim()) throw new AppError('PLANNING_CONFLICT')
   const participants = input.participantIds === undefined ? null : [...new Set(input.participantIds as string[])]
   if (participants) for (const id of participants) if (!(await ensureAssigneeInWorkspace(db, workspaceId, id))) throw new AppError('PLANNING_INPUT_INVALID')
   await db.begin(async (tx) => {
-    await tx`UPDATE planning_items SET title = ${typeof input.title === 'string' ? input.title.trim() : current.title}, description = ${typeof input.description === 'string' ? input.description.trim() : current.description}, acceptance_criteria = ${typeof input.acceptanceCriteria === 'string' ? input.acceptanceCriteria.trim() : current.acceptanceCriteria}, status = ${typeof input.status === 'string' ? input.status : current.status}, updated_at = now() WHERE id = ${itemId} AND workspace_id = ${workspaceId}`
-    if (participants) {
-      await tx`DELETE FROM planning_participants WHERE item_id = ${itemId}`
-      for (const userId of participants) await tx`INSERT INTO planning_participants (item_id, user_id) VALUES (${itemId}, ${userId})`
-    }
+    await updatePlanningItemFields(tx, {
+      workspaceId,
+      itemId,
+      title: typeof input.title === 'string' ? input.title.trim() : current.title,
+      description: typeof input.description === 'string' ? input.description.trim() : current.description,
+      acceptanceCriteria: typeof input.acceptanceCriteria === 'string' ? input.acceptanceCriteria.trim() : current.acceptanceCriteria,
+      status: typeof input.status === 'string' ? input.status : current.status,
+    })
+    if (participants) await replacePlanningParticipants(tx, itemId, participants, { clear: true })
     await event(tx, workspaceId, actorId, current.kind, itemId, 'updated', undefined, { statusFrom: current.status, statusTo: input.status ?? current.status, participantsChanged: participants !== null })
   })
   return itemRow(db, workspaceId, itemId)
@@ -274,7 +341,17 @@ export async function createPlanningTaskDraft(db: SQL, workspaceId: string, acto
   const project = await ensureWorkspaceProject(db, workspaceId)
   const id = randomUUID()
   await db.begin(async (tx) => {
-    await tx`INSERT INTO tasks (id, project_id, story_id, title, description, status, priority, assignee_id, created_by, published_at, role) VALUES (${id}, ${project.id}, ${story.id}, ${String(input.title).trim()}, ${typeof input.description === 'string' ? input.description.trim() : ''}, 'backlog', ${typeof input.priority === 'string' ? input.priority : 'medium'}, ${assigneeId}, ${actorId}, NULL, ${isWorkRole(input.role) ? input.role : null})`
+    await insertTaskDraft(tx, {
+      id,
+      projectId: project.id,
+      storyId: story.id,
+      title: String(input.title).trim(),
+      description: typeof input.description === 'string' ? input.description.trim() : '',
+      priority: typeof input.priority === 'string' ? input.priority : 'medium',
+      assigneeId,
+      createdBy: actorId,
+      role: isWorkRole(input.role) ? input.role : null,
+    })
     await event(tx, workspaceId, actorId, 'task', id, 'draft_created', via?.apiKeyId)
   })
   return { id, storyId: story.id, title: input.title, assigneeId }
@@ -288,7 +365,14 @@ export async function updatePlanningTaskDraft(db: SQL, workspaceId: string, task
   if (input.priority !== undefined && !['low', 'medium', 'high', 'urgent'].includes(String(input.priority))) throw new AppError('PLANNING_INPUT_INVALID')
   if (typeof input.assigneeId === 'string' && !(await ensureAssigneeInWorkspace(db, workspaceId, input.assigneeId))) throw new AppError('PLANNING_INPUT_INVALID')
   return db.begin(async (tx) => {
-    const [task] = await tx`UPDATE tasks SET title = coalesce(${typeof input.title === 'string' ? input.title.trim() : null}, title), description = coalesce(${typeof input.description === 'string' ? input.description.trim() : null}, description), assignee_id = CASE WHEN ${input.assigneeId === undefined} THEN assignee_id ELSE ${typeof input.assigneeId === 'string' ? input.assigneeId : null} END, priority = coalesce(${typeof input.priority === 'string' ? input.priority : null}, priority), updated_at = now() WHERE id = ${taskId} AND published_at IS NULL AND story_id IN (SELECT id FROM planning_items WHERE workspace_id = ${workspaceId} AND kind = 'story' AND published_at IS NULL) RETURNING id, story_id AS "storyId", title, description, priority, assignee_id AS "assigneeId"`
+    const task = await updateTaskDraftRow(tx, {
+      workspaceId,
+      taskId,
+      title: typeof input.title === 'string' ? input.title.trim() : null,
+      description: typeof input.description === 'string' ? input.description.trim() : null,
+      assigneeId: input.assigneeId === undefined ? undefined : typeof input.assigneeId === 'string' ? input.assigneeId : null,
+      priority: typeof input.priority === 'string' ? input.priority : null,
+    })
     if (!task) throw new AppError('PLANNING_NOT_FOUND')
     await event(tx, workspaceId, actorId, 'task', taskId, 'draft_updated')
     return task
@@ -296,8 +380,7 @@ export async function updatePlanningTaskDraft(db: SQL, workspaceId: string, task
 }
 
 export async function listPlanningTasks(db: SQL, workspaceId: string, userId: string, via?: PlanningVia) {
-  const pm = await readsAsPm(db, workspaceId, userId, via)
-  return db`SELECT t.id, t.story_id AS "storyId", t.title, t.description, t.status, t.priority, t.assignee_id AS "assigneeId", t.published_at AS "publishedAt" FROM tasks t JOIN projects p ON p.id = t.project_id WHERE p.workspace_id = ${workspaceId} AND t.story_id IS NOT NULL AND (${pm} OR t.published_at IS NOT NULL) ORDER BY t.created_at LIMIT 500`
+  return listPlanningTaskRows(db, workspaceId, await readsAsPm(db, workspaceId, userId, via))
 }
 
 export async function publishPlanningEpic(db: SQL, workspaceId: string, epicId: string, actorId: string) {
@@ -307,14 +390,10 @@ export async function publishPlanningEpic(db: SQL, workspaceId: string, epicId: 
   if (!epic.sourceDocumentId) throw new AppError('PLANNING_CONFLICT')
   const source = await documentRow(db, workspaceId, epic.sourceDocumentId)
   if (source.status !== 'approved' || source.currentVersion !== epic.sourceVersion || source.sourceOutdated) throw new AppError('PLANNING_CONFLICT')
-  const [notReady] = await db`SELECT 1 FROM planning_items WHERE parent_id = ${epicId} AND status <> 'ready' LIMIT 1`
-  if (notReady) throw new AppError('PLANNING_CONFLICT')
-  const [stories] = await db`SELECT count(*)::int AS count FROM planning_items WHERE parent_id = ${epicId} AND kind = 'story'`
-  const [emptyStory] = await db`SELECT 1 FROM planning_items s WHERE s.parent_id = ${epicId} AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.story_id = s.id) LIMIT 1`
-  if (!stories?.count || emptyStory) throw new AppError('PLANNING_CONFLICT')
+  const blockers = await findEpicPublishBlockers(db, epicId)
+  if (blockers.notReady || blockers.storyCount === 0 || blockers.storyWithoutTask) throw new AppError('PLANNING_CONFLICT')
   await db.begin(async (tx) => {
-    await tx`UPDATE planning_items SET published_at = now(), updated_at = now() WHERE id = ${epicId} OR parent_id = ${epicId}`
-    await tx`UPDATE tasks SET published_at = now(), updated_at = now() WHERE story_id IN (SELECT id FROM planning_items WHERE parent_id = ${epicId}) AND published_at IS NULL`
+    await publishEpicRows(tx, epicId)
     await event(tx, workspaceId, actorId, 'epic', epicId, 'published')
   })
   return itemRow(db, workspaceId, epicId)
@@ -327,7 +406,7 @@ export async function rebasePlanningEpic(db: SQL, workspaceId: string, epicId: s
   const source = await documentRow(db, workspaceId, epic.sourceDocumentId)
   if (source.status !== 'approved' || source.sourceOutdated) throw new AppError('PLANNING_CONFLICT')
   await db.begin(async (tx) => {
-    await tx`UPDATE planning_items SET source_version = ${source.currentVersion}, updated_at = now() WHERE workspace_id = ${workspaceId} AND (id = ${epicId} OR parent_id = ${epicId}) AND published_at IS NULL`
+    await rebaseEpicSource(tx, workspaceId, epicId, source.currentVersion)
     await event(tx, workspaceId, actorId, 'epic', epicId, 'source_reviewed', undefined, { fromVersion: epic.sourceVersion, toVersion: source.currentVersion })
   })
   return itemRow(db, workspaceId, epicId)
@@ -355,9 +434,9 @@ async function requireCommentWriter(db: SQL, workspaceId: string, targetKind: Ta
   throw new AppError('ROLE_NOT_ALLOWED')
 }
 
-export async function listPlanningComments(db: SQL, workspaceId: string, actorId: string, targetKind: TargetKind, targetId: string) {
-  await canReadTarget(db, workspaceId, targetKind, targetId, actorId)
-  return db`SELECT c.id, c.target_kind AS "targetKind", c.target_id AS "targetId", c.parent_id AS "parentId", c.body, c.is_decision AS "isDecision", c.resolved_at AS "resolvedAt", c.created_by AS "createdBy", u.email AS "authorEmail", c.created_at AS "createdAt" FROM planning_comments c JOIN users u ON u.id = c.created_by WHERE c.workspace_id = ${workspaceId} AND c.target_kind = ${targetKind} AND c.target_id = ${targetId} ORDER BY c.created_at LIMIT 500`
+export async function listPlanningComments(db: SQL, workspaceId: string, actorId: string, targetKind: TargetKind, targetId: string, via?: PlanningVia) {
+  await canReadTarget(db, workspaceId, targetKind, targetId, actorId, via)
+  return listPlanningCommentRows(db, workspaceId, targetKind, targetId)
 }
 
 export async function addPlanningComment(db: SQL, workspaceId: string, actorId: string, targetKind: TargetKind, targetId: string, input: { body?: unknown; parentId?: unknown; isDecision?: unknown; mentionIds?: unknown }, via?: PlanningVia) {
@@ -366,16 +445,14 @@ export async function addPlanningComment(db: SQL, workspaceId: string, actorId: 
   if (input.mentionIds !== undefined && (!Array.isArray(input.mentionIds) || input.mentionIds.length > 20 || input.mentionIds.some((id) => typeof id !== 'string'))) throw new AppError('PLANNING_INPUT_INVALID')
   if (!validText(input.body, 8000) || (input.parentId !== undefined && typeof input.parentId !== 'string') || (input.isDecision !== undefined && typeof input.isDecision !== 'boolean')) throw new AppError('PLANNING_INPUT_INVALID')
   if (input.isDecision && !(await isPm(db, workspaceId, actorId, via))) throw new AppError('ROLE_NOT_ALLOWED')
-  if (input.parentId) {
-    const [parent] = await db`SELECT 1 FROM planning_comments WHERE id = ${input.parentId} AND workspace_id = ${workspaceId} AND target_kind = ${targetKind} AND target_id = ${targetId}`
-    if (!parent) throw new AppError('PLANNING_INPUT_INVALID')
-  }
+  if (typeof input.parentId === 'string' && !(await commentExistsOnTarget(db, workspaceId, input.parentId, targetKind, targetId))) throw new AppError('PLANNING_INPUT_INVALID')
   const id = randomUUID()
+  const parentId = typeof input.parentId === 'string' ? input.parentId : null
   await db.begin(async (tx) => {
-    await tx`INSERT INTO planning_comments (id, workspace_id, target_kind, target_id, parent_id, body, is_decision, created_by) VALUES (${id}, ${workspaceId}, ${targetKind}, ${targetId}, ${typeof input.parentId === 'string' ? input.parentId : null}, ${String(input.body).trim()}, ${input.isDecision === true}, ${actorId})`
+    await insertPlanningComment(tx, { id, workspaceId, targetKind, targetId, parentId, body: String(input.body).trim(), isDecision: input.isDecision === true, createdBy: actorId })
     await event(tx, workspaceId, actorId, targetKind, targetId, 'commented', via?.apiKeyId)
   })
-  await notifyCommentAudience(db, workspaceId, actorId, { targetKind, targetId, parentId: typeof input.parentId === 'string' ? input.parentId : null, body: String(input.body).trim(), mentionIds: (input.mentionIds as string[] | undefined) ?? [] })
+  await notifyCommentAudience(db, workspaceId, actorId, { targetKind, targetId, parentId, body: String(input.body).trim(), mentionIds: (input.mentionIds as string[] | undefined) ?? [] })
   return { id }
 }
 
@@ -385,12 +462,12 @@ async function notifyCommentAudience(db: SQL, workspaceId: string, actorId: stri
   const audience = new Map<string, 'comment_mention' | 'comment_reply' | 'task_comment'>()
   for (const id of comment.mentionIds) audience.set(id, 'comment_mention')
   if (comment.parentId) {
-    const [parent] = await db`SELECT created_by AS "createdBy" FROM planning_comments WHERE id = ${comment.parentId}`
-    if (parent && !audience.has(parent.createdBy)) audience.set(parent.createdBy, 'comment_reply')
+    const author = await findCommentAuthor(db, comment.parentId)
+    if (author && !audience.has(author)) audience.set(author, 'comment_reply')
   }
   if (comment.targetKind === 'task') {
-    const [task] = await db`SELECT assignee_id AS "assigneeId" FROM tasks WHERE id = ${comment.targetId}`
-    if (task?.assigneeId && !audience.has(task.assigneeId)) audience.set(task.assigneeId, 'task_comment')
+    const assigneeId = await findTaskAssignee(db, comment.targetId)
+    if (assigneeId && !audience.has(assigneeId)) audience.set(assigneeId, 'task_comment')
   }
   audience.delete(actorId)
   if (audience.size === 0) return
@@ -402,12 +479,12 @@ async function notifyCommentAudience(db: SQL, workspaceId: string, actorId: stri
 }
 
 export async function resolvePlanningComment(db: SQL, workspaceId: string, actorId: string, commentId: string) {
-  const [comment] = await db`SELECT target_kind AS "targetKind", target_id AS "targetId", created_by AS "createdBy" FROM planning_comments WHERE id = ${commentId} AND workspace_id = ${workspaceId}`
+  const comment = await findPlanningComment(db, workspaceId, commentId)
   if (!comment) throw new AppError('PLANNING_NOT_FOUND')
-  await canReadTarget(db, workspaceId, comment.targetKind, comment.targetId, actorId)
+  await canReadTarget(db, workspaceId, comment.targetKind as TargetKind, comment.targetId, actorId)
   if (comment.createdBy !== actorId && !(await isPm(db, workspaceId, actorId))) throw new AppError('ROLE_NOT_ALLOWED')
   await db.begin(async (tx) => {
-    await tx`UPDATE planning_comments SET resolved_at = now(), resolved_by = ${actorId} WHERE id = ${commentId} AND workspace_id = ${workspaceId}`
+    await resolvePlanningCommentRow(tx, workspaceId, commentId, actorId)
     await event(tx, workspaceId, actorId, comment.targetKind, comment.targetId, 'comment_resolved')
   })
 }

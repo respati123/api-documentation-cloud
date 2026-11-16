@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { defaultToolsFor, MCP_KEY_ROLES, MCP_TOOLS, type McpTool, PLANNING_TOOLS, toolsForRoles } from '@/models/mcp'
+import { defaultToolsFor, HIDDEN_TOOLS, listedTools, MCP_KEY_ROLES, MCP_TOOLS, type McpTool, PLANNING_TOOLS, toolsForRoles } from '@/models/mcp'
 
-const memberTools: McpTool[] = ['workspaces_list', 'projects_list', 'tasks_list_assigned', 'tasks_get_assigned', 'tasks_update_assigned_status', 'tasks_comment_assigned', 'stories_list_participating', 'stories_read_participating', 'stories_comment_participating', 'story_read', 'tasks_list_ready', 'subtasks_list', 'subtask_add', 'subtask_set_done', 'planning_guide', 'project_items_list', 'project_tasks_list']
+const memberTools: McpTool[] = ['workspaces_list', 'projects_list', 'tasks_list_assigned', 'tasks_get_assigned', 'tasks_update_assigned_status', 'tasks_comment_assigned', 'stories_list_participating', 'stories_read_participating', 'stories_comment_participating', 'story_read', 'tasks_list_ready', 'subtasks_list', 'subtask_add', 'subtask_set_done', 'planning_guide', 'project_items_list', 'project_tasks_list', 'api_requests_search', 'notifications_list', 'notifications_mark_read', 'team_members_list', 'discussion_read']
 
 describe('default MCP tools per key role', () => {
   test('pm gets every tool', () => {
@@ -10,7 +10,7 @@ describe('default MCP tools per key role', () => {
 
   test('tech_lead reads planning and drafts tasks, but does not draft a PRD or an epic', () => {
     const tools = defaultToolsFor('tech_lead')
-    expect(tools).toEqual(expect.arrayContaining([...memberTools, 'planning_list', 'planning_read_document', 'planning_draft_task', 'planning_comment', 'story_attach_design']))
+    expect(tools).toEqual(expect.arrayContaining([...memberTools, 'planning_list', 'documents_read', 'planning_draft_task', 'planning_comment', 'story_attach_design']))
     expect(tools).not.toContain('planning_draft_prd')
     expect(tools).not.toContain('planning_draft_item')
   })
@@ -29,8 +29,8 @@ describe('default MCP tools per key role', () => {
     expect(defaultToolsFor(role).sort()).toEqual([...memberTools].sort())
   })
 
-  test('only backend and the PM read documents through the document tools', () => {
-    for (const role of MCP_KEY_ROLES) expect(defaultToolsFor(role).includes('documents_read')).toBe(role === 'backend' || role === 'pm')
+  test('only backend, the tech lead, and the PM read documents through the document tools', () => {
+    for (const role of MCP_KEY_ROLES) expect(defaultToolsFor(role).includes('documents_read')).toBe(['backend', 'tech_lead', 'pm'].includes(role))
   })
 
   test('every role can list its workspaces', () => {
@@ -62,5 +62,12 @@ describe('tools from workspace roles', () => {
   test('no tool is listed twice', () => {
     const tools = toolsForRoles(['pm', 'tech_lead', 'backend'])
     expect(new Set(tools).size).toBe(tools.length)
+  })
+})
+
+describe('listed tools', () => {
+  test('the duplicate older names are hidden from lists but stay in the role matrix', () => {
+    expect(listedTools(defaultToolsFor('pm')).some((tool) => HIDDEN_TOOLS.includes(tool))).toBe(false)
+    for (const tool of HIDDEN_TOOLS) expect(defaultToolsFor('pm')).toContain(tool)
   })
 })

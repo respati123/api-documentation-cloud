@@ -64,7 +64,7 @@ export function collectionRequests(snapshot: unknown): Map<string, CollectionReq
   return found
 }
 
-function contractPath(url: string): string {
+export function contractPath(url: string): string {
   return url.replace(/^\{\{[^}]+\}\}/, '').replace(/^https?:\/\/[^/]+/, '') || url
 }
 

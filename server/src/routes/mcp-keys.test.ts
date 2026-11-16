@@ -170,6 +170,23 @@ describe.skipIf(!databaseEnabled)('member MCP keys', () => {
     expect(toolResult(await draft(PRD_CONTENT)).isError).toBe(false)
   })
 
+  test('a viewer stays read-only through MCP, even with the PM role', async () => {
+    const owner = await http.signUp('viewer-owner')
+    const workspaceId = await http.createWorkspace(owner, 'viewer space')
+    const viewer = await http.signUp('viewer-pm')
+    await http.inviteAndAccept(owner, workspaceId, viewer, 'viewer')
+    await setRoles(owner, workspaceId, viewer, ['pm'])
+    const brd = await http.call('POST', `/api/workspaces/${workspaceId}/planning/documents`, { token: owner.token, body: { kind: 'brd', title: 'BRD', content: 'Needs' } })
+    const brdId = (brd.json.data as { document: { id: string } }).document.id
+    const secret = await secretFor(viewer)
+    await http.mcp(secret, 'tools/call', { name: 'planning_guide', arguments: {} })
+    const call = (name: string, args: Record<string, unknown>) => http.mcp(secret, 'tools/call', { name, arguments: { workspaceId, ...args } })
+
+    expect(toolResult(await call('planning_draft_prd', { title: 'PRD', content: PRD_CONTENT, sourceDocumentId: brdId }))).toMatchObject({ isError: true, value: { code: 'MCP_PERMISSION_DENIED' } })
+    expect(toolResult(await call('planning_upload_brd', { title: 'BRD 2', content: 'Text' }))).toMatchObject({ isError: true, value: { code: 'MCP_PERMISSION_DENIED' } })
+    expect(toolResult(await call('project_items_list', {})).isError).toBe(false)
+  })
+
   test('a PM uploads a BRD from markdown text after reading the guide', async () => {
     const { member: pm, workspaceId } = await team('brd', ['pm'])
     const secret = await secretFor(pm)
@@ -179,7 +196,7 @@ describe.skipIf(!databaseEnabled)('member MCP keys', () => {
     expect(toolResult(await upload({}))).toMatchObject({ isError: true, value: { code: 'MCP_GUIDE_REQUIRED' } })
     await http.mcp(secret, 'tools/call', { name: 'planning_guide', arguments: {} })
     expect(toolResult(await upload({ fileName: 'brd.pdf' }))).toMatchObject({ isError: true, value: { code: 'PLANNING_INPUT_INVALID' } })
-    expect(toolResult(await upload({ fileName: 'brd-klinik.md' })).value).toMatchObject({ kind: 'brd', status: 'approved', fileName: 'brd-klinik.md' })
+    expect(toolResult(await upload({ fileName: 'brd-klinik.md' })).value).toMatchObject({ kind: 'brd', status: 'draft', fileName: 'brd-klinik.md' })
   })
 
   test('the server hands the agent its playbook for every role it holds, with PM prompts for a PM', async () => {

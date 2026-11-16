@@ -39,6 +39,7 @@ export const en = {
   PLANNING_INPUT_INVALID: 'Planning details are invalid.',
   PLANNING_NOT_FOUND: 'Planning item not found.',
   PLANNING_CONFLICT: 'This planning item has changed or is not ready for that action.',
+  PLANNING_DOCUMENT_IN_USE: 'Another PRD or epic is based on this document, so it cannot be deleted. Discard the draft instead.',
   MCP_KEY_INPUT_INVALID: 'API key settings are invalid.',
   MCP_KEY_INVALID: 'The MCP API key is invalid or expired.',
   MCP_PERMISSION_DENIED: 'Your project roles in this workspace do not allow that action. Ask the workspace owner for the role.',
@@ -70,7 +71,9 @@ export const en = {
   TASK_LOCKED: 'This task stays locked until the story design is approved.',
   SUBTASK_NOT_FOUND: 'Sub-task not found.',
   CONTRACT_REQUEST_NOT_FOUND: 'That request is not in the workspace collection.',
-  MCP_GUIDE_REQUIRED: 'Read the planning guide first: call planning_guide, follow it, then try again.',
+  MCP_GUIDE_REQUIRED: 'Read the planning guide first. It is in the guide field of this response (or call planning_guide); follow it, then try again.',
   MCP_DRAFT_INCOMPLETE: 'This draft is missing fields the planning guide requires. Call planning_guide and fill them in.',
+  MCP_RATE_LIMITED: 'Too many MCP calls with this key. Wait a minute and try again.',
+  MCP_REQUEST_IN_PROGRESS: 'A request with this clientRequestId is still running. Wait a moment, then send it again with the same clientRequestId.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>

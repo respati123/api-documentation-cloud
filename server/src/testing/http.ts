@@ -70,5 +70,19 @@ export function createTestHttp(db: SQL, databaseUrl: string) {
     return { status: response.status, json: (await response.json().catch(() => ({}))) as Record<string, unknown> }
   }
 
-  return { call, signUp, createWorkspace, inviteAndAccept, signInAdmin, mcp }
+  // A raw MCP post: any body (a notification has no id), any extra headers, and no key when secret is undefined.
+  async function mcpRaw(secret: string | undefined, body: unknown, headers: Record<string, string> = {}) {
+    const response = await app.fetch(
+      new Request('http://api.test/api/mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(secret ? { Authorization: `Bearer ${secret}` } : {}), 'CF-Connecting-IP': `test-${randomUUID()}`, ...headers },
+        body: JSON.stringify(body),
+      }),
+    )
+    if (!response) throw new Error('The route did not answer.')
+    const text = await response.text()
+    return { status: response.status, text, json: (text ? JSON.parse(text) : {}) as Record<string, unknown>, headers: response.headers }
+  }
+
+  return { call, signUp, createWorkspace, inviteAndAccept, signInAdmin, mcp, mcpRaw }
 }

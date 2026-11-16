@@ -287,7 +287,8 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     const brdId = ((await call('POST', '/documents', { kind: 'brd', title: 'BRD', content: 'x' })).json.data as { document: { id: string } }).document.id
     const prdId = ((await call('POST', '/documents', { kind: 'prd', title: 'PRD', content: 'y', sourceDocumentId: brdId })).json.data as { document: { id: string } }).document.id
 
-    expect((await planningAudience(db, workspaceId, { kind: 'document', id: prdId })).sort()).toEqual([owner.user.id].sort())
+    // A draft PRD reaches the PM and the tech lead only.
+    expect((await planningAudience(db, workspaceId, { kind: 'document', id: prdId })).sort()).toEqual([owner.user.id, lead.user.id].sort())
     for (const status of ['review_pm', 'review_team', 'approved']) await call('POST', `/documents/${prdId}/status`, { status })
     // An approved PRD reaches the PM, the tech lead, and backend. Frontend does not read documents.
     expect((await planningAudience(db, workspaceId, { kind: 'document', id: prdId })).sort()).toEqual([owner.user.id, participant.user.id, lead.user.id].sort())
@@ -295,7 +296,7 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     const epicId = ((await call('POST', '/items', { kind: 'epic', title: 'E', sourceDocumentId: prdId })).json.data as { item: { id: string } }).item.id
     const storyId = ((await call('POST', '/items', { kind: 'story', parentId: epicId, title: 'S', acceptanceCriteria: 'ok', sourceDocumentId: prdId, participantIds: [participant.user.id] })).json.data as { item: { id: string } }).item.id
     const draftAudience = await planningAudience(db, workspaceId, { kind: 'item', id: storyId })
-    expect(draftAudience).toEqual([owner.user.id])
+    expect(draftAudience.sort()).toEqual([owner.user.id, lead.user.id].sort())
 
     await call('POST', '/task-drafts', { storyId, title: 'T', role: 'backend', assigneeId: participant.user.id })
     for (const status of ['refinement', 'ready']) {

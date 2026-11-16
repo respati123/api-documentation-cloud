@@ -32,11 +32,53 @@ export const MCP_TOOLS = [
   'project_tasks_list',
   'documents_list',
   'documents_read',
+  'api_requests_search',
+  'notifications_list',
+  'notifications_mark_read',
+  'team_members_list',
+  'discussion_read',
 ] as const
 export type McpTool = (typeof MCP_TOOLS)[number]
 
+// Tools that only read. A viewer of a workspace may call these there and nothing else.
+export const MCP_READ_TOOLS: readonly McpTool[] = [
+  'workspaces_list',
+  'projects_list',
+  'tasks_list_assigned',
+  'tasks_get_assigned',
+  'stories_list_participating',
+  'stories_read_participating',
+  'planning_list',
+  'planning_read_document',
+  'story_read',
+  'tasks_list_ready',
+  'subtasks_list',
+  'planning_guide',
+  'project_items_list',
+  'project_tasks_list',
+  'documents_list',
+  'documents_read',
+  'api_requests_search',
+  'notifications_list',
+  'team_members_list',
+  'discussion_read',
+]
+
+export function isReadTool(tool: McpTool): boolean {
+  return MCP_READ_TOOLS.includes(tool)
+}
+
+// Older names that duplicate another tool. They still answer, so a running agent does not break, but tools/list and
+// the portal no longer show them: projects_list (one project per workspace), stories_read_participating (story_read),
+// and planning_read_document (documents_read).
+export const HIDDEN_TOOLS: readonly McpTool[] = ['projects_list', 'stories_read_participating', 'planning_read_document']
+
+export function listedTools(tools: readonly McpTool[]): McpTool[] {
+  return tools.filter((tool) => !HIDDEN_TOOLS.includes(tool))
+}
+
 // Tools that act on planning drafts. A key holding any of them works on planning as a PM would.
-export const PLANNING_TOOLS: readonly McpTool[] = ['planning_list', 'planning_read_document', 'planning_draft_prd', 'planning_draft_item', 'planning_draft_task', 'planning_comment']
+export const PLANNING_TOOLS: readonly McpTool[] = ['planning_list', 'planning_draft_prd', 'planning_draft_item', 'planning_draft_task', 'planning_comment']
 
 const memberTools: McpTool[] = [
   'workspaces_list',
@@ -56,17 +98,22 @@ const memberTools: McpTool[] = [
   'planning_guide',
   'project_items_list',
   'project_tasks_list',
+  'api_requests_search',
+  'notifications_list',
+  'notifications_mark_read',
+  'team_members_list',
+  'discussion_read',
 ]
 
-// Backend reads the BRD and approved PRDs it builds the API from.
+// Documents the role may read: the PM and tech lead read all of them, backend the BRD and approved PRDs.
 const documentTools: McpTool[] = ['documents_list', 'documents_read']
 
 const artifactTools: McpTool[] = ['story_attach_design', 'story_link_api_contract', 'story_write_test_case']
 const storyDetailTools: McpTool[] = ['story_write_details']
 
 const roleTools: Record<McpKeyRole, McpTool[]> = {
-  pm: [...memberTools, ...PLANNING_TOOLS, 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools],
-  tech_lead: [...memberTools, 'planning_list', 'planning_read_document', 'planning_draft_task', 'planning_comment', ...artifactTools, ...storyDetailTools],
+  pm: [...memberTools, ...PLANNING_TOOLS, 'planning_read_document', 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools],
+  tech_lead: [...memberTools, 'planning_list', 'planning_read_document', 'planning_draft_task', 'planning_comment', ...documentTools, ...artifactTools, ...storyDetailTools],
   ui_ux: [...memberTools, 'story_attach_design'],
   backend: [...memberTools, ...documentTools, 'story_link_api_contract'],
   frontend: memberTools,

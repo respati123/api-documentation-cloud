@@ -35,3 +35,7 @@ export async function markNotificationRead(db: SQL, userId: string, notification
 export async function markAllNotificationsRead(db: SQL, userId: string): Promise<void> {
   await db`UPDATE notifications SET read_at = now() WHERE user_id = ${userId} AND read_at IS NULL`
 }
+
+export async function listUnreadNotifications(db: SQL, userId: string, limit: number): Promise<NotificationRow[]> {
+  return db`SELECT ${db.unsafe(columns)} FROM notifications WHERE user_id = ${userId} AND read_at IS NULL ORDER BY created_at DESC, id DESC LIMIT ${limit}`
+}

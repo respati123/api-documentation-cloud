@@ -146,3 +146,8 @@ export async function ensureAssigneeInProject(db: SQL, workspaceId: string, proj
   if (!(await isProjectInWorkspace(db, projectId, workspaceId))) return false
   return isWorkspaceMember(db, workspaceId, assigneeId)
 }
+
+export async function hasProjectDiscipline(db: SQL, projectId: string, userId: string, discipline: string): Promise<boolean> {
+  const [row] = await db`SELECT 1 FROM project_members WHERE project_id = ${projectId} AND user_id = ${userId} AND discipline = ${discipline}`
+  return row !== undefined
+}

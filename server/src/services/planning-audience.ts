@@ -40,8 +40,9 @@ export function commentTarget(targetKind: string, targetId: string): AudienceTar
   return { kind: 'item', id: targetId }
 }
 
-const managers = (db: SQL, workspaceId: string) => listMembersWithDiscipline(db, workspaceId, ['pm'])
-// Besides the PM, the tech lead reads the BRD and PRDs from team review on, and backend reads the BRD and approved PRDs.
+// The PM and the tech lead read drafts. Besides them, a viewer holding the tech lead role reads the BRD and PRDs from
+// team review on, and backend reads the BRD and approved PRDs.
+const managers = (db: SQL, workspaceId: string) => listMembersWithDiscipline(db, workspaceId, ['pm', 'tech_lead'])
 async function documentReaders(db: SQL, workspaceId: string, disciplines: string[]): Promise<string[]> {
   return unique([...(await managers(db, workspaceId)), ...(await listMembersWithAnyDiscipline(db, workspaceId, disciplines))])
 }
@@ -56,11 +57,11 @@ export async function planningAudience(db: SQL, workspaceId: string, target: Aud
   }
   if (target.kind === 'document') {
     const document = await findDocumentVisibility(db, workspaceId, target.id)
-    if (document?.kind === 'brd' || document?.status === 'approved') return documentReaders(db, workspaceId, ['tech_lead', 'backend'])
+    if (document?.status === 'approved') return documentReaders(db, workspaceId, ['tech_lead', 'backend'])
     if (document?.kind === 'prd' && document.status === 'review_team') return documentReaders(db, workspaceId, ['tech_lead'])
     return managers(db, workspaceId)
   }
-  // Published epics, stories, and tasks, with their discussions, are open to every member. Drafts stay with the PM.
+  // Published epics, stories, and tasks, with their discussions, are open to every member. Drafts stay with the managers.
   if (target.kind === 'task-thread') {
     const task = await findTaskVisibility(db, workspaceId, target.id)
     return task?.published ? listMemberIds(db, workspaceId) : managers(db, workspaceId)

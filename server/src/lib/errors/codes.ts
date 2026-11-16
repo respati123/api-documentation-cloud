@@ -36,6 +36,7 @@ export const errorDefinitions = {
   PLANNING_INPUT_INVALID: { status: 400 },
   PLANNING_NOT_FOUND: { status: 404 },
   PLANNING_CONFLICT: { status: 409 },
+  PLANNING_DOCUMENT_IN_USE: { status: 409 },
   MCP_KEY_INPUT_INVALID: { status: 400 },
   MCP_KEY_INVALID: { status: 401 },
   MCP_PERMISSION_DENIED: { status: 403 },
@@ -69,6 +70,8 @@ export const errorDefinitions = {
   CONTRACT_REQUEST_NOT_FOUND: { status: 404 },
   MCP_GUIDE_REQUIRED: { status: 409 },
   MCP_DRAFT_INCOMPLETE: { status: 400 },
+  MCP_RATE_LIMITED: { status: 429 },
+  MCP_REQUEST_IN_PROGRESS: { status: 409 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

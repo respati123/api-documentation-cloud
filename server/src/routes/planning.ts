@@ -4,7 +4,7 @@ import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
 import { created, noContent, ok } from '@/lib/http'
 import { addStoryTestCase, approveStoryDesign, attachStoryDesign, getStoryDetails, linkStoryContract, setStoryDodItem, updateStoryDetails } from '@/services/stories'
-import { addPlanningComment, canApprovePlanning, canManagePlanning, canReadPlanningDocuments, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, getPlanningDocument, getPlanningDocumentFile, getPlanningDocumentVersion, listPlanningComments, listPlanningDocuments, listPlanningEvents, listPlanningItems, listPlanningTasks, publishPlanningEpic, rebasePlanningEpic, requirePlanningPm, resolvePlanningComment, revisePlanningDocument, setPlanningDocumentStatus, updatePlanningItem, updatePlanningTaskDraft, type TargetKind } from '@/services/planning'
+import { addPlanningComment, canApprovePlanning, canManagePlanning, canReadPlanningDocuments, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, deletePlanningDocument, getPlanningDocument, getPlanningDocumentFile, getPlanningDocumentVersion, listPlanningComments, listPlanningDocuments, listPlanningEvents, listPlanningItems, listPlanningTasks, publishPlanningEpic, rebasePlanningEpic, requirePlanningPm, resolvePlanningComment, revisePlanningDocument, setPlanningDocumentStatus, updatePlanningItem, updatePlanningTaskDraft, type TargetKind } from '@/services/planning'
 import { extractDocumentFile } from '@/services/document-upload'
 
 const targetKinds: TargetKind[] = ['document', 'epic', 'story', 'task']
@@ -39,6 +39,10 @@ export async function handlePlanningRoutes(ctx: AppContext, request: Request, me
   if (documentMatch) {
     if (method === 'GET') return ok({ document: await getPlanningDocument(db, workspaceId, documentMatch[1], actorId) })
     if (method === 'PATCH') return ok({ document: await revisePlanningDocument(db, workspaceId, documentMatch[1], actorId, await bodyOf(request)) })
+    if (method === 'DELETE') {
+      await deletePlanningDocument(db, workspaceId, documentMatch[1], actorId)
+      return noContent()
+    }
   }
   const documentStatusMatch = action.match(/^planning\/documents\/([\w-]+)\/status$/)
   if (documentStatusMatch && method === 'POST') {

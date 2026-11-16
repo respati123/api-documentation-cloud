@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
 import { PROJECT_DISCIPLINES, type ProjectDiscipline, type TaskPriority, type TaskStatus } from '@/models/project'
-import { ensureAssigneeInProject, ensureAssigneeInWorkspace, ensureWorkspaceProject, findTaskInWorkspace, insertSubtask, insertTask, isProjectInWorkspace, isTaskAssigneeInProject, listProjectMembers, listSubtasks, listTasks, listWorkspaceMembers, replaceTaskDependencies, setProjectMemberDisciplines, setSubtaskDone, updateTaskInWorkspace } from '@/repositories/projects.repository'
+import { ensureAssigneeInProject, ensureAssigneeInWorkspace, ensureWorkspaceProject, findTaskInWorkspace, hasProjectDiscipline, insertSubtask, insertTask, isProjectInWorkspace, isTaskAssigneeInProject, listProjectMembers, listSubtasks, listTasks, listWorkspaceMembers, replaceTaskDependencies, setProjectMemberDisciplines, setSubtaskDone, updateTaskInWorkspace } from '@/repositories/projects.repository'
 import { isWorkRole } from '@/models/story'
 import { insertPlanningEvent } from '@/repositories/planning-events.repository'
 import { findUserById } from '@/repositories/users.repository'
@@ -115,10 +115,7 @@ export async function assignProjectMember(db: SQL, workspaceId: string, projectI
   if (role === 'viewer') throw new AppError('ROLE_NOT_ALLOWED')
   const unique = [...new Set(roles)]
   if (unique.length > disciplines.length || unique.some((value) => !disciplines.includes(value)) || !(await isProjectInWorkspace(db, projectId, workspaceId)) || !(await ensureAssigneeInWorkspace(db, workspaceId, userId))) throw new AppError('PROJECT_INPUT_INVALID')
-  if (role !== 'owner') {
-    const [pm] = await db`SELECT 1 FROM project_members WHERE project_id = ${projectId} AND user_id = ${actorId} AND discipline = 'pm'`
-    if (!pm) throw new AppError('ROLE_NOT_ALLOWED')
-  }
+  if (role !== 'owner' && !(await hasProjectDiscipline(db, projectId, actorId, 'pm'))) throw new AppError('ROLE_NOT_ALLOWED')
   await setProjectMemberDisciplines(db, projectId, userId, unique)
   const member = (await listProjectMembers(db, projectId)).find((row) => row.id === userId)
   return member ?? { id: userId, email: '', discipline: null, disciplines: [] }

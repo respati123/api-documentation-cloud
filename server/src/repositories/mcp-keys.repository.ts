@@ -54,8 +54,9 @@ export async function markGuideRead(db: SQL, keyId: string, version: string): Pr
   await db`UPDATE mcp_keys SET guide_version = ${version}, guide_read_at = now() WHERE id = ${keyId}`
 }
 
+// At most one write a minute per key, since agents call in bursts.
 export async function touchMcpKey(db: SQL, keyId: string): Promise<void> {
-  await db`UPDATE mcp_keys SET last_used_at = now() WHERE id = ${keyId}`
+  await db`UPDATE mcp_keys SET last_used_at = now() WHERE id = ${keyId} AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute')`
 }
 
 // Every claimed key in the app with its owner's email, newest first. `limit` is one more than the page size.

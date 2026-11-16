@@ -8,8 +8,8 @@ type Doc = { id: string; kind: string }
 type Item = { id: string; kind: string }
 type Task = { id: string }
 
-// Who reads what: backend reads the BRD and approved PRDs, the tech lead also PRDs in team review,
-// and every member reads published epics, stories, and tasks. Drafts stay with the PM.
+// Who reads what: backend reads the BRD and approved PRDs, the tech lead reads everything the PM reads,
+// and every member reads published epics, stories, and tasks. Drafts stay with the PM and the tech lead.
 describe.skipIf(!databaseEnabled)('planning read access by work role', () => {
   let db: SQL
   let http: ReturnType<typeof createTestHttp>
@@ -99,11 +99,22 @@ describe.skipIf(!databaseEnabled)('planning read access by work role', () => {
     }
   })
 
-  test('the tech lead also reads PRDs in team review, which it approves', async () => {
+  test('the tech lead reads every document and every draft, like the PM, in the portal and through MCP', async () => {
     const w = await workspace('access-lead')
+    const draftPrdId = ((await http.call('POST', `/api/workspaces/${w.workspaceId}/planning/documents`, { token: w.owner.token, body: { kind: 'prd', title: 'PRD 3', content: 'Draft', sourceDocumentId: w.brdId } })).json.data as { document: Doc }).document.id
     const lead = await member(w.owner, w.workspaceId, 'docs-lead', 'tech_lead')
 
-    expect(await documentIds(lead, w.workspaceId)).toEqual([w.brdId, w.prdId, w.reviewPrdId].sort())
+    expect(await documentIds(lead, w.workspaceId)).toEqual([w.brdId, w.prdId, w.reviewPrdId, draftPrdId].sort())
+    expect((await read(lead, w.workspaceId, `/documents/${draftPrdId}`)).status).toBe(200)
+    const listed = (await read(lead, w.workspaceId, '/items')).json.data as { items: Item[]; tasks: Task[] }
+    expect(listed.items.map((item) => item.id)).toEqual(expect.arrayContaining([w.draftEpicId, w.draftStoryId]))
+    expect(listed.tasks).toHaveLength(3)
+    expect((await read(lead, w.workspaceId, `/stories/${w.draftStoryId}`)).status).toBe(200)
+
+    const key = await keyFor(lead, 'tech_lead')
+    const planning = toolResult(await http.mcp(key, 'tools/call', { name: 'planning_list', arguments: { workspaceId: w.workspaceId } })).value as { documents: Doc[]; items: Item[] }
+    expect(planning.documents.map((doc) => doc.id)).toContain(draftPrdId)
+    expect(planning.items.map((item) => item.id)).toContain(w.draftStoryId)
   })
 
   test('every member reads all published epics, stories, and tasks, but no drafts', async () => {
@@ -161,6 +172,7 @@ describe.skipIf(!databaseEnabled)('planning read access by work role', () => {
     expect(sorted(await planningAudience(db, w.workspaceId, { kind: 'document', id: w.prdId }))).toEqual(sorted([w.owner.user.id, backend.user.id, lead.user.id]))
     expect(sorted(await planningAudience(db, w.workspaceId, { kind: 'document', id: w.reviewPrdId }))).toEqual(sorted([w.owner.user.id, lead.user.id]))
     expect(await planningAudience(db, w.workspaceId, { kind: 'item', id: w.storyId })).toEqual(expect.arrayContaining([frontend.user.id, backend.user.id]))
-    expect(await planningAudience(db, w.workspaceId, { kind: 'item', id: w.draftStoryId })).toEqual([w.owner.user.id])
+    expect(sorted(await planningAudience(db, w.workspaceId, { kind: 'item', id: w.draftStoryId }))).toEqual(sorted([w.owner.user.id, lead.user.id]))
+    expect(sorted(await planningAudience(db, w.workspaceId, { kind: 'managers' }))).toEqual(sorted([w.owner.user.id, lead.user.id]))
   })
 })
