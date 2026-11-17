@@ -19,6 +19,7 @@ import { handleWorkspaceCollection } from '@/routes/workspace-collection'
 import { handleWorkspaceRecord } from '@/routes/workspace-record'
 import { handleProjectRoutes } from '@/routes/projects'
 import { handleMcpRequest } from '@/routes/mcp'
+import { handleOidcRoutes } from '@/routes/oidc'
 import { broadcastPlanningChange, planningScopeOf } from '@/services/events'
 import { audienceFromAction, planningAudience } from '@/services/planning-audience'
 import { handleAdminWorkspaceRoutes } from '@/routes/admin-workspaces'
@@ -49,6 +50,9 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   }
 
   if (path === '/api/mcp') return handleMcpRequest(ctx, request, method)
+
+  const oidcResponse = await handleOidcRoutes(ctx, request, method, path)
+  if (oidcResponse) return oidcResponse
 
   const publicResponse = await handlePublicRoutes(ctx, request, method, path)
   if (publicResponse) return publicResponse
