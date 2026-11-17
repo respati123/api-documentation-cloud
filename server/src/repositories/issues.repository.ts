@@ -1,8 +1,8 @@
 import type { SQL } from 'bun'
 import type { IssueRow, IssueType } from '@/models/issue'
 
-const columns = `i.id, i.project_id AS "projectId", i.number, p.key || '-' || i.number AS key, i.type, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.status, i.points, i.priority, i.rank::float8 AS rank, i.sprint_id AS "sprintId", i.role, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", i.source_reviewed_version AS "sourceReviewedVersion", i.design_approved_by AS "designApprovedBy", i.design_approved_at AS "designApprovedAt", i.test_case_id AS "testCaseId", i.published_at AS "publishedAt", i.created_by AS "createdBy", i.created_at AS "createdAt", i.updated_at AS "updatedAt"`
-const tables = 'FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN users u ON u.id = i.assignee_id'
+const columns = `i.id, i.project_id AS "projectId", i.number, p.key || '-' || i.number AS key, i.type, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.status, i.points, i.priority, i.rank::float8 AS rank, i.sprint_id AS "sprintId", i.role, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", i.source_reviewed_version AS "sourceReviewedVersion", (src.current_version > i.source_version AND coalesce(i.source_reviewed_version, i.source_version) < src.current_version) AS "sourceOutdated", i.design_approved_by AS "designApprovedBy", i.design_approved_at AS "designApprovedAt", i.test_case_id AS "testCaseId", i.published_at AS "publishedAt", i.created_by AS "createdBy", i.created_at AS "createdAt", i.updated_at AS "updatedAt"`
+const tables = 'FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN users u ON u.id = i.assignee_id LEFT JOIN planning_documents src ON src.id = i.source_document_id'
 
 export interface NewIssue {
   id: string
@@ -248,4 +248,13 @@ export async function listIssuesByNumber(
     AND (${query.sprintId === undefined}::boolean OR i.sprint_id IS NOT DISTINCT FROM ${query.sprintId ?? null})
     AND (${query.afterNumber}::int IS NULL OR i.number > ${query.afterNumber}::int)
     ORDER BY i.number LIMIT ${query.limit}`
+}
+
+// The epics and stories already made from a document, so a second run does not make them again.
+export async function listSourceEntries(db: SQL, projectId: string, documentId: string): Promise<Array<{ id: string; type: IssueType; title: string; sourceSection: string | null }>> {
+  return db`SELECT id, type, title, source_section AS "sourceSection" FROM issues WHERE project_id = ${projectId} AND source_document_id = ${documentId} AND type IN ('epic', 'story')`
+}
+
+export async function setSourceReviewed(db: SQL, projectId: string, id: string, version: number): Promise<void> {
+  await db`UPDATE issues SET source_reviewed_version = ${version}, updated_at = now() WHERE project_id = ${projectId} AND id = ${id}`
 }

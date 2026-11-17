@@ -186,6 +186,52 @@ describe.skipIf(!databaseEnabled)('issue, backlog, and sprint routes', () => {
     expect((projects.json.data as Body).projects[0]).toMatchObject({ key: newKey, mode: 'scrum', productGoal: 'Halve checkout time' })
   })
 
+  async function approvedPrd(content: string) {
+    const id = crypto.randomUUID()
+    await db`INSERT INTO planning_documents (id, workspace_id, kind, title, status, current_version, created_by) VALUES (${id}, ${workspaceId}, 'prd', 'Route PRD', 'approved', 1, ${owner.user.id})`
+    await db`INSERT INTO planning_document_versions (document_id, version, content, created_by) VALUES (${id}, 1, ${content}, ${owner.user.id})`
+    return id
+  }
+
+  test('the PM makes draft epics and stories from the headings of an approved PRD', async () => {
+    const doc = await approvedPrd('# PRD\n\n## Payment\nPay.\n\n### Pay by card\nCard.\n\n## Delivery\nShip.')
+    const response = await call('POST', `/documents/${doc}/draft-backlog`, pm)
+    expect(response.status).toBe(201)
+    const issues = data(response).issues as Body[]
+    expect(issues.map((issue) => [issue.type, issue.title])).toEqual([
+      ['epic', 'Payment'],
+      ['story', 'Pay by card'],
+      ['epic', 'Delivery'],
+    ])
+    expect(issues.every((issue) => issue.publishedAt === null && issue.sourceDocumentId === doc)).toBe(true)
+    const again = await call('POST', `/documents/${doc}/draft-backlog`, pm)
+    expect(again.status).toBe(200)
+    expect(data(again).issues).toEqual([])
+  })
+
+  test('a hand-made outline works, a bad one is refused, and only the PM may ask', async () => {
+    const doc = await approvedPrd('# PRD\n\n## Search\nFind things.')
+    expect((await call('POST', `/documents/${doc}/draft-backlog`, plain)).json.code).toBe('ROLE_NOT_ALLOWED')
+    expect((await call('POST', `/documents/${doc}/draft-backlog`, pm, { epics: [{ title: 'Find', color: 'red' }] })).json.code).toBe('ISSUE_INPUT_INVALID')
+    expect((await call('POST', `/documents/${doc}/draft-backlog`, pm, { epics: [{ title: 'Find', sourceSection: 'Not there' }] })).json.code).toBe('ISSUE_INPUT_INVALID')
+    const made = await call('POST', `/documents/${doc}/draft-backlog`, pm, { epics: [{ title: 'Find', sourceSection: 'Search', stories: [{ title: 'By name', points: 2 }] }] })
+    expect(made.status).toBe(201)
+    expect((data(made).issues as Body[]).map((issue) => issue.title)).toEqual(['Find', 'By name'])
+    expect((await call('POST', `/documents/${crypto.randomUUID()}/draft-backlog`, pm)).json.code).toBe('PLANNING_NOT_FOUND')
+  })
+
+  test('a new PRD version flags the issue until the PM marks it reviewed', async () => {
+    const doc = await approvedPrd('# PRD\n\n## Reports\nNumbers.')
+    const [epic] = data(await call('POST', `/documents/${doc}/draft-backlog`, pm)).issues as Body[]
+    await db`UPDATE planning_documents SET current_version = 2 WHERE id = ${doc}`
+    await db`INSERT INTO planning_document_versions (document_id, version, content, created_by) VALUES (${doc}, 2, 'changed', ${owner.user.id})`
+    expect(data(await call('GET', `/issues/${epic.id}`, pm)).issue.sourceOutdated).toBe(true)
+    expect((await call('POST', `/issues/${epic.id}/source-reviewed`, plain)).json.code).toBe('ISSUE_NOT_FOUND')
+    const reviewed = await call('POST', `/issues/${epic.id}/source-reviewed`, pm)
+    expect(reviewed.status).toBe(200)
+    expect(data(reviewed).issue).toMatchObject({ sourceOutdated: false, sourceReviewedVersion: 2 })
+  })
+
   test('a path that is not a route is not found', async () => {
     expect((await call('DELETE', '/issues', pm)).json.code).toBe('ROUTE_NOT_FOUND')
     expect((await call('GET', '/issues/x/rank', pm)).json.code).toBe('ROUTE_NOT_FOUND')

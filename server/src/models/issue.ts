@@ -96,6 +96,8 @@ export interface IssueRow {
   sourceVersion: number | null
   sourceSection: string | null
   sourceReviewedVersion: number | null
+  // True when a newer version of the source document exists that the PM has not reviewed. Null without a source.
+  sourceOutdated: boolean | null
   designApprovedBy: string | null
   designApprovedAt: Date | null
   testCaseId: string | null

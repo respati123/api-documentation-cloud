@@ -73,6 +73,8 @@ These routes sit under `/api/workspaces/:workspaceId/projects/:projectId`. Every
 | `PATCH /issues/:idOrKey` | by field, see the issue service | `200` `{ issue }` |
 | `POST /issues/:idOrKey/rank` | PM, tech lead | `200` `{ issue }`. Body `{ afterId?, beforeId? }` |
 | `POST /issues/:idOrKey/publish` | PM, tech lead | `200` `{ issue }` |
+| `POST /issues/:idOrKey/source-reviewed` | PM | `200` `{ issue }`. The issue stops being flagged until its PRD changes again |
+| `POST /documents/:documentId/draft-backlog` | PM | `201` `{ issues }` (`200` with an empty list when everything exists already). Draft epics and stories from an approved PRD, from its headings or from a body `{ epics }`. All or none |
 | `GET, POST /issues/:idOrKey/checklist` | read: member. Write: who works on the issue | `200` `{ items }`, `201` `{ item }` |
 | `PATCH, DELETE /issues/:idOrKey/checklist/:itemId` | who works on the issue | `200` `{ item }`, `204` |
 | `GET, POST /issues/:idOrKey/links` | read: member. Write: who works on the issue | `200` `{ links }`, `201` `{ links }` |

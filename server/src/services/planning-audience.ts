@@ -32,7 +32,7 @@ export function audienceFromAction(action: string): AudienceTarget | null {
   if (match) return { kind: 'item', id: match[1] }
   if (/^tasks\//.test(action) || /^projects\/[\w-]+\/(tasks|members)$/.test(action)) return { kind: 'everyone' }
   // Issues and sprints tell every member to reload. Each reader then asks the API, which hides what they may not see.
-  if (/^projects\/[\w-]+(\/(issues|sprints)(\/.*)?)?$/.test(action)) return { kind: 'everyone' }
+  if (/^projects\/[\w-]+(\/(issues|sprints)(\/.*)?|\/documents\/[\w-]+\/draft-backlog)?$/.test(action)) return { kind: 'everyone' }
   return null
 }
 

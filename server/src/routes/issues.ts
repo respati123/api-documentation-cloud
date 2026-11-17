@@ -9,6 +9,7 @@ import {
   checklistAddBody,
   checklistDoneBody,
   createIssueBody,
+  draftBacklogBody,
   issueListQuery,
   linkAddBody,
   rankBody,
@@ -25,6 +26,7 @@ import {
   removeLink,
   setChecklistItemDone,
 } from '@/services/issue-details'
+import { draftBacklogFromPrd, markSourceReviewed } from '@/services/issue-import'
 import { createIssue, getIssue, listIssuePage, updateIssue } from '@/services/issues'
 
 async function bodyAs<T extends z.ZodType>(request: Request, schema: T): Promise<z.output<T>> {
@@ -41,7 +43,16 @@ export async function handleIssueRoutes(
   action: string,
   user: AuthUser,
 ): Promise<Response | undefined> {
-  const route = action.match(/^projects\/([\w-]+)\/(backlog|issues(?:\/([\w-]+)(?:\/(rank|publish|checklist|links)(?:\/([\w-]+))?)?)?)$/)
+  const draft = action.match(/^projects\/([\w-]+)\/documents\/([\w-]+)\/draft-backlog$/)
+  if (draft) {
+    if (method !== 'POST') return undefined
+    // The outline is optional. Without one, the headings of the PRD give it.
+    const body = request.body === null ? {} : await bodyAs(request, draftBacklogBody)
+    const issues = await draftBacklogFromPrd(ctx.db, { workspaceId, projectId: draft[1] }, { userId: user.id }, draft[2], 'epics' in body && body.epics ? { epics: body.epics } : undefined)
+    return issues.length > 0 ? created({ issues }) : ok({ issues })
+  }
+
+  const route = action.match(/^projects\/([\w-]+)\/(backlog|issues(?:\/([\w-]+)(?:\/(rank|publish|source-reviewed|checklist|links)(?:\/([\w-]+))?)?)?)$/)
   if (!route) return undefined
   const { db } = ctx
   const scope = { workspaceId, projectId: route[1] }
@@ -72,6 +83,7 @@ export async function handleIssueRoutes(
 
   if (sub === 'rank' && method === 'POST') return ok({ issue: await rankIssue(db, scope, actor, ref, await bodyAs(request, rankBody)) })
   if (sub === 'publish' && method === 'POST') return ok({ issue: await publishIssue(db, scope, actor, ref) })
+  if (sub === 'source-reviewed' && method === 'POST') return ok({ issue: await markSourceReviewed(db, scope, actor, ref) })
 
   if (sub === 'checklist') {
     if (!subId && method === 'GET') return ok({ items: await listChecklist(db, scope, actor, ref) })

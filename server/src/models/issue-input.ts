@@ -65,3 +65,18 @@ export const issueListQuery = z.strictObject({
   sprint: id.optional(),
   epic: id.optional(),
 })
+
+const outlineStory = z.strictObject({
+  title: z.string().max(1000),
+  description: z.string().max(20_000).optional(),
+  acceptanceCriteria: z.string().max(20_000).optional(),
+  points: z.number().int().nullable().optional(),
+  sourceSection: z.string().max(300).nullable().optional(),
+})
+const outlineEpic = z.strictObject({
+  title: z.string().max(1000),
+  description: z.string().max(20_000).optional(),
+  sourceSection: z.string().max(300).nullable().optional(),
+  stories: z.array(outlineStory).max(200).optional(),
+})
+export const draftBacklogBody = z.strictObject({ epics: z.array(outlineEpic).max(50).optional() })

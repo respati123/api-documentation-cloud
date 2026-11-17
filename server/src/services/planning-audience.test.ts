@@ -23,6 +23,7 @@ describe('audienceFromAction', () => {
     ['projects/p-1/issues', { kind: 'everyone' }],
     ['projects/p-1/issues/PARI-3/publish', { kind: 'everyone' }],
     ['projects/p-1/sprints/s-1/items/i-1', { kind: 'everyone' }],
+    ['projects/p-1/documents/d-1/draft-backlog', { kind: 'everyone' }],
   ] as const)('%s', (action, target) => {
     expect(audienceFromAction(action)).toEqual(target)
   })

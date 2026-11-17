@@ -88,38 +88,41 @@ export async function createIssue(db: SQL, scope: IssueScope, actor: Actor, inpu
   const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
   if (!isIssueType(input.type)) throw invalid()
   if (!mayCreate(input.type, roles, input.role ?? null)) throw new AppError('ROLE_NOT_ALLOWED')
-  const fields = await validatedFields(db, scope, input)
-
-  const id = await db.begin(async (tx) => {
-    const issueId = randomUUID()
-    const rank = isBacklogItem(input.type) ? ((await lastRank(tx, scope.projectId)) ?? 0) + RANK_STEP : null
-    await insertIssue(tx, {
-      id: issueId,
-      projectId: scope.projectId,
-      number: await allocateIssueNumber(tx, scope.projectId),
-      type: input.type,
-      parentId: fields.parentId,
-      title: fields.title,
-      description: fields.description,
-      acceptanceCriteria: fields.acceptanceCriteria,
-      status: input.type === 'epic' ? null : input.type === 'story' ? 'draft' : 'todo',
-      points: fields.points,
-      priority: fields.priority,
-      rank,
-      role: input.type === 'subtask' ? fields.role : null,
-      assigneeId: fields.assigneeId,
-      dueDate: fields.dueDate,
-      sourceDocumentId: input.sourceDocumentId ?? null,
-      sourceVersion: input.sourceVersion ?? null,
-      sourceSection: input.sourceSection ?? null,
-      // Epics and stories wait for an approver to publish them. Agents only draft.
-      published: !isAgent(actor) && (input.type === 'task' || input.type === 'bug' || input.type === 'subtask'),
-      createdBy: actor.userId,
-    })
-    await logEvent(tx, scope, actor, issueId, 'issue.created', { type: input.type })
-    return issueId
-  })
+  const id = await db.begin((tx) => insertNewIssue(tx, scope, actor, input))
   return (await findIssue(db, scope.projectId, id)) as IssueRow
+}
+
+// Checks and stores one new issue inside a transaction, and returns its id. The caller has already checked who may
+// create it. A bulk creation calls this for every issue in one transaction, so it keeps all of them or none.
+export async function insertNewIssue(tx: SQL, scope: IssueScope, actor: Actor, input: CreateIssueInput): Promise<string> {
+  const fields = await validatedFields(tx, scope, input)
+  const issueId = randomUUID()
+  const rank = isBacklogItem(input.type) ? ((await lastRank(tx, scope.projectId)) ?? 0) + RANK_STEP : null
+  await insertIssue(tx, {
+    id: issueId,
+    projectId: scope.projectId,
+    number: await allocateIssueNumber(tx, scope.projectId),
+    type: input.type,
+    parentId: fields.parentId,
+    title: fields.title,
+    description: fields.description,
+    acceptanceCriteria: fields.acceptanceCriteria,
+    status: input.type === 'epic' ? null : input.type === 'story' ? 'draft' : 'todo',
+    points: fields.points,
+    priority: fields.priority,
+    rank,
+    role: input.type === 'subtask' ? fields.role : null,
+    assigneeId: fields.assigneeId,
+    dueDate: fields.dueDate,
+    sourceDocumentId: input.sourceDocumentId ?? null,
+    sourceVersion: input.sourceVersion ?? null,
+    sourceSection: input.sourceSection ?? null,
+    // Epics and stories wait for an approver to publish them. Agents only draft.
+    published: !isAgent(actor) && (input.type === 'task' || input.type === 'bug' || input.type === 'subtask'),
+    createdBy: actor.userId,
+  })
+  await logEvent(tx, scope, actor, issueId, 'issue.created', { type: input.type })
+  return issueId
 }
 
 export async function getIssue(db: SQL, scope: IssueScope, actor: Actor, ref: string): Promise<IssueRow> {
