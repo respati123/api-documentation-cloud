@@ -51,3 +51,56 @@ export function isPoints(value: unknown): value is Points {
 export function isBacklogItem(type: IssueType): boolean {
   return type === 'story' || type === 'task' || type === 'bug'
 }
+
+// Backlog order. Items are spaced a step apart, so one can be dropped between two others without moving the rest.
+export const RANK_STEP = 1024
+
+// The rank for an item placed after `before` and ahead of `after`. Null means there is no whole number left in that
+// gap, and the caller renumbers the backlog first.
+export function rankBetween(before: number | null, after: number | null): number | null {
+  if (before === null && after === null) return RANK_STEP
+  if (after === null) return (before as number) + RANK_STEP
+  const middle = before === null ? Math.floor(after / 2) : Math.floor((before + after) / 2)
+  const floor = before ?? 0
+  return middle > floor && middle < after ? middle : null
+}
+
+export type IssuePriority = 'low' | 'medium' | 'high' | 'urgent'
+export const ISSUE_PRIORITIES: readonly IssuePriority[] = ['low', 'medium', 'high', 'urgent']
+
+export interface IssueRow {
+  id: string
+  projectId: string
+  number: number
+  // Project key and number, such as PARI-12.
+  key: string
+  type: IssueType
+  parentId: string | null
+  title: string
+  description: string
+  acceptanceCriteria: string
+  userStoryRole: string
+  userStoryAction: string
+  userStoryBenefit: string
+  flow: string
+  status: IssueStatus | null
+  points: Points | null
+  priority: IssuePriority
+  rank: number | null
+  sprintId: string | null
+  role: string | null
+  assigneeId: string | null
+  assigneeEmail: string | null
+  dueDate: string | null
+  sourceDocumentId: string | null
+  sourceVersion: number | null
+  sourceSection: string | null
+  sourceReviewedVersion: number | null
+  designApprovedBy: string | null
+  designApprovedAt: Date | null
+  testCaseId: string | null
+  publishedAt: Date | null
+  createdBy: string
+  createdAt: Date
+  updatedAt: Date
+}

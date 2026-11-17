@@ -85,6 +85,12 @@ export const errorDefinitions = {
   MCP_DRAFT_INCOMPLETE: { status: 400 },
   MCP_RATE_LIMITED: { status: 429 },
   MCP_REQUEST_IN_PROGRESS: { status: 409 },
+  ISSUE_NOT_FOUND: { status: 404 },
+  ISSUE_INPUT_INVALID: { status: 400 },
+  ISSUE_STATUS_NOT_ALLOWED: { status: 409 },
+  ISSUE_NOT_READY: { status: 409 },
+  ISSUE_SUBTASKS_OPEN: { status: 409 },
+  ISSUE_AGENT_FORBIDDEN: { status: 403 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

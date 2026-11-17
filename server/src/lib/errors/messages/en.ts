@@ -88,5 +88,11 @@ export const en = {
   MCP_DRAFT_INCOMPLETE: 'This draft is missing fields the planning guide requires. Call planning_guide and fill them in.',
   MCP_RATE_LIMITED: 'Too many MCP calls with this key. Wait a minute and try again.',
   MCP_REQUEST_IN_PROGRESS: 'A request with this clientRequestId is still running. Wait a moment, then send it again with the same clientRequestId.',
+  ISSUE_NOT_FOUND: 'Issue not found.',
+  ISSUE_INPUT_INVALID: 'Issue details are invalid.',
+  ISSUE_STATUS_NOT_ALLOWED: 'This issue cannot move to that status.',
+  ISSUE_NOT_READY: 'A story needs acceptance criteria and an approved design before it is Ready.',
+  ISSUE_SUBTASKS_OPEN: 'Finish every sub-task before moving this issue to Done.',
+  ISSUE_AGENT_FORBIDDEN: 'An AI agent key cannot do this. A person has to.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>

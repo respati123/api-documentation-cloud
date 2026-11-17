@@ -5,6 +5,8 @@ import {
   ISSUE_TYPES,
   isBacklogItem,
   isPoints,
+  RANK_STEP,
+  rankBetween,
   statusCategory,
   STORY_STATUSES,
   WORK_STATUSES,
@@ -71,5 +73,30 @@ describe('points and types', () => {
     expect(['story', 'task', 'bug'].map((type) => isBacklogItem(type as never))).toEqual([true, true, true])
     expect(isBacklogItem('epic')).toBe(false)
     expect(isBacklogItem('subtask')).toBe(false)
+  })
+})
+
+describe('rankBetween', () => {
+  test('the first item in an empty backlog gets one step', () => {
+    expect(rankBetween(null, null)).toBe(RANK_STEP)
+  })
+
+  test('an item after the last one goes one step further', () => {
+    expect(rankBetween(3 * RANK_STEP, null)).toBe(4 * RANK_STEP)
+  })
+
+  test('an item before the first one goes halfway to zero', () => {
+    expect(rankBetween(null, RANK_STEP)).toBe(RANK_STEP / 2)
+  })
+
+  test('an item between two others goes in the middle', () => {
+    expect(rankBetween(RANK_STEP, 2 * RANK_STEP)).toBe(1.5 * RANK_STEP)
+    expect(rankBetween(10, 14)).toBe(12)
+  })
+
+  test('there is no room when the neighbours are next to each other or the top has no space left', () => {
+    expect(rankBetween(10, 11)).toBeNull()
+    expect(rankBetween(10, 10)).toBeNull()
+    expect(rankBetween(null, 1)).toBeNull()
   })
 })

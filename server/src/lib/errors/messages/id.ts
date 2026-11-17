@@ -88,5 +88,11 @@ export const id = {
   MCP_DRAFT_INCOMPLETE: 'Draft ini belum memuat field yang diwajibkan panduan perencanaan. Panggil planning_guide lalu lengkapi.',
   MCP_RATE_LIMITED: 'Terlalu banyak panggilan MCP dengan key ini. Tunggu satu menit lalu coba lagi.',
   MCP_REQUEST_IN_PROGRESS: 'Permintaan dengan clientRequestId ini masih diproses. Tunggu sebentar lalu kirim ulang dengan clientRequestId yang sama.',
+  ISSUE_NOT_FOUND: 'Issue tidak ditemukan.',
+  ISSUE_INPUT_INVALID: 'Detail issue tidak valid.',
+  ISSUE_STATUS_NOT_ALLOWED: 'Issue ini tidak bisa dipindah ke status itu.',
+  ISSUE_NOT_READY: 'Story harus punya acceptance criteria dan desain yang sudah disetujui sebelum berstatus Ready.',
+  ISSUE_SUBTASKS_OPEN: 'Selesaikan semua sub-task sebelum memindahkan issue ini ke Done.',
+  ISSUE_AGENT_FORBIDDEN: 'Key agen AI tidak bisa melakukan ini. Harus dilakukan oleh orang.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>
