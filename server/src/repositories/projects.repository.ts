@@ -1,5 +1,6 @@
 import type { SQL } from 'bun'
 import type { ProjectRow, TaskPriority, TaskRow, TaskStatus } from '@/models/project'
+import { makeProjectKey } from '@/models/project-key'
 
 export async function listProjects(db: SQL, workspaceId: string): Promise<ProjectRow[]> {
   return db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.updated_at DESC, p.id`
@@ -9,7 +10,10 @@ export async function ensureWorkspaceProject(db: SQL, workspaceId: string): Prom
   const [existing] = await db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.created_at, p.id LIMIT 1`
   if (existing) return existing
 
-  const [created] = await db`INSERT INTO projects (id, workspace_id, name, description, created_by) SELECT w.id, w.id, w.name, '', w.owner_id FROM workspaces w WHERE w.id = ${workspaceId} ON CONFLICT (id) DO NOTHING RETURNING id, workspace_id AS "workspaceId", name, description, created_by AS "createdBy", created_at AS "createdAt", 0::int AS "taskCount"`
+  // The workspace has no project yet, so its first one takes the plain key for the workspace name.
+  const [workspace] = await db`SELECT name FROM workspaces WHERE id = ${workspaceId}`
+  const key = makeProjectKey(workspace?.name ?? '', [])
+  const [created] = await db`INSERT INTO projects (id, workspace_id, name, description, created_by, key) SELECT w.id, w.id, w.name, '', w.owner_id, ${key}::text FROM workspaces w WHERE w.id = ${workspaceId} ON CONFLICT (id) DO NOTHING RETURNING id, workspace_id AS "workspaceId", name, description, created_by AS "createdBy", created_at AS "createdAt", 0::int AS "taskCount"`
   if (created) {
     await addProjectMember(db, created.id, created.createdBy, 'pm')
     return created

@@ -1,5 +1,9 @@
 import { SQL } from 'bun'
 import { randomUUID } from 'node:crypto'
+import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { runMigrations } from '@/migrate'
 import { insertCommit } from '@/repositories/commits.repository'
 import { insertMembership } from '@/repositories/memberships.repository'
@@ -16,6 +20,44 @@ export async function openTestDatabase(): Promise<SQL> {
   const db = new SQL(testUrl)
   await runMigrations(db, new URL('../../migrations/', import.meta.url), { info: () => undefined })
   return db
+}
+
+export interface ScratchDatabase {
+  db: SQL
+  // Applies the migrations up to a version (all of them when omitted). Safe to call again with a higher version.
+  migrate: (upTo?: number) => Promise<void>
+  drop: () => Promise<void>
+}
+
+// A throwaway database on the test server. A test can build the schema up to one version, seed old rows,
+// run the next migration, and check what it did. The name is made from a UUID, so it is safe in SQL.
+export async function openScratchDatabase(): Promise<ScratchDatabase> {
+  if (!testUrl) throw new Error('TEST_DATABASE_URL is not set.')
+  const name = `scratch_${randomUUID().replaceAll('-', '')}`
+  const admin = new SQL(testUrl)
+  await admin.unsafe(`CREATE DATABASE ${name}`)
+  const url = new URL(testUrl)
+  url.pathname = `/${name}`
+  const db = new SQL(url.toString())
+  const source = new URL('../../migrations/', import.meta.url)
+
+  const migrate = async (upTo = Number.POSITIVE_INFINITY) => {
+    const folder = await mkdtemp(join(tmpdir(), 'migrations-'))
+    try {
+      for (const file of await readdir(source)) {
+        if (file.endsWith('.sql') && Number(file.slice(0, 4)) <= upTo) await copyFile(new URL(file, source), join(folder, file))
+      }
+      await runMigrations(db, pathToFileURL(`${folder}/`), { info: () => undefined })
+    } finally {
+      await rm(folder, { recursive: true, force: true })
+    }
+  }
+  const drop = async () => {
+    await db.close()
+    await admin.unsafe(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`)
+    await admin.close()
+  }
+  return { db, migrate, drop }
 }
 
 export async function seedUser(db: SQL): Promise<{ id: string; email: string }> {
