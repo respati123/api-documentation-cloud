@@ -46,9 +46,10 @@ FROM tasks t
 LEFT JOIN planning_items si ON si.id = t.story_id
 LEFT JOIN planning_project m ON m.workspace_id = si.workspace_id;
 
--- Issue numbers count up from 1 in each project, in the order the items were made.
+-- Issue numbers count up from 1 in each project, in the order the items were made. An issue that was already made
+-- through the new routes keeps its number, and the moved items follow it.
 CREATE TEMP TABLE legacy_numbers ON COMMIT DROP AS
-SELECT id, project_id, row_number() OVER (PARTITION BY project_id ORDER BY created_at, id) AS number
+SELECT id, project_id, row_number() OVER (PARTITION BY project_id ORDER BY created_at, id) + coalesce((SELECT max(x.number) FROM issues x WHERE x.project_id = everything.project_id), 0) AS number
 FROM (
   SELECT i.id, m.project_id, i.created_at FROM planning_items i JOIN planning_project m ON m.workspace_id = i.workspace_id
   UNION ALL
@@ -56,8 +57,9 @@ FROM (
 ) AS everything;
 
 -- Backlog order: the stories first in the order they were made, then the tasks with no story by their old position.
+-- They follow any item that is already ranked.
 CREATE TEMP TABLE legacy_ranks ON COMMIT DROP AS
-SELECT id, row_number() OVER (PARTITION BY project_id ORDER BY grp, ord, created_at, id) * 1024 AS rank
+SELECT id, (row_number() OVER (PARTITION BY project_id ORDER BY grp, ord, created_at, id) * 1024) + coalesce((SELECT max(x.rank) FROM issues x WHERE x.project_id = backlog.project_id), 0) AS rank
 FROM (
   SELECT i.id, m.project_id, 0 AS grp, 0::bigint AS ord, i.created_at
   FROM planning_items i JOIN planning_project m ON m.workspace_id = i.workspace_id

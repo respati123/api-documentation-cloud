@@ -67,6 +67,8 @@ describe.skipIf(!databaseEnabled)('moving planning and tasks into issues (staged
     await db`INSERT INTO projects (id, workspace_id, name, created_by, key, created_at) VALUES ('p3a', 'w3', 'Older', 'u4', 'OLD', '2026-01-01T00:00:00Z'), ('p3b', 'w3', 'Newer', 'u4', 'NEW', '2026-01-05T00:00:00Z')`
     await db`INSERT INTO planning_items (id, workspace_id, kind, title, status, created_by, created_at) VALUES ('e4', 'w3', 'epic', 'Epic of w3', 'draft', 'u4', '2026-01-06T00:00:00Z')`
     await db`INSERT INTO planning_items (id, workspace_id, kind, parent_id, title, status, created_by, created_at) VALUES ('s7', 'w3', 'story', 'e4', 'Story of w3', 'draft', 'u4', '2026-01-06T00:01:00Z')`
+    // An issue made through the new routes before the move keeps its number, and the moved items come after it.
+    await db`INSERT INTO issues (id, project_id, number, type, title, status, rank, created_by, published_at) VALUES ('pre1', 'p3b', 1, 'task', 'Made early', 'todo', 5000, 'u4', now())`
     await db`INSERT INTO tasks (id, project_id, story_id, title, status, created_by, created_at, role) VALUES ('t7', 'p3a', 's7', 'one', 'todo', 'u4', '2026-01-06T00:02:00Z', 'qa'), ('t8', 'p3b', 's7', 'two', 'todo', 'u4', '2026-01-06T00:03:00Z', 'qa'), ('t9', 'p3b', 's7', 'three', 'todo', 'u4', '2026-01-06T00:04:00Z', 'qa')`
   }
 
@@ -138,6 +140,16 @@ describe.skipIf(!databaseEnabled)('moving planning and tasks into issues (staged
     expect(numbers.map((row) => row.id)).toEqual(['e1', 's1', 's2', 's3', 's4', 's5', 's6', 'e2', 't1', 't2', 't3', 't4', 't5', 't6'])
     const [project] = await rows(db`SELECT next_issue_number FROM projects WHERE id = 'w1'`)
     expect(project.next_issue_number).toBe(15)
+  })
+
+  test('an issue made before the move keeps its number and rank, and the moved items follow it', async () => {
+    expect(await issue('pre1')).toMatchObject({ number: 1, rank: '5000' })
+    const moved = await rows(db`SELECT id, number FROM issues WHERE project_id = 'p3b' AND id <> 'pre1' ORDER BY number`)
+    expect(moved.map((row) => row.id)).toEqual(['e4', 's7', 't7', 't8', 't9'])
+    expect(moved.map((row) => row.number)).toEqual([2, 3, 4, 5, 6])
+    const [story] = await rows(db`SELECT rank FROM issues WHERE id = 's7'`)
+    expect(Number(story.rank)).toBeGreaterThan(5000)
+    expect((await rows(db`SELECT next_issue_number FROM projects WHERE id = 'p3b'`))[0].next_issue_number).toBe(7)
   })
 
   test('stories are ranked first in creation order, then the loose tasks by their old position, and sub-tasks have no rank', async () => {
@@ -217,7 +229,7 @@ describe.skipIf(!databaseEnabled)('moving planning and tasks into issues (staged
 
   test('the whole move leaves no issue without a number, and every project count matches', async () => {
     const [{ total }] = await rows(db`SELECT count(*)::int AS total FROM issues`)
-    expect(total).toBe(11 + 9)
+    expect(total).toBe(11 + 9 + 1)
     expect((await rows(db`SELECT count(*)::int AS n FROM issues WHERE number IS NULL`))[0].n).toBe(0)
   })
 })
