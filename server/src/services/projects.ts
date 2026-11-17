@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
+import { insertStatusEvent } from '@/repositories/issues.repository'
 import { AppError } from '@/lib/errors/app-error'
 import { PROJECT_DISCIPLINES, type ProjectDiscipline, type TaskPriority, type TaskStatus } from '@/models/project'
 import { ensureAssigneeInProject, ensureAssigneeInWorkspace, ensureWorkspaceProject, findTaskInWorkspace, hasProjectDiscipline, insertSubtask, insertTask, isProjectInWorkspace, isTaskAssigneeInProject, listProjectMembers, listSubtasks, listTasks, listWorkspaceMembers, replaceTaskDependencies, setProjectMemberDisciplines, setSubtaskDone, updateTaskInWorkspace } from '@/repositories/projects.repository'
@@ -56,8 +57,10 @@ export async function changeProjectTask(db: SQL, workspaceId: string, taskId: st
   return task
 }
 
-export function recordTaskEvent(db: SQL, workspaceId: string, taskId: string, actorId: string, action: string, apiKeyId: string | null = null) {
-  return insertPlanningEvent(db, { workspaceId, actorId, apiKeyId, targetKind: 'task', targetId: taskId, action })
+// A status change also goes into the status history, which the reports read.
+export async function recordTaskEvent(db: SQL, workspaceId: string, taskId: string, actorId: string, action: string, apiKeyId: string | null = null) {
+  await insertPlanningEvent(db, { workspaceId, actorId, apiKeyId, targetKind: 'task', targetId: taskId, action })
+  if (action.startsWith('status:')) await insertStatusEvent(db, { id: randomUUID(), issueId: taskId, fromStatus: null, toStatus: action.slice('status:'.length), actorId, apiKeyId })
 }
 
 // The new assignee hears about the task, unless they assigned it to themselves.

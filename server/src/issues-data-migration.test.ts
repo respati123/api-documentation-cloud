@@ -2,12 +2,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { SQL } from 'bun'
 import { databaseEnabled, openScratchDatabase, type ScratchDatabase } from '@/testing/database'
 
-const STAGED = new URL('../migrations-staged/0024_issues_data.sql', import.meta.url)
+const STAGED = new URL('../migrations/0024_issues_data.sql', import.meta.url)
 
 type Row = Record<string, any>
 
 // The data move of the agile model. It runs on a database that holds the old planning, task, and checklist rows.
-describe.skipIf(!databaseEnabled)('moving planning and tasks into issues (staged migration 0024)', () => {
+describe.skipIf(!databaseEnabled)('moving planning and tasks into issues (migration 0024)', () => {
   let scratch: ScratchDatabase
   let db: SQL
 
@@ -225,6 +225,13 @@ describe.skipIf(!databaseEnabled)('moving planning and tasks into issues (staged
     expect((await rows(db`SELECT count(*)::int AS n FROM planning_items_legacy`))[0].n).toBe(11)
     expect((await rows(db`SELECT count(*)::int AS n FROM tasks_legacy`))[0].n).toBe(9)
     expect((await rows(db`SELECT count(*)::int AS n FROM task_subtasks_legacy`))[0].n).toBe(2)
+  })
+
+  test('an item past its first status starts its status history at the move, and the others have none', async () => {
+    const started = await rows(db`SELECT issue_id, to_status FROM issue_status_events ORDER BY issue_id`)
+    const byIssue = Object.fromEntries(started.map((row) => [row.issue_id, row.to_status]))
+    expect(byIssue).toMatchObject({ s2: 'in_design', s3: 'ready', s4: 'in_progress', s5: 'in_qa', s6: 'done', t2: 'in_review', t3: 'done', t5: 'in_progress' })
+    for (const id of ['s1', 't1', 't4', 't6', 'e1', 'e2']) expect(byIssue[id]).toBeUndefined()
   })
 
   test('the whole move leaves no issue without a number, and every project count matches', async () => {

@@ -1,7 +1,5 @@
--- Agile project model, step 2 of 2. NOT ACTIVE YET. It is kept outside migrations/ on purpose.
--- It moves every epic, story, task, and checklist line into issues, points the story tables at issues,
--- and renames the old tables to *_legacy. The code that still reads the old tables stops working the moment
--- this runs. Move this file into migrations/ only in the release that also switches that code over.
+-- Agile project model, step 2 of 2. It moves every epic, story, task, and checklist line into issues,
+-- points the story tables at issues, and renames the old tables to *_legacy. The repositories read issues from here on.
 -- The runner splits the file at every semicolon, so keep them out of comments and strings.
 
 -- A workspace that has planning data but no project row yet gets its project now, the way ensureWorkspaceProject
@@ -110,6 +108,12 @@ SELECT t.id, n.project_id, n.number, 'task', t.title, t.description,
   t.assignee_id, t.due_date, t.published_at, t.created_by, t.created_at, t.updated_at
 FROM tasks t JOIN legacy_numbers n ON n.id = t.id JOIN legacy_ranks r ON r.id = t.id
 WHERE t.story_id IS NULL;
+
+-- Reports read the history of the status. An item that is already past its first status starts its history here.
+INSERT INTO issue_status_events (id, issue_id, from_status, to_status, actor_id, created_at)
+SELECT gen_random_uuid()::text, i.id, NULL, i.status, i.created_by, now()
+FROM issues i JOIN legacy_numbers n ON n.id = i.id
+WHERE i.status IS NOT NULL AND i.status NOT IN ('todo', 'draft');
 
 -- The sub-task lines of a task become its checklist. A checklist line has no assignee, so who it was given to
 -- is written to the activity log.

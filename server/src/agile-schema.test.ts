@@ -32,7 +32,7 @@ describe.skipIf(!databaseEnabled)('agile schema (migration 0023)', () => {
     await project(ids.symbols, workspaceId, '123 !!', '2026-01-04T00:00:00Z')
     await project(ids.other, otherWorkspaceId, 'Pari Mobile App', '2026-01-05T00:00:00Z')
     await db`INSERT INTO tasks (id, project_id, title, created_by) VALUES (${randomUUID()}, ${ids.first}, 'Old task', ${userId})`
-    await scratch.migrate()
+    await scratch.migrate(23)
   })
 
   afterAll(async () => {

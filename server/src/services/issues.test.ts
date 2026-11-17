@@ -47,7 +47,7 @@ describe.skipIf(!databaseEnabled)('issues service', () => {
     people.viewer = await addMember('viewer', 'pm')
     people.outsider = (await seedUser(db)).id
     keyId = randomUUID()
-    await db`INSERT INTO mcp_api_keys (id, workspace_id, user_id, name, key_hash) VALUES (${keyId}, ${workspaceId}, ${people.pm}, 'test key', ${randomUUID()})`
+    await db`INSERT INTO mcp_keys (id, user_id, name, role, valid_days, claim_expires_at, key_hash) VALUES (${keyId}, ${people.pm}, 'test key', 'pm', 30, now() + interval '1 day', ${randomUUID()})`
   })
 
   afterAll(async () => {

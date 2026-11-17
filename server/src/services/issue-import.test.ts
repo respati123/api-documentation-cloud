@@ -29,8 +29,8 @@ describe.skipIf(!databaseEnabled)('draft backlog from a PRD', () => {
   async function document(options: { kind?: string; status?: string; content?: string; version?: number; sourceId?: string; sourceVersion?: number } = {}) {
     const id = randomUUID()
     const version = options.version ?? 1
-    await world.db`INSERT INTO planning_documents (id, workspace_id, kind, title, status, current_version, source_document_id, created_by)
-      VALUES (${id}, ${world.workspaceId}, ${options.kind ?? 'prd'}, 'Checkout PRD', ${options.status ?? 'approved'}, ${version}, ${options.sourceId ?? null}, ${world.ownerId})`
+    await world.db`INSERT INTO planning_documents (id, workspace_id, project_id, kind, title, status, current_version, source_document_id, created_by)
+      VALUES (${id}, ${world.workspaceId}, ${world.projectId}, ${options.kind ?? 'prd'}, 'Checkout PRD', ${options.status ?? 'approved'}, ${version}, ${options.sourceId ?? null}, ${world.ownerId})`
     for (let number = 1; number <= version; number += 1) {
       await world.db`INSERT INTO planning_document_versions (document_id, version, content, source_version, created_by) VALUES (${id}, ${number}, ${options.content ?? PRD}, ${options.sourceVersion ?? null}, ${world.ownerId})`
     }

@@ -301,7 +301,8 @@ export async function listMcpReadyTasks(db: SQL, principal: McpPrincipal, worksp
   const id = await requireWorkspace(db, principal, 'tasks_list_ready', workspaceId)
   const tasks = (await Promise.all((await projectIdsOf(db, id)).map((projectId) => listTasks(db, projectId)))).flat()
   const done = new Set(tasks.filter((task) => task.status === 'done').map((task) => task.id))
-  return tasks.filter((task) => task.assigneeId === principal.userId && task.status !== 'done' && !task.locked && task.dependsOn.every((dependency) => done.has(dependency)))
+  // A task locked by its story is listed too, marked locked. Its role waits for the design to be approved.
+  return tasks.filter((task) => task.assigneeId === principal.userId && task.status !== 'done' && task.dependsOn.every((dependency) => done.has(dependency)))
 }
 
 async function requireOwnTask(db: SQL, principal: McpPrincipal, tool: McpTool, workspaceId: unknown, taskId: unknown) {

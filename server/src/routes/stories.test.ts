@@ -108,7 +108,8 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     const designTask = before.find((task) => task.role === 'ui_ux') as BoardTask
     expect(backendTask.locked).toBe(true)
     expect(designTask.locked).toBe(false)
-    const moved = await http.call('PATCH', `/api/workspaces/${workspaceId}/tasks/${backendTask.id}`, { token: owner.token, body: { status: 'todo' } })
+    // A task that was backlog is todo now, so a locked task starts from todo and cannot move on.
+    const moved = await http.call('PATCH', `/api/workspaces/${workspaceId}/tasks/${backendTask.id}`, { token: owner.token, body: { status: 'in_progress' } })
     expect(moved.status).toBe(409)
     expect(moved.json.code).toBe('TASK_LOCKED')
 
@@ -118,7 +119,7 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     expect((approved.json.data as { story: Story }).story.stage).toBe('design_approved')
 
     expect((await boardTasks(owner, workspaceId)).find((task) => task.id === backendTask.id)?.locked).toBe(false)
-    const movedAfter = await http.call('PATCH', `/api/workspaces/${workspaceId}/tasks/${backendTask.id}`, { token: owner.token, body: { status: 'todo' } })
+    const movedAfter = await http.call('PATCH', `/api/workspaces/${workspaceId}/tasks/${backendTask.id}`, { token: owner.token, body: { status: 'in_progress' } })
     expect(movedAfter.status).toBe(200)
   })
 
@@ -206,7 +207,7 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     expect(refused).toMatchObject({ isError: true, value: { code: 'MCP_PERMISSION_DENIED' } })
   })
 
-  test('tasks_list_ready leaves out a task locked by the story design', async () => {
+  test('tasks_list_ready lists a task locked by the story design, marked as locked', async () => {
     const { owner, workspaceId } = await project('story-ready')
     const backend = await memberWithRole(owner, workspaceId, 'ready-backend', 'backend')
     const designer = await memberWithRole(owner, workspaceId, 'ready-designer', 'ui_ux')
@@ -219,8 +220,8 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     const backendReady = toolResult(await http.mcp(await keyFor(backend, 'backend'), 'tools/call', { name: 'tasks_list_ready', arguments: { workspaceId } }))
     const designerReady = toolResult(await http.mcp(await keyFor(designer, 'ui_ux'), 'tools/call', { name: 'tasks_list_ready', arguments: { workspaceId } }))
 
-    expect(backendReady.value).toEqual([])
-    expect(designerReady.value.map((task: { id: string }) => task.id)).toEqual([designTask.id])
+    expect(backendReady.value.map((task: { id: string; locked: boolean }) => [task.id, task.locked])).toEqual([[backendTask.id, true]])
+    expect(designerReady.value.map((task: { id: string; locked: boolean }) => [task.id, task.locked])).toEqual([[designTask.id, false]])
   })
 
   test('a story cannot start work before its design is approved', async () => {

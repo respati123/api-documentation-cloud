@@ -15,6 +15,7 @@ describe.skipIf(!databaseEnabled)('issue, backlog, and sprint routes', () => {
   let stranger: TestAccount
   let workspaceId: string
   let base: string
+  let projectId: string
 
   beforeAll(async () => {
     db = await openTestDatabase()
@@ -29,7 +30,7 @@ describe.skipIf(!databaseEnabled)('issue, backlog, and sprint routes', () => {
     await http.inviteAndAccept(owner, workspaceId, plain, 'editor')
     await http.inviteAndAccept(owner, workspaceId, viewer, 'viewer')
     const projects = await http.call('GET', `/api/workspaces/${workspaceId}/projects`, { token: owner.token })
-    const projectId = (projects.json.data as { projects: Array<{ id: string }> }).projects[0].id
+    projectId = (projects.json.data as { projects: Array<{ id: string }> }).projects[0].id
     base = `/api/workspaces/${workspaceId}/projects/${projectId}`
     await http.call('POST', `${base}/members`, { token: owner.token, body: { userId: pm.user.id, disciplines: ['pm'] } })
   })
@@ -188,7 +189,7 @@ describe.skipIf(!databaseEnabled)('issue, backlog, and sprint routes', () => {
 
   async function approvedPrd(content: string) {
     const id = crypto.randomUUID()
-    await db`INSERT INTO planning_documents (id, workspace_id, kind, title, status, current_version, created_by) VALUES (${id}, ${workspaceId}, 'prd', 'Route PRD', 'approved', 1, ${owner.user.id})`
+    await db`INSERT INTO planning_documents (id, workspace_id, project_id, kind, title, status, current_version, created_by) VALUES (${id}, ${workspaceId}, ${projectId}, 'prd', 'Route PRD', 'approved', 1, ${owner.user.id})`
     await db`INSERT INTO planning_document_versions (document_id, version, content, created_by) VALUES (${id}, 1, ${content}, ${owner.user.id})`
     return id
   }
