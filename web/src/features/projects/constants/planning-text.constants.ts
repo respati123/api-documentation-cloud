@@ -6,6 +6,7 @@ export const PLANNING_TEXT = {
     documents: 'planning:nav.documents',
     epics: 'planning:nav.epics',
     backlog: 'planning:nav.backlog',
+    reports: 'planning:nav.reports',
     board: 'planning:nav.board',
   },
   kind: {

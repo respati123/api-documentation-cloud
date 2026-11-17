@@ -123,3 +123,70 @@ export type Backlog = z.infer<typeof backlogSchema>
 export type ChecklistItem = z.infer<typeof checklistItemSchema>
 export type IssueLink = z.infer<typeof issueLinkSchema>
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>
+
+export const reportItemSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  title: z.string(),
+  type: z.string(),
+  status: z.nullable(z.string()),
+  points: z.nullable(z.number()),
+})
+
+export const burndownSchema = z.object({
+  sprintId: z.string(),
+  total: z.number(),
+  days: z.array(z.object({ date: z.string(), remaining: z.nullable(z.number()), ideal: z.number() })),
+})
+
+export const sprintReportSchema = z.object({
+  sprint: sprintSchema,
+  committedPoints: z.number(),
+  completedPoints: z.number(),
+  completed: z.array(reportItemSchema),
+  notCompleted: z.array(reportItemSchema),
+  addedAfterStart: z.array(reportItemSchema),
+  removedAfterStart: z.array(reportItemSchema),
+  pointsChanged: z.array(z.extend(reportItemSchema, { before: z.nullable(z.number()), after: z.nullable(z.number()) })),
+})
+
+export const velocitySchema = z.object({
+  sprints: z.array(
+    z.object({
+      sprintId: z.string(),
+      name: z.string(),
+      startsOn: z.string(),
+      endsOn: z.string(),
+      committedPoints: z.number(),
+      addedPoints: z.number(),
+      completedPoints: z.number(),
+    }),
+  ),
+  averageCompleted: z.number(),
+})
+
+const summarySchema = z.object({ count: z.number(), average: z.number(), median: z.number(), p85: z.number() })
+
+export const flowSchema = z.object({
+  days: z.number(),
+  wip: z.object({
+    total: z.number(),
+    byStatus: z.array(z.object({ status: z.string(), count: z.number(), limit: z.nullable(z.number()), over: z.boolean() })),
+  }),
+  throughput: z.object({ perDay: z.array(z.object({ date: z.string(), done: z.number() })), total: z.number() }),
+  cycleTime: summarySchema,
+  workItemAge: z.object({
+    average: z.number(),
+    oldest: z.array(z.object({ id: z.string(), key: z.string(), title: z.string(), ageDays: z.number() })),
+  }),
+  cumulativeFlow: z.array(z.object({ date: z.string(), todo: z.number(), in_progress: z.number(), done: z.number() })),
+})
+
+export const wipLimitsSchema = z.object({ limits: z.array(z.object({ status: z.string(), limit: z.number() })) })
+
+export type ReportItem = z.infer<typeof reportItemSchema>
+export type Burndown = z.infer<typeof burndownSchema>
+export type SprintReport = z.infer<typeof sprintReportSchema>
+export type Velocity = z.infer<typeof velocitySchema>
+export type FlowMetrics = z.infer<typeof flowSchema>
+export type WipLimit = { status: string; limit: number }

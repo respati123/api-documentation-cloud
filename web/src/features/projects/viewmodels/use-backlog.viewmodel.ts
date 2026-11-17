@@ -2,7 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
-import { BACKLOG_TEXT } from '@/features/projects/constants/backlog-text.constants'
+import { BACKLOG_TEXT, statusTextKey } from '@/features/projects/constants/backlog-text.constants'
 import { type Issue, type IssueType, type StatusCategory, statusCategory } from '@/features/projects/models/issue.model'
 import { issuesService } from '@/features/projects/services/issues.service'
 import { daysLeft, epicCounts, filterByEpic, type ReadyGap, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
@@ -125,7 +125,7 @@ function rowOf(issue: Issue, t: Text, epicKeyOf: Map<string, string>): BacklogRo
     title: issue.title,
     type: issue.type,
     typeLabel: t(BACKLOG_TEXT.type[issue.type]),
-    statusLabel: issue.status ? t(statusKey(issue.status)) : '',
+    statusLabel: issue.status ? t(statusTextKey(issue.status)) : '',
     category: statusCategory(issue.status),
     points: issue.points,
     pointsLabel: issue.points === null ? t(BACKLOG_TEXT.noPoints) : t(BACKLOG_TEXT.points, { count: issue.points }),
@@ -137,7 +137,3 @@ function rowOf(issue: Issue, t: Text, epicKeyOf: Map<string, string>): BacklogRo
     outdated: issue.sourceOutdated === true,
   }
 }
-
-// A status the server sends that this page has no word for shows as To do rather than as a raw key.
-const statusKey = (status: string): string =>
-  status in BACKLOG_TEXT.status ? BACKLOG_TEXT.status[status as keyof typeof BACKLOG_TEXT.status] : BACKLOG_TEXT.status.todo

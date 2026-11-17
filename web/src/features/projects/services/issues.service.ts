@@ -1,14 +1,19 @@
 import * as z from 'zod/mini'
 import {
   backlogSchema,
+  burndownSchema,
   checklistItemSchema,
+  flowSchema,
   type IssuePriority,
   type IssueType,
   issueLinkSchema,
   issueSchema,
   type LinkKind,
   projectSettingsSchema,
+  sprintReportSchema,
   sprintSchema,
+  velocitySchema,
+  wipLimitsSchema,
 } from '@/features/projects/models/issue.model'
 import { workspaceCall } from '@/features/projects/services/workspace-transport'
 import { apiPage } from '@/shared/services/api-client'
@@ -169,6 +174,22 @@ export const issuesService = {
     }),
   removeSprintItem: (token: string, workspaceId: string, projectId: string, sprintId: string, issueId: string) =>
     workspaceCall(workspaceId, at(projectId, `/sprints/${sprintId}/items/${issueId}`), { token, method: 'DELETE' }),
+
+  burndown: async (token: string, workspaceId: string, projectId: string, sprintId: string) =>
+    z.parse(burndownSchema, await workspaceCall(workspaceId, at(projectId, `/sprints/${sprintId}/burndown`), { token })),
+  sprintReport: async (token: string, workspaceId: string, projectId: string, sprintId: string) =>
+    z.parse(sprintReportSchema, await workspaceCall(workspaceId, at(projectId, `/sprints/${sprintId}/report`), { token })),
+  velocity: async (token: string, workspaceId: string, projectId: string, limit = 6) =>
+    z.parse(velocitySchema, await workspaceCall(workspaceId, at(projectId, `/reports/velocity?limit=${limit}`), { token })),
+  flow: async (token: string, workspaceId: string, projectId: string, days: number) =>
+    z.parse(flowSchema, await workspaceCall(workspaceId, at(projectId, `/flow?days=${days}`), { token })),
+  wipLimits: async (token: string, workspaceId: string, projectId: string) =>
+    z.parse(wipLimitsSchema, await workspaceCall(workspaceId, at(projectId, '/wip-limits'), { token })).limits,
+  setWipLimit: async (token: string, workspaceId: string, projectId: string, status: string, limit: number | null) =>
+    z.parse(
+      wipLimitsSchema,
+      await workspaceCall(workspaceId, at(projectId, `/wip-limits/${status}`), { token, method: 'PUT', body: { limit } }),
+    ).limits,
 
   updateSettings: async (
     token: string,

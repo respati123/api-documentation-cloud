@@ -23,7 +23,7 @@ import { useRealtimeEvent } from '@/shared/realtime/use-realtime-event'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatRelativeDate } from '@/shared/utils/format'
 
-export const PROJECT_SECTIONS = ['flow', 'documents', 'epics', 'backlog', 'board'] as const
+export const PROJECT_SECTIONS = ['flow', 'documents', 'epics', 'backlog', 'board', 'reports'] as const
 export type ProjectSection = (typeof PROJECT_SECTIONS)[number]
 type Detail = { kind: 'document'; id: string } | { kind: 'item'; id: string } | null
 
@@ -169,12 +169,12 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
     codes,
     storyExtras,
     section,
-    sections: PROJECT_SECTIONS.filter((id) => (id !== 'documents' || canReadDocuments) && (id !== 'backlog' || AGILE_PROJECT_ENABLED)).map(
-      (id) => ({
-        id,
-        count: id === 'documents' ? documents.length : id === 'epics' ? epics.length : null,
-      }),
-    ),
+    sections: PROJECT_SECTIONS.filter(
+      (id) => (id !== 'documents' || canReadDocuments) && ((id !== 'backlog' && id !== 'reports') || AGILE_PROJECT_ENABLED),
+    ).map((id) => ({
+      id,
+      count: id === 'documents' ? documents.length : id === 'epics' ? epics.length : null,
+    })),
     go,
     detail: detail?.kind ?? null,
     access,

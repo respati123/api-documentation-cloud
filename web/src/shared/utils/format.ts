@@ -19,3 +19,10 @@ export function formatRelativeDate(value: string, locale: string, now = Date.now
   if (elapsed < WEEK) return formatter.format(-Math.floor(elapsed / DAY), 'day')
   return formatDate(value, locale)
 }
+
+// Day and month in the language of the page, for the labels of a chart. The date is read as UTC, so the day does not move.
+export function formatShortDate(value: string, locale: string): string {
+  const date = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(date)
+}

@@ -5,7 +5,8 @@
     "documents": "Dokumen",
     "epics": "Epic & Story",
     "board": "Papan tugas",
-    "backlog": "Backlog"
+    "backlog": "Backlog",
+    "reports": "Laporan"
   },
   "kind": {
     "brd": "BRD",
@@ -480,6 +481,79 @@
     "outdated": "PRD berubah",
     "unassigned": "Belum ditugaskan",
     "error": "Backlog tidak bisa dimuat.",
+    "retry": "Coba lagi"
+  },
+  "reports": {
+    "title": "Laporan",
+    "subtitleScrum": "Bagaimana sprint berjalan: yang tersisa, yang selesai di tiap sprint, dan seberapa banyak yang tim selesaikan.",
+    "subtitleKanban": "Bagaimana pekerjaan mengalir: yang sedang dikerjakan, berapa lama, dan seberapa banyak yang selesai.",
+    "sprintLabel": "Sprint",
+    "noSprint": "Belum ada sprint untuk dilaporkan. Mulai sprint di tab Backlog.",
+    "burndown": {
+      "title": "Burndown",
+      "detail": "Poin yang masih terbuka di akhir tiap hari, di samping garis ideal.",
+      "ideal": "Ideal",
+      "remaining": "Tersisa",
+      "aria": "Burndown {{name}}, {{total}} poin dikomitmenkan",
+      "line": "{{date}}: sisa {{remaining}} poin"
+    },
+    "report": {
+      "title": "Laporan sprint",
+      "committed": "Dikomitmenkan",
+      "completed": "Selesai",
+      "points_one": "{{count}} poin",
+      "points_other": "{{count}} poin",
+      "finished": "Selesai",
+      "notFinished": "Belum selesai",
+      "added": "Ditambah setelah mulai",
+      "removed": "Dikeluarkan setelah mulai",
+      "estimates": "Estimasi berubah",
+      "none": "Tidak ada.",
+      "estimate": "{{before}} menjadi {{after}} poin",
+      "noPoints": "Belum ada poin"
+    },
+    "velocity": {
+      "title": "Velocity",
+      "detail": "Poin yang dikomitmenkan dan selesai di sprint-sprint terakhir yang sudah ditutup.",
+      "committed": "Dikomitmenkan",
+      "completed": "Selesai",
+      "average": "Rata-rata selesai: {{value}} poin",
+      "empty": "Belum ada sprint yang ditutup.",
+      "aria": "Velocity sprint-sprint terakhir yang sudah ditutup",
+      "line": "{{name}}: {{committed}} dikomitmenkan, {{completed}} selesai"
+    },
+    "flow": {
+      "title": "Aliran kerja",
+      "period": "Periode",
+      "days_one": "{{count}} hari terakhir",
+      "days_other": "{{count}} hari terakhir",
+      "wip": "Pekerjaan berjalan",
+      "wipDetail": "Item di tiap kolom dibandingkan dengan batasnya.",
+      "limit": "Batas {{count}}",
+      "over": "Melebihi batas",
+      "noLimit": "Tanpa batas",
+      "noWip": "Tidak ada yang sedang dikerjakan.",
+      "throughput": "Throughput",
+      "finished_one": "{{count}} item selesai",
+      "finished_other": "{{count}} item selesai",
+      "cycleTime": "Cycle time",
+      "cycleDays": "{{value}} hari",
+      "average": "Rata-rata",
+      "median": "Median",
+      "p85": "Persentil ke-85",
+      "noCycle": "Belum ada item yang selesai di periode ini.",
+      "age": "Item terbuka tertua",
+      "ageDays": "Terbuka {{value}} hari",
+      "noAge": "Tidak ada yang terbuka.",
+      "cfd": "Cumulative flow",
+      "cfdDetail": "Item di tiap kategori pada akhir tiap hari.",
+      "cfdAria": "Cumulative flow item di project ini",
+      "cfdLine": "{{date}}: {{done}} selesai, {{inProgress}} berjalan, {{todo}} belum dikerjakan",
+      "todo": "Belum dikerjakan",
+      "inProgress": "Berjalan",
+      "done": "Selesai"
+    },
+    "error": "Laporan tidak bisa dimuat.",
     "retry": "Coba lagi"
   }
 }

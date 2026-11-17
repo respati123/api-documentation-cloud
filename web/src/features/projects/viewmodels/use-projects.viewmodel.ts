@@ -11,6 +11,7 @@ import { projectKeys } from '@/features/projects/viewmodels/project-keys'
 import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
+import { useReportsViewModel } from '@/features/projects/viewmodels/use-reports.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
 import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
@@ -137,6 +138,13 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     enabled && AGILE_PROJECT_ENABLED && planning.section === 'backlog',
   )
 
+  const reports = useReportsViewModel(
+    workspaceId,
+    selectedProject?.id,
+    selectedProject?.mode ?? 'scrum',
+    enabled && AGILE_PROJECT_ENABLED && planning.section === 'reports',
+  )
+
   const allTasks = tasks.data ?? []
   const taskExtras = useTaskExtrasViewModel(workspaceId, editingTask ?? null, allTasks, planning.codes, true)
   const visible = filterTasks(allTasks, filters, userId)
@@ -148,6 +156,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     selectedProject,
     planning,
     backlog,
+    reports,
     taskComments,
     canSeeTaskComments,
     filters,

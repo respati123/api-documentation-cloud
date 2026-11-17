@@ -59,8 +59,8 @@ export function LabelAxis({ labels, x }: { labels: string[]; x: (index: number) 
     <g>
       {labels.map((label, index) =>
         index % step === 0 || index === labels.length - 1 ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: the labels of an axis keep their position, and two can be alike
           <text
+            // biome-ignore lint/suspicious/noArrayIndexKey: the labels of an axis keep their position, and two can be alike
             key={`${label}-${index}`}
             x={x(index)}
             y={FRAME.height - 10}

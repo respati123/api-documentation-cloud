@@ -5,7 +5,8 @@
     "documents": "Documents",
     "epics": "Epics & stories",
     "board": "Task board",
-    "backlog": "Backlog"
+    "backlog": "Backlog",
+    "reports": "Reports"
   },
   "kind": {
     "brd": "BRD",
@@ -480,6 +481,79 @@
     "outdated": "PRD changed",
     "unassigned": "Unassigned",
     "error": "The backlog could not be loaded.",
+    "retry": "Try again"
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitleScrum": "How the sprints go: what is left, what each sprint finished, and how much the team finishes.",
+    "subtitleKanban": "How work flows: what is in progress, how long it takes, and how much gets finished.",
+    "sprintLabel": "Sprint",
+    "noSprint": "No sprint to report on yet. Start a sprint in the Backlog tab.",
+    "burndown": {
+      "title": "Burndown",
+      "detail": "Points still open at the end of each day, next to the ideal line.",
+      "ideal": "Ideal",
+      "remaining": "Remaining",
+      "aria": "Burndown of {{name}}, {{total}} points committed",
+      "line": "{{date}}: {{remaining}} points left"
+    },
+    "report": {
+      "title": "Sprint report",
+      "committed": "Committed",
+      "completed": "Completed",
+      "points_one": "{{count}} point",
+      "points_other": "{{count}} points",
+      "finished": "Finished",
+      "notFinished": "Not finished",
+      "added": "Added after the start",
+      "removed": "Removed after the start",
+      "estimates": "Estimates changed",
+      "none": "None.",
+      "estimate": "{{before}} to {{after}} points",
+      "noPoints": "No points"
+    },
+    "velocity": {
+      "title": "Velocity",
+      "detail": "Committed and completed points of the last closed sprints.",
+      "committed": "Committed",
+      "completed": "Completed",
+      "average": "Average completed: {{value}} points",
+      "empty": "No sprint has closed yet.",
+      "aria": "Velocity of the last closed sprints",
+      "line": "{{name}}: {{committed}} committed, {{completed}} completed"
+    },
+    "flow": {
+      "title": "Flow",
+      "period": "Period",
+      "days_one": "Last {{count}} day",
+      "days_other": "Last {{count}} days",
+      "wip": "Work in progress",
+      "wipDetail": "Items in each column against its limit.",
+      "limit": "Limit {{count}}",
+      "over": "Over the limit",
+      "noLimit": "No limit",
+      "noWip": "Nothing is in progress.",
+      "throughput": "Throughput",
+      "finished_one": "{{count}} item finished",
+      "finished_other": "{{count}} items finished",
+      "cycleTime": "Cycle time",
+      "cycleDays": "{{value}} days",
+      "average": "Average",
+      "median": "Median",
+      "p85": "85th percentile",
+      "noCycle": "No item finished in this period.",
+      "age": "Oldest open items",
+      "ageDays": "{{value}} days open",
+      "noAge": "Nothing is open.",
+      "cfd": "Cumulative flow",
+      "cfdDetail": "Items in each category at the end of each day.",
+      "cfdAria": "Cumulative flow of the items of the project",
+      "cfdLine": "{{date}}: {{done}} done, {{inProgress}} in progress, {{todo}} to do",
+      "todo": "To do",
+      "inProgress": "In progress",
+      "done": "Done"
+    },
+    "error": "The reports could not be loaded.",
     "retry": "Try again"
   }
 }

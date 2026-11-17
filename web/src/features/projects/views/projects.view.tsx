@@ -11,6 +11,7 @@ import { ItemDetailView } from '@/features/projects/views/item-detail.view'
 import { PlanningDialogsView } from '@/features/projects/views/planning-dialogs.view'
 import { Notice } from '@/features/projects/views/planning-marks.view'
 import { ProjectSectionNav } from '@/features/projects/views/project-section-nav.view'
+import { ReportsView } from '@/features/projects/views/reports.view'
 import { TaskBoardView } from '@/features/projects/views/task-board.view'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Button } from '@/shared/components/primitives/button'
@@ -96,6 +97,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
             ))}
           {planning.section === 'backlog' && <BacklogView vm={vm.backlog} />}
           {planning.section === 'board' && vm.selectedProject && <TaskBoardView vm={vm} />}
+          {planning.section === 'reports' && <ReportsView vm={vm.reports} />}
         </>
       )}
 

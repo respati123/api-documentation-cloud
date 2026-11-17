@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { formatDate, formatRelativeDate } from './format'
+import { formatDate, formatRelativeDate, formatShortDate } from './format'
 
 describe('formatDate', () => {
   test('formats a valid timestamp with the active language', () => {
@@ -32,5 +32,16 @@ describe('formatRelativeDate', () => {
 
   test('returns null for an invalid timestamp', () => {
     expect(formatRelativeDate('nope', 'en')).toBeNull()
+  })
+})
+
+describe('formatShortDate', () => {
+  test('gives the day and the month in the language, and reads the date as UTC so the day does not move', () => {
+    expect(formatShortDate('2026-07-01', 'en')).toBe('Jul 1')
+    expect(formatShortDate('2026-07-01', 'id')).toBe('1 Jul')
+  })
+
+  test('returns the text as it came when it is not a date', () => {
+    expect(formatShortDate('soon', 'en')).toBe('soon')
   })
 })

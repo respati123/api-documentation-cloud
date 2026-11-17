@@ -51,3 +51,7 @@ export const BACKLOG_TEXT = {
   error: 'planning:backlog.error',
   retry: 'planning:backlog.retry',
 } as const
+
+// The key of the word for a status. A status this page has no word for shows as To do rather than as a raw key.
+export const statusTextKey = (status: string): string =>
+  status in BACKLOG_TEXT.status ? BACKLOG_TEXT.status[status as keyof typeof BACKLOG_TEXT.status] : BACKLOG_TEXT.status.todo
