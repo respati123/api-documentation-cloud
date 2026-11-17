@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { appIntegrationsKeys, appIntegrationsService } from '@/features/app-integrations'
 import { useAuthSessionStore } from '@/features/auth'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { Task } from '@/features/projects/models/project.model'
@@ -16,6 +17,7 @@ import { planningService } from '@/features/projects/services/planning.service'
 import { progressOf } from '@/features/projects/utils/planning'
 import { planningKeys } from '@/features/projects/viewmodels/planning-keys'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
+import { showToast } from '@/shared/toast/toast-manager'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatRelativeDate } from '@/shared/utils/format'
 import { parseMarkdown } from '@/shared/utils/markdown'
@@ -67,6 +69,67 @@ export function useStoryExtrasViewModel(
     },
   })
   const approve = useMutation({ mutationFn: () => planningService.approveDesign(token, workspaceId, storyId), onSuccess: refresh })
+
+  // Screens and tables of the Stitchkit and DBDesign projects linked to the workspace, for attaching to this story.
+  const [screenChoice, setScreenChoice] = useState('')
+  const [tableChoice, setTableChoice] = useState('')
+  const screens = useQuery({
+    queryKey: appIntegrationsKeys.screens(workspaceId),
+    queryFn: () => appIntegrationsService.stitchkitScreens(workspaceId),
+    enabled: enabled && story !== null,
+    retry: false,
+  })
+  const tables = useQuery({
+    queryKey: appIntegrationsKeys.tables(workspaceId),
+    queryFn: () => appIntegrationsService.dbdesignTables(workspaceId),
+    enabled: enabled && story !== null,
+    retry: false,
+  })
+  const screenOptions = (screens.data ?? []).flatMap((project) =>
+    project.items.map((screen) => ({
+      value: `${project.projectId}::${screen.id}`,
+      label: `${project.projectName} · ${screen.name}`,
+      url: screen.url,
+    })),
+  )
+  const tableOptions = (tables.data ?? []).flatMap((project) =>
+    project.items.map((table) => ({
+      value: `${project.projectId}::${table.id}`,
+      label: `${project.projectName} · ${table.name}`,
+      projectId: project.projectId,
+      tableId: table.id,
+    })),
+  )
+  const showFailure = (error: unknown) => showToast({ kind: 'error', message: readErrorMessage(error, t(PLANNING_TEXT.error)) })
+  const attachScreen = useMutation({
+    mutationFn: async () => {
+      const option = screenOptions.find((item) => item.value === screenChoice)
+      if (!option?.url) return
+      await planningService.attachDesign(token, workspaceId, storyId, { title: option.label, url: option.url, note: 'Stitchkit' })
+    },
+    onSuccess: async () => {
+      setScreenChoice('')
+      await refresh()
+    },
+    onError: showFailure,
+  })
+  const addTable = useMutation({
+    mutationFn: async () => {
+      const option = tableOptions.find((item) => item.value === tableChoice)
+      if (!option) return
+      await planningService.linkDataModel(token, workspaceId, storyId, { projectId: option.projectId, tableId: option.tableId })
+    },
+    onSuccess: async () => {
+      setTableChoice('')
+      await refresh()
+    },
+    onError: showFailure,
+  })
+  const removeTable = useMutation({
+    mutationFn: (dataModelId: string) => planningService.unlinkDataModel(token, workspaceId, storyId, dataModelId),
+    onSuccess: refresh,
+    onError: showFailure,
+  })
   const toggleDod = useMutation({
     mutationFn: ({ itemId, done }: { itemId: string; done: boolean }) =>
       planningService.setDodItem(token, workspaceId, storyId, itemId, done),
@@ -122,6 +185,23 @@ export function useStoryExtrasViewModel(
     isApproving: approve.isPending,
     onApproveDesign: () => approve.mutate(),
     contracts: data?.contracts ?? [],
+    stitchkit: {
+      options: screenOptions.map(({ value, label }) => ({ value, label })),
+      choice: screenChoice,
+      setChoice: setScreenChoice,
+      attach: () => screenChoice && attachScreen.mutate(),
+      isBusy: attachScreen.isPending,
+    },
+    dataModels: data?.dataModels ?? [],
+    dbdesign: {
+      options: tableOptions.map(({ value, label }) => ({ value, label })),
+      choice: tableChoice,
+      setChoice: setTableChoice,
+      add: () => tableChoice && addTable.mutate(),
+      isBusy: addTable.isPending,
+    },
+    onRemoveDataModel: (dataModelId: string) => removeTable.mutate(dataModelId),
+    removingDataModelId: removeTable.isPending ? (removeTable.variables ?? null) : null,
     testCases: (data?.testCases ?? []).map((testCase) => ({ ...testCase, text: testCaseText(testCase, labels) })),
     copiedId,
     onCopyTestCase: async (id: string, text: string) => {

@@ -24,6 +24,13 @@ export const contractSchema = z.object({
   requestName: z.string(),
   missing: z.boolean(),
 })
+export const dataModelSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  projectName: z.string(),
+  tableId: z.string(),
+  tableName: z.string(),
+})
 export const testCaseSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -45,6 +52,8 @@ export const storyDetailsSchema = z.object({
   designApprovedBy: z.nullable(z.string()),
   designApprovedAt: z.nullable(z.string()),
   contracts: z.array(contractSchema),
+  // Older servers do not send data models yet.
+  dataModels: z.optional(z.array(dataModelSchema)),
   testCases: z.array(testCaseSchema),
 })
 
@@ -54,6 +63,7 @@ export type DodItem = z.infer<typeof dodItemSchema>
 export type StoryDesign = z.infer<typeof designSchema>
 export type StoryContract = z.infer<typeof contractSchema>
 export type StoryTestCase = z.infer<typeof testCaseSchema>
+export type StoryDataModel = z.infer<typeof dataModelSchema>
 export type StoryDetails = z.infer<typeof storyDetailsSchema>
 export type Subtask = z.infer<typeof subtaskSchema>
 

@@ -399,7 +399,15 @@
     "dodRole": "Role",
     "addDod": "Add item",
     "removeDod": "Remove item",
-    "dodProgress": "{{done}} of {{total}} done"
+    "dodProgress": "{{done}} of {{total}} done",
+    "tabDataModel": "Data model",
+    "dataModelsEmpty": "No tables yet. Link a DBDesign project to the workspace under Design, then add its tables here.",
+    "dataModelHint": "Tables from DBDesign that this story reads or writes.",
+    "pickTable": "Table",
+    "addTable": "Add table",
+    "removeTable": "Remove",
+    "pickScreen": "Stitchkit screen",
+    "attachScreen": "Attach screen"
   },
   "task": {
     "role": "Role",
