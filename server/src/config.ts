@@ -20,6 +20,8 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().default('API Documentation <no-reply@example.test>'),
+  OIDC_SIGNING_KEY_B64: z.string().optional(),
+  OIDC_SIGNING_KEY_ID: z.string().optional(),
 })
 
 export interface AppConfig {
@@ -32,6 +34,13 @@ export interface AppConfig {
   dbPoolMax: number
   dbStatementTimeoutMs: number
   smtp: { host?: string; port: number; secure: boolean; user?: string; password?: string; from: string }
+  oidc: OidcConfig | null
+}
+
+export interface OidcConfig {
+  signingKeyPem: string
+  keyId: string
+  issuer: string
 }
 
 export class ConfigError extends Error {
@@ -45,6 +54,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const parsed = envSchema.safeParse(env)
   if (!parsed.success) throw new ConfigError([...new Set(parsed.error.issues.map((issue) => String(issue.path[0])))])
   const values = parsed.data
+  const oidc = readOidc(values)
   return {
     databaseUrl: values.DATABASE_URL,
     publicWebUrl: values.PUBLIC_WEB_URL,
@@ -62,5 +72,20 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       password: values.SMTP_PASSWORD,
       from: values.SMTP_FROM,
     },
+    oidc,
+  }
+}
+
+// The OIDC key is optional. It is either fully set (key and key id) or not set at all.
+function readOidc(values: { PUBLIC_WEB_URL: string; OIDC_SIGNING_KEY_B64?: string; OIDC_SIGNING_KEY_ID?: string }): OidcConfig | null {
+  const hasKey = Boolean(values.OIDC_SIGNING_KEY_B64)
+  const hasKeyId = Boolean(values.OIDC_SIGNING_KEY_ID)
+  if (!hasKey && !hasKeyId) return null
+  if (!hasKey) throw new ConfigError(['OIDC_SIGNING_KEY_B64'])
+  if (!hasKeyId) throw new ConfigError(['OIDC_SIGNING_KEY_ID'])
+  return {
+    signingKeyPem: Buffer.from(values.OIDC_SIGNING_KEY_B64!, 'base64').toString('utf8'),
+    keyId: values.OIDC_SIGNING_KEY_ID!,
+    issuer: `${values.PUBLIC_WEB_URL.replace(/\/+$/, '')}/api/oidc`,
   }
 }
