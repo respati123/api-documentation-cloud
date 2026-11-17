@@ -46,6 +46,7 @@ export function useDesignAppViewModel(workspaceId: string, app: AppName) {
     errorMessage: list.error ? readErrorMessage(list.error, t(APPS_TEXT.error.fallback)) : null,
     retry: () => void list.refetch(),
     enabled: current?.enabled ?? false,
+    canUse: current?.canUse ?? false,
     baseUrl: current?.baseUrl ?? null,
     links: current?.links ?? [],
     canManage: list.data?.canManage ?? false,

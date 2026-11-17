@@ -165,8 +165,3 @@ export interface McpPrincipal {
   guideReadAt?: Date | null
 }
 
-// Project roles that may use each app's tools through the portal MCP: UI work in Stitchkit, data design in DBDesign.
-export const APP_TOOL_ROLES = {
-  stitchkit: ['ui_ux', 'pm', 'tech_lead'],
-  dbdesign: ['backend', 'tech_lead', 'pm'],
-} as const satisfies Record<'dbdesign' | 'stitchkit', readonly McpKeyRole[]>

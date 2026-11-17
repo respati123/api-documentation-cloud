@@ -6,6 +6,10 @@ export const APPS_TEXT = {
   link: 'apps:link',
   unlink: 'apps:unlink',
   loading: 'apps:loading',
+  noAccess: {
+    title: 'apps:noAccess.title',
+    detail: 'apps:noAccess.detail',
+  },
   notConfigured: { title: 'apps:notConfigured.title', detail: 'apps:notConfigured.detail' },
   empty: { title: 'apps:empty.title', owner: 'apps:empty.owner', member: 'apps:empty.member' },
   error: { title: 'apps:error.title', retry: 'apps:error.retry', fallback: 'apps:error.fallback' },

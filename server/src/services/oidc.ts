@@ -8,8 +8,13 @@ import {
   insertAuthorizationCode,
   type OidcClientRow,
 } from '@/repositories/oidc.repository'
+import type { AppName } from '@/repositories/app-links.repository'
+import { appRolesOf } from '@/services/app-access'
 import { tokenHash } from '@/services/auth'
 import type { OidcKeys, OidcUser } from './oidc-keys'
+
+// Client ids of the apps the portal calls. Their ID tokens carry the member's app_role.
+const APP_CLIENTS: string[] = ['dbdesign', 'stitchkit'] satisfies AppName[]
 
 export interface OidcDeps {
   db: SQL
@@ -149,7 +154,10 @@ export async function exchangeCode(deps: OidcDeps, form: TokenForm): Promise<Tok
   const user = await loadUser(deps.db, row.userId)
   if (!user) return tokenError(400, 'invalid_grant', 'The code is invalid or expired.')
 
-  const idToken = await deps.keys.signIdToken({ user, clientId: client.clientId, nonce: row.nonce })
+  const appRole = APP_CLIENTS.includes(client.clientId as AppName) ? (await appRolesOf(deps.db, user.id))[client.clientId as AppName] : undefined
+  if (appRole === 'none') return tokenError(403, 'access_denied', 'This account has no access to this app.')
+
+  const idToken = await deps.keys.signIdToken({ user, clientId: client.clientId, nonce: row.nonce, appRole })
   const accessToken = await deps.keys.signAccessToken({ user, clientId: client.clientId, scope: row.scope })
   return {
     status: 200,

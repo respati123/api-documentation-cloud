@@ -6,12 +6,13 @@ import { isReadTool, listedTools, type McpPrincipal, type McpTool } from '@/mode
 import { findMcpReplay, releaseMcpReplay, reserveMcpReplay, saveMcpReplay } from '@/repositories/mcp-replays.repository'
 import { bearerToken } from '@/services/auth'
 import { findAppLink, type AppName } from '@/repositories/app-links.repository'
+import { appRolesOf } from '@/services/app-access'
 import { appActorOf, APPS } from '@/services/app-integrations'
 import { broadcastPlanningChange, type PlanningScope } from '@/services/events'
 import { type AudienceTarget, commentTarget, planningAudience } from '@/services/planning-audience'
 import { guideIsFresh, readMcpGuide, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
-import { addMcpSubtask, appsForPrincipal, attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
+import { addMcpSubtask, attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
 import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpProjects, listMcpWorkspaces, readMcpDocument, readMcpParticipatingStory, uploadMcpBrd } from '@/services/mcp-access'
 import { listMcpDocuments, listMcpProjectItems, listMcpProjectTasks, readMcpReadableDocument } from '@/services/mcp-access'
 import { DOCUMENT_URI_TEMPLATE, listMcpDocumentResources, listMcpTeamMembers, readMcpDiscussion, listMcpNotifications, markMcpNotificationsRead, readMcpDocumentResource, searchMcpApiRequests } from '@/services/mcp-access'
@@ -401,9 +402,9 @@ async function appToolsOf(ctx: AppContext, app: AppName, principal: McpPrincipal
 
 async function appToolList(ctx: AppContext, principal: McpPrincipal) {
   const listed = []
-  const allowed = await appsForPrincipal(ctx.db, principal)
+  const access = await appRolesOf(ctx.db, principal.userId)
   for (const app of APPS) {
-    if (!ctx.apps.enabled(app) || !allowed.includes(app)) continue
+    if (!ctx.apps.enabled(app) || access[app] === 'none') continue
     let tools: AppTool[]
     try {
       tools = await appToolsOf(ctx, app, principal)
@@ -415,6 +416,8 @@ async function appToolList(ctx: AppContext, principal: McpPrincipal) {
     for (const tool of tools) {
       const name = `${APP_PREFIX[app]}${tool.name}`
       if (BLOCKED_APP_TOOLS.has(name)) continue
+      // Changes are listed only to the members the app gives edit rights (Stitchkit: UI/UX).
+      if (!tool.annotations?.readOnlyHint && access[app] !== 'editor') continue
       listed.push({
         name,
         title: `${APP_LABEL[app]}: ${tool.title ?? tool.name}`,
@@ -439,7 +442,9 @@ async function callAppTool(ctx: AppContext, principal: McpPrincipal, id: RpcRequ
   try {
     if (!ctx.apps.enabled(app)) throw new AppError('APP_NOT_CONFIGURED')
     if (BLOCKED_APP_TOOLS.has(name)) throw new AppError('MCP_PERMISSION_DENIED')
-    const workspaceId = await requireAppWorkspace(ctx.db, principal, app, args.workspaceId)
+    const tools = await appToolsOf(ctx, app, principal)
+    const readOnly = tools.find((tool) => `${APP_PREFIX[app]}${tool.name}` === name)?.annotations?.readOnlyHint === true
+    const workspaceId = await requireAppWorkspace(ctx.db, principal, app, args.workspaceId, !readOnly)
     // A tool that names a project may only touch a project linked to this workspace.
     if (typeof args.projectId === 'string' && !(await findAppLink(ctx.db, workspaceId, app, args.projectId))) throw new AppError('APP_PROJECT_NOT_LINKED')
     delete args.workspaceId

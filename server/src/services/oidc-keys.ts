@@ -1,5 +1,6 @@
 import { createPublicKey, randomUUID } from 'node:crypto'
 import { exportJWK, importJWK, importPKCS8, jwtVerify, SignJWT, type CryptoKey, type JWK } from 'jose'
+import type { AppRole } from '@/services/app-access'
 
 export interface OidcKeyOptions {
   signingKeyPem: string
@@ -11,6 +12,8 @@ export interface OidcUser {
   id: string
   email: string
   isAdmin: boolean
+  // Filled for the apps that call the portal, so a service token can say what the member may do there.
+  appRoles?: Partial<Record<string, AppRole>>
 }
 
 const ID_TOKEN_LIFETIME = '5m'
@@ -37,9 +40,10 @@ export function createOidcKeys(options: OidcKeyOptions) {
       return { keys: [publicJwk] }
     },
 
-    async signIdToken(input: { user: OidcUser; clientId: string; nonce: string }): Promise<string> {
+    async signIdToken(input: { user: OidcUser; clientId: string; nonce: string; appRole?: AppRole }): Promise<string> {
       const { signing } = await load()
-      return new SignJWT({ nonce: input.nonce, email: input.user.email, name: input.user.email, is_admin: input.user.isAdmin })
+      const claims = { nonce: input.nonce, email: input.user.email, name: input.user.email, is_admin: input.user.isAdmin, ...(input.appRole ? { app_role: input.appRole } : {}) }
+      return new SignJWT(claims)
         .setProtectedHeader({ alg: 'ES256', kid: options.keyId, typ: 'JWT' })
         .setIssuer(options.issuer)
         .setSubject(input.user.id)
@@ -66,7 +70,7 @@ export function createOidcKeys(options: OidcKeyOptions) {
     // and token_use, so an ID token for the same client is never accepted in its place.
     async signServiceToken(input: { user: OidcUser; audience: string }): Promise<string> {
       const { signing } = await load()
-      return new SignJWT({ token_use: 'service', email: input.user.email, is_admin: input.user.isAdmin })
+      return new SignJWT({ token_use: 'service', email: input.user.email, is_admin: input.user.isAdmin, app_role: input.user.appRoles?.[input.audience] ?? 'none' })
         .setProtectedHeader({ alg: 'ES256', kid: options.keyId, typ: 'JWT' })
         .setIssuer(options.issuer)
         .setSubject(input.user.id)

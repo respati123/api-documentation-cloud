@@ -13,7 +13,7 @@ function fakeApp(kind: 'dbdesign' | 'stitchkit') {
   const tools =
     kind === 'dbdesign'
       ? [{ name: 'dbdesign_project_get', inputSchema: { properties: { projectId: { type: 'string' } }, required: ['projectId'] } }, { name: 'dbdesign_project_create', inputSchema: { properties: {} } }]
-      : [{ name: 'create_screen', inputSchema: { properties: { projectId: { type: 'string' } }, required: ['projectId'] } }, { name: 'create_project', inputSchema: { properties: {} } }]
+      : [{ name: 'get_project', annotations: { readOnlyHint: true }, inputSchema: { properties: { projectId: { type: 'string' } }, required: ['projectId'] } }, { name: 'create_screen', inputSchema: { properties: { projectId: { type: 'string' } }, required: ['projectId'] } }, { name: 'create_project', inputSchema: { properties: {} } }]
   const server = Bun.serve({
     port: 0,
     async fetch(request) {
@@ -122,7 +122,7 @@ describe.skipIf(!databaseEnabled)('DBDesign and Stitchkit integration', () => {
   })
 
   test('the pickers list screens and tables of the linked projects only', async () => {
-    const { owner, member, workspaceId } = await team('apps-pickers', [])
+    const { owner, member, workspaceId } = await team('apps-pickers', ['backend'])
     await link(owner, workspaceId, 'stitchkit', 's1')
     await link(owner, workspaceId, 'dbdesign', 'd1')
     const screens = await http.call('GET', `/api/workspaces/${workspaceId}/apps/stitchkit/screens`, { token: member.token })
@@ -131,6 +131,17 @@ describe.skipIf(!databaseEnabled)('DBDesign and Stitchkit integration', () => {
     })
     const tables = await http.call('GET', `/api/workspaces/${workspaceId}/apps/dbdesign/tables`, { token: member.token })
     expect(tables.json.data).toEqual({ projects: [{ projectId: 'd1', projectName: 'Toko', items: [{ id: 't1', name: 'orders' }], error: null }] })
+  })
+
+  test('DBDesign is closed to disciplines outside backend, tech lead, and PM', async () => {
+    const { owner, member, workspaceId } = await team('apps-frontend', ['frontend'])
+    await link(owner, workspaceId, 'dbdesign', 'd1')
+    const tables = await http.call('GET', `/api/workspaces/${workspaceId}/apps/dbdesign/tables`, { token: member.token })
+    expect(tables.status).toBe(403)
+    const listed = await http.call('GET', `/api/workspaces/${workspaceId}/apps`, { token: member.token })
+    const apps = (listed.json.data as { apps: Array<{ app: string; canUse: boolean }> }).apps
+    expect(apps.find((item) => item.app === 'dbdesign')?.canUse).toBe(false)
+    expect(apps.find((item) => item.app === 'stitchkit')?.canUse).toBe(true)
   })
 
   test('a story data model takes tables from linked projects only, shows on the story, and can be removed', async () => {
@@ -180,5 +191,26 @@ describe.skipIf(!databaseEnabled)('DBDesign and Stitchkit integration', () => {
     expect(JSON.parse((noRole.json.result as { content: Array<{ text: string }> }).content[0].text).code).toBe('MCP_PERMISSION_DENIED')
     const blocked = await call('dbdesign_project_create', { workspaceId })
     expect(JSON.parse((blocked.json.result as { content: Array<{ text: string }> }).content[0].text).code).toBe('MCP_PERMISSION_DENIED')
+  })
+
+  test('Stitchkit: every member reads through MCP, only UI/UX changes', async () => {
+    const { owner, member, workspaceId } = await team('apps-stitch-read', ['backend'])
+    await link(owner, workspaceId, 'stitchkit', 's1')
+    const secret = ((await http.call('POST', '/api/me/mcp-keys', { token: member.token, body: { name: 'Laptop', validDays: 30 } })).json.data as { secret: string }).secret
+    const names = (((await http.mcp(secret, 'tools/list')).json.result as { tools: Array<{ name: string }> }).tools).map((item) => item.name)
+    expect(names).toContain('stitchkit_get_project')
+    expect(names).not.toContain('stitchkit_create_screen')
+    const read = await http.mcp(secret, 'tools/call', { name: 'stitchkit_get_project', arguments: { workspaceId, projectId: 's1' } })
+    expect(JSON.parse((read.json.result as { content: Array<{ text: string }> }).content[0].text)).toEqual({ called: 'get_project' })
+    const write = await http.mcp(secret, 'tools/call', { name: 'stitchkit_create_screen', arguments: { workspaceId, projectId: 's1' } })
+    expect(JSON.parse((write.json.result as { content: Array<{ text: string }> }).content[0].text).code).toBe('MCP_PERMISSION_DENIED')
+  })
+
+  test('Stitchkit: a UI/UX member may change screens through MCP', async () => {
+    const { owner, member, workspaceId } = await team('apps-stitch-write', ['ui_ux'])
+    await link(owner, workspaceId, 'stitchkit', 's1')
+    const secret = ((await http.call('POST', '/api/me/mcp-keys', { token: member.token, body: { name: 'Laptop', validDays: 30 } })).json.data as { secret: string }).secret
+    const write = await http.mcp(secret, 'tools/call', { name: 'stitchkit_create_screen', arguments: { workspaceId, projectId: 's1' } })
+    expect(JSON.parse((write.json.result as { content: Array<{ text: string }> }).content[0].text)).toEqual({ called: 'create_screen' })
   })
 })

@@ -5,6 +5,7 @@ import { AppError } from '@/lib/errors/app-error'
 import { deleteAppLink, insertAppLink, listAppLinks, type AppName } from '@/repositories/app-links.repository'
 import { findRole } from '@/repositories/memberships.repository'
 import { findUserById, isAdminUser } from '@/repositories/users.repository'
+import { appRolesOf, requireWorkspaceApp, workspaceAppAllowedFor } from '@/services/app-access'
 import type { OidcUser } from '@/services/oidc-keys'
 
 export const APPS: readonly AppName[] = ['dbdesign', 'stitchkit']
@@ -18,7 +19,7 @@ export function appNameOf(value: unknown): AppName {
 export async function appActorOf(db: SQL, userId: string): Promise<OidcUser> {
   const user = await findUserById(db, userId)
   if (!user) throw new AppError('ACCOUNT_NOT_FOUND')
-  return { id: user.id, email: user.email, isAdmin: await isAdminUser(db, user.id) }
+  return { id: user.id, email: user.email, isAdmin: await isAdminUser(db, user.id), appRoles: await appRolesOf(db, user.id) }
 }
 
 async function requireMember(db: SQL, workspaceId: string, userId: string) {
@@ -36,11 +37,13 @@ async function requireOwner(db: SQL, workspaceId: string, userId: string) {
 export async function listWorkspaceApps(ctx: AppContext, workspaceId: string, userId: string) {
   const role = await requireMember(ctx.db, workspaceId, userId)
   const links = await listAppLinks(ctx.db, workspaceId)
+  const usable = Object.fromEntries(await Promise.all(APPS.map(async (app) => [app, await workspaceAppAllowedFor(ctx.db, userId, workspaceId, app, false)])))
   return {
     canManage: role === 'owner',
     apps: APPS.map((app) => ({
       app,
       enabled: ctx.apps.enabled(app),
+      canUse: usable[app] === true,
       baseUrl: ctx.config.apps[app],
       links: links
         .filter((link) => link.app === app)
@@ -101,6 +104,7 @@ export function listLinkedStitchkitScreens(ctx: AppContext, workspaceId: string,
 }
 
 // Tables of the DBDesign projects linked to the workspace, for the story data model picker.
-export function listLinkedDbdesignTables(ctx: AppContext, workspaceId: string, userId: string) {
+export async function listLinkedDbdesignTables(ctx: AppContext, workspaceId: string, userId: string) {
+  await requireWorkspaceApp(ctx.db, userId, workspaceId, 'dbdesign', false)
   return perLinkedProject(ctx, workspaceId, userId, 'dbdesign', async (actor, projectId) => (await ctx.apps.dbdesignTables(actor, projectId)).tables)
 }
