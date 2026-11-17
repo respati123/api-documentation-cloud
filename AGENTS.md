@@ -83,6 +83,8 @@ The tag is the release. Nothing deploys on its own.
 
 The portal is the identity provider for DBDesign and Stitchkit. It needs two values in the server `.env`: `OIDC_SIGNING_KEY_B64` (the PKCS#8 signing key, base64) and `OIDC_SIGNING_KEY_ID`. Both are optional. Set both or neither. Create the key once, as in `PLAN-sso-oidc.md`, Task 0.1, and never commit it.
 
+DBDesign and Stitchkit are reached at `DBDESIGN_URL` and `STITCHKIT_URL` (optional). The portal calls them with a 60-second service token for the member (`token_use=service`), for the Design pages, the story pickers, and the app tools in the portal MCP.
+
 Register each app with `bun run api:oidc-client -- create --client-id <id> --name <name> --redirect-uri <https url> --post-logout-uri <https url>`. The secret is printed once. Rotating or disabling uses `rotate-secret` or `disable`.
 
 ## Actions that need an explicit request

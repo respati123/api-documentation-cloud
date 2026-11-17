@@ -95,7 +95,8 @@
     "notifications_list": "Lihat notifikasi",
     "notifications_mark_read": "Tandai notifikasi dibaca",
     "team_members_list": "Lihat daftar tim",
-    "discussion_read": "Baca diskusi"
+    "discussion_read": "Baca diskusi",
+    "story_link_data_model": "Tautkan tabel data model"
   },
   "guide": {
     "title": "Panduan wajib agent",

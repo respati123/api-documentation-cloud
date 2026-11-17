@@ -2,7 +2,7 @@ import type { McpKeyRole } from '@/models/mcp'
 
 // The playbook every agent must read through planning_guide before it writes project data.
 // Bump GUIDE_VERSION whenever a guide changes, so agents that read an older version have to read it again.
-export const GUIDE_VERSION = '2026-11-16.4'
+export const GUIDE_VERSION = '2026-11-17.1'
 
 const shared = `## Rules for every agent
 
@@ -174,6 +174,7 @@ ${shared}
 - Find work you can start with tasks_list_ready, then read the story with story_read: the user story, the flow, and the acceptance criteria.
 - Attach each design with story_attach_design: a clear title, an http or https link, and a short note (screens, devices).
 - A person approves the design in the web app. Approval opens the backend, frontend, mobile, and QA tasks.
+- When the workspace links a Stitchkit project under Design, build the screens there with the stitchkit_ tools (each needs workspaceId), then attach each screen with story_attach_design using the screen link.
 - Track your steps with subtask_add and subtask_set_done, and move your task with tasks_update_assigned_status.
 
 ${projectView}`
@@ -187,6 +188,7 @@ ${shared}
 - Find work with tasks_list_ready. Read the story, its approved design, and its acceptance criteria with story_read.
 - Read the BRD and the approved PRD behind the story with documents_list and documents_read, so the API covers the business rules and limits they state.
 - Keep the API contract in the workspace API docs. Find each request's id with api_requests_search (by name, path, or method), then link it to the story with story_link_api_contract.
+- When the workspace links a DBDesign project under Design, design the tables there with the dbdesign_ tools (each needs workspaceId), then add the tables the story reads or writes with story_link_data_model.
 - Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status.
 
 ${projectView}
