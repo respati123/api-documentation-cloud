@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
+import { type CursorKeys, cursorValues, encodeCursor, pageOf } from '@/lib/pagination'
 import {
   allowedStatuses,
   ISSUE_PRIORITIES,
@@ -23,9 +24,11 @@ import {
   lastRank,
   listChildren,
   listIssues,
+  listIssuesByNumber,
   updateIssueFields,
 } from '@/repositories/issues.repository'
 import { insertPlanningEvent } from '@/repositories/planning-events.repository'
+import { keyOwner } from '@/repositories/project-settings.repository'
 import { ensureAssigneeInProject } from '@/repositories/projects.repository'
 import { findSprint, insertScopeEvent } from '@/repositories/sprints.repository'
 import { type ProjectRoles, resolveProjectRoles } from '@/services/project-roles'
@@ -134,6 +137,27 @@ export async function listProjectIssues(
   return listIssues(db, scope.projectId, { ...filter, includeDrafts: roles.isApprover, viewerId: actor.userId })
 }
 
+// The issues of a project by number, a page at a time. The cursor is the number of the last issue of the page before.
+export async function listIssuePage(
+  db: SQL,
+  scope: IssueScope,
+  actor: Actor,
+  filter: { type?: IssueType; sprintId?: string | null; parentId?: string },
+  page: { limit: number; cursor: CursorKeys | null },
+): Promise<{ items: IssueRow[]; nextCursor: string | null }> {
+  const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
+  const after = cursorValues(page.cursor, ['n'])
+  if (after && !Number.isInteger(Number(after.n))) throw new AppError('PAGINATION_INVALID')
+  const rows = await listIssuesByNumber(db, scope.projectId, {
+    ...filter,
+    includeDrafts: roles.isApprover,
+    viewerId: actor.userId,
+    limit: page.limit + 1,
+    afterNumber: after ? Number(after.n) : null,
+  })
+  return pageOf(rows, page.limit, (row) => encodeCursor({ n: String(row.number) }))
+}
+
 export async function updateIssue(db: SQL, scope: IssueScope, actor: Actor, ref: string, patch: UpdateIssueInput): Promise<IssueRow> {
   const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
   const issue = await loadVisible(db, scope, actor, roles, ref)
@@ -158,7 +182,11 @@ export async function updateIssue(db: SQL, scope: IssueScope, actor: Actor, ref:
 export async function loadVisible(db: SQL, scope: IssueScope, actor: Actor, roles: ProjectRoles, ref: string): Promise<IssueRow> {
   const keyed = /^([A-Za-z]+)-(\d+)$/.exec(ref)
   const issue = keyed ? await findIssueByNumber(db, scope.projectId, Number(keyed[2])) : await findIssue(db, scope.projectId, ref)
-  if (!issue || (keyed && issue.key.toLowerCase() !== ref.toLowerCase())) throw new AppError('ISSUE_NOT_FOUND')
+  if (!issue) throw new AppError('ISSUE_NOT_FOUND')
+  // A key the project had before still opens its issues.
+  if (keyed && issue.key.toLowerCase() !== ref.toLowerCase() && (await keyOwner(db, scope.workspaceId, keyed[1].toUpperCase())) !== scope.projectId) {
+    throw new AppError('ISSUE_NOT_FOUND')
+  }
   if (!issue.publishedAt && !roles.isApprover && issue.createdBy !== actor.userId) throw new AppError('ISSUE_NOT_FOUND')
   return issue
 }

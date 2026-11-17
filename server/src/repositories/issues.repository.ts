@@ -207,3 +207,45 @@ export async function blocksReach(db: SQL, startId: string, targetId: string): P
     ) SELECT 1 AS hit FROM reach WHERE id = ${targetId} LIMIT 1`
   return row !== undefined
 }
+
+export interface DraftVisibility {
+  includeDrafts: boolean
+  // A member always sees the drafts they made themselves.
+  viewerId: string
+}
+
+// The open items that belong to no sprint, by rank. Finished items are left out. A page follows `after`.
+export async function listBacklogPage(
+  db: SQL,
+  projectId: string,
+  query: DraftVisibility & { limit: number; after: { rank: number; number: number } | null },
+): Promise<IssueRow[]> {
+  const rank = query.after?.rank ?? null
+  const number = query.after?.number ?? null
+  return db`SELECT ${db.unsafe(columns)} ${db.unsafe(tables)} WHERE i.project_id = ${projectId}
+    AND i.sprint_id IS NULL AND i.rank IS NOT NULL AND i.status IS DISTINCT FROM 'done'
+    AND (${query.includeDrafts}::boolean OR i.published_at IS NOT NULL OR i.created_by = ${query.viewerId})
+    AND (${rank}::float8 IS NULL OR (i.rank::float8, i.number) > (${rank}::float8, ${number}::int))
+    ORDER BY i.rank, i.number LIMIT ${query.limit}`
+}
+
+export async function listSprintIssues(db: SQL, sprintId: string, query: DraftVisibility & { limit: number }): Promise<IssueRow[]> {
+  return db`SELECT ${db.unsafe(columns)} ${db.unsafe(tables)} WHERE i.sprint_id = ${sprintId} AND i.type IN ('story', 'task', 'bug')
+    AND (${query.includeDrafts}::boolean OR i.published_at IS NOT NULL OR i.created_by = ${query.viewerId})
+    ORDER BY i.rank NULLS LAST, i.number LIMIT ${query.limit}`
+}
+
+// Issues by number, one page at a time.
+export async function listIssuesByNumber(
+  db: SQL,
+  projectId: string,
+  query: DraftVisibility & { type?: IssueType; sprintId?: string | null; parentId?: string; limit: number; afterNumber: number | null },
+): Promise<IssueRow[]> {
+  return db`SELECT ${db.unsafe(columns)} ${db.unsafe(tables)} WHERE i.project_id = ${projectId}
+    AND (${query.includeDrafts}::boolean OR i.published_at IS NOT NULL OR i.created_by = ${query.viewerId})
+    AND (${query.type ?? null}::text IS NULL OR i.type = ${query.type ?? null})
+    AND (${query.parentId ?? null}::text IS NULL OR i.parent_id = ${query.parentId ?? null})
+    AND (${query.sprintId === undefined}::boolean OR i.sprint_id IS NOT DISTINCT FROM ${query.sprintId ?? null})
+    AND (${query.afterNumber}::int IS NULL OR i.number > ${query.afterNumber}::int)
+    ORDER BY i.number LIMIT ${query.limit}`
+}

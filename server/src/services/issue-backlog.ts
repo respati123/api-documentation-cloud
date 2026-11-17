@@ -1,7 +1,9 @@
 import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
 import { isBacklogItem, type IssueRow, RANK_STEP, rankBetween } from '@/models/issue'
-import { findIssue, markPublished, neighbourRank, renumberRanks, updateIssueFields } from '@/repositories/issues.repository'
+import { type CursorKeys, cursorValues, encodeCursor, pageOf } from '@/lib/pagination'
+import { findIssue, listBacklogPage, listSprintIssues, markPublished, neighbourRank, renumberRanks, updateIssueFields } from '@/repositories/issues.repository'
+import { listSprintRows, type SprintRow } from '@/repositories/sprints.repository'
 import { type Actor, invalid, isAgent, type IssueScope, loadVisible, logEvent } from '@/services/issues'
 import { resolveProjectRoles } from '@/services/project-roles'
 
@@ -63,4 +65,26 @@ export async function publishIssue(db: SQL, scope: IssueScope, actor: Actor, ref
     })
   }
   return (await findIssue(db, scope.projectId, issue.id)) as IssueRow
+}
+
+const SPRINT_ITEM_LIMIT = 500
+
+// What the Backlog screen shows: the planned and active sprints with their items, then the items that belong to no
+// sprint. Only that second part is paged, because it is the one that grows without bound.
+export async function readBacklog(
+  db: SQL,
+  scope: IssueScope,
+  actor: Actor,
+  page: { limit: number; cursor: CursorKeys | null },
+): Promise<{ sprints: Array<SprintRow & { issues: IssueRow[] }>; backlog: { items: IssueRow[]; nextCursor: string | null } }> {
+  const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
+  const visibility = { includeDrafts: roles.isApprover, viewerId: actor.userId }
+  const after = cursorValues(page.cursor, ['r', 'n'])
+  if (after && (Number.isNaN(Number(after.r)) || !Number.isInteger(Number(after.n)))) throw new AppError('PAGINATION_INVALID')
+
+  const open = (await listSprintRows(db, scope.projectId)).filter((sprint) => sprint.status !== 'closed')
+  const sprints = await Promise.all(open.map(async (sprint) => ({ ...sprint, issues: await listSprintIssues(db, sprint.id, { ...visibility, limit: SPRINT_ITEM_LIMIT }) })))
+  const rows = await listBacklogPage(db, scope.projectId, { ...visibility, limit: page.limit + 1, after: after ? { rank: Number(after.r), number: Number(after.n) } : null })
+  const items = pageOf(rows, page.limit, (row) => encodeCursor({ r: String(row.rank), n: String(row.number) }))
+  return { sprints, backlog: items }
 }

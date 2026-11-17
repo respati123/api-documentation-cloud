@@ -99,5 +99,6 @@ export const en = {
   SPRINT_ALREADY_ACTIVE: 'This project already has an active sprint. Close it before starting another.',
   SPRINT_NOT_EDITABLE: 'This sprint is not in a state where that can be done.',
   SPRINT_ITEM_NOT_READY: 'Only a Ready story with points, or a task or bug with points, can enter a sprint. A PM can override this with a reason.',
+  PROJECT_KEY_TAKEN: 'Another project in this workspace already uses that key, now or before.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>
