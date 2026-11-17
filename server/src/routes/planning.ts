@@ -3,7 +3,8 @@ import type { AuthUser } from '@/models/workspace'
 import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
 import { created, noContent, ok } from '@/lib/http'
-import { addStoryTestCase, approveStoryDesign, attachStoryDesign, getStoryDetails, linkStoryContract, setStoryDodItem, updateStoryDetails } from '@/services/stories'
+import { addStoryTestCase, approveStoryDesign, attachStoryDesign, getStoryDetails, linkStoryContract, setStoryDodItem, updateStoryDetails, linkStoryDataModel, unlinkStoryDataModel } from '@/services/stories'
+import { appActorOf } from '@/services/app-integrations'
 import { addPlanningComment, canApprovePlanning, canManagePlanning, canReadPlanningDocuments, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, deletePlanningDocument, getPlanningDocument, getPlanningDocumentFile, getPlanningDocumentVersion, listPlanningComments, listPlanningDocuments, listPlanningEvents, listPlanningItems, listPlanningTasks, publishPlanningEpic, rebasePlanningEpic, requirePlanningPm, resolvePlanningComment, revisePlanningDocument, setPlanningDocumentStatus, updatePlanningItem, updatePlanningTaskDraft, type TargetKind } from '@/services/planning'
 import { extractDocumentFile } from '@/services/document-upload'
 
@@ -63,9 +64,9 @@ export async function handlePlanningRoutes(ctx: AppContext, request: Request, me
   const draftTaskMatch = action.match(/^planning\/task-drafts\/([\w-]+)$/)
   if (draftTaskMatch && method === 'PATCH') return ok({ task: await updatePlanningTaskDraft(db, workspaceId, draftTaskMatch[1], actorId, await bodyOf(request)) })
   if (action === 'planning/events' && method === 'GET') return ok({ events: await listPlanningEvents(db, workspaceId, actorId) })
-  const storyMatch = action.match(/^planning\/stories\/([\w-]+)(?:\/(approve-design|designs|contracts|test-cases|dod\/([\w-]+)))?$/)
+  const storyMatch = action.match(/^planning\/stories\/([\w-]+)(?:\/(approve-design|designs|contracts|test-cases|data-models|dod\/([\w-]+)|data-models\/([\w-]+)))?$/)
   if (storyMatch) {
-    const [, storyId, part, dodItemId] = storyMatch
+    const [, storyId, part, dodItemId, dataModelId] = storyMatch
     if (!part && method === 'GET') return ok({ story: await getStoryDetails(db, workspaceId, storyId, actorId) })
     if (!part && method === 'PATCH') return ok({ story: await updateStoryDetails(db, workspaceId, storyId, actorId, await bodyOf(request)) })
     if (part === 'approve-design' && method === 'POST') return ok({ story: await approveStoryDesign(db, workspaceId, storyId, actorId) })
@@ -73,6 +74,12 @@ export async function handlePlanningRoutes(ctx: AppContext, request: Request, me
     if (part === 'designs' && method === 'POST') return created({ design: await attachStoryDesign(db, workspaceId, storyId, actorId, await bodyOf(request)) })
     if (part === 'contracts' && method === 'POST') return created({ contract: await linkStoryContract(db, workspaceId, storyId, actorId, await bodyOf(request)) })
     if (part === 'test-cases' && method === 'POST') return created({ testCase: await addStoryTestCase(db, workspaceId, storyId, actorId, await bodyOf(request)) })
+    if (part === 'data-models' && method === 'POST')
+      return created({ dataModel: await linkStoryDataModel(db, ctx.apps, await appActorOf(db, actorId), workspaceId, storyId, await bodyOf(request)) })
+    if (dataModelId && method === 'DELETE') {
+      await unlinkStoryDataModel(db, workspaceId, storyId, actorId, dataModelId)
+      return noContent()
+    }
   }
   const commentMatch = action.match(/^planning\/(document|epic|story|task)\/([\w-]+)\/comments$/)
   if (commentMatch) {
