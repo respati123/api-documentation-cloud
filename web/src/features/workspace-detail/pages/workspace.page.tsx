@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { DesignAppPage } from '@/features/app-integrations'
 import { type AppRoute, SHELL_TEXT, type WorkspaceTab } from '@/features/app-shell'
 import { ProjectsView } from '@/features/projects'
 import { CommitDetailView } from '@/features/workspace-detail/views/commit-detail.view'
@@ -176,6 +177,9 @@ export function WorkspacePage({ workspaceId, tab, commitId, navigate }: Workspac
             />
           )}
         </>
+      )}
+      {vm.detailStatus === 'ready' && (vm.activeTab === 'design-ui' || vm.activeTab === 'design-database') && (
+        <DesignAppPage key={vm.activeTab} workspaceId={workspaceId} app={vm.activeTab === 'design-ui' ? 'stitchkit' : 'dbdesign'} />
       )}
       {vm.detailStatus === 'ready' && vm.activeTab === 'projects' && (
         <ProjectsView {...vm.projects} onManageTeam={() => vm.selectTab('team')} />
