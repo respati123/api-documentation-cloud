@@ -110,3 +110,7 @@ Responses that contain a session or a token also set `Cache-Control: no-store`. 
 2. Add its message to `en.ts` and `id.ts`.
 3. Write the test that expects the code, the status, and the message in the requested language first (TDD).
 4. Run typecheck. If a language is missing, it fails here.
+
+## OpenID Connect endpoints (exception)
+
+The endpoints under `/api/oidc/` answer plain JSON, with no `code`, `requestId`, or `data` wrapper. OIDC clients and OAuth tools expect that shape (for example `{ "error": "invalid_grant" }`). Only these routes use the helper in `src/lib/oidc-http.ts`. Authorize and end-session keep the normal response base, because the portal page calls them. The token and user info responses send `Cache-Control: no-store`.
