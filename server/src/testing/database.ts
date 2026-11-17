@@ -1,9 +1,10 @@
 import { SQL } from 'bun'
 import { randomUUID } from 'node:crypto'
-import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises'
+import { copyFile, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { splitStatements } from '@/lib/migrations'
 import { runMigrations } from '@/migrate'
 import { insertCommit } from '@/repositories/commits.repository'
 import { insertMembership } from '@/repositories/memberships.repository'
@@ -26,6 +27,8 @@ export interface ScratchDatabase {
   db: SQL
   // Applies the migrations up to a version (all of them when omitted). Safe to call again with a higher version.
   migrate: (upTo?: number) => Promise<void>
+  // Runs the statements of one SQL file in a single transaction, the way the migration runner does.
+  applySql: (file: URL) => Promise<void>
   drop: () => Promise<void>
 }
 
@@ -52,12 +55,18 @@ export async function openScratchDatabase(): Promise<ScratchDatabase> {
       await rm(folder, { recursive: true, force: true })
     }
   }
+  const applySql = async (file: URL) => {
+    const statements = splitStatements(await readFile(file, 'utf8'))
+    await db.begin(async (tx) => {
+      for (const statement of statements) await tx.unsafe(statement)
+    })
+  }
   const drop = async () => {
     await db.close()
     await admin.unsafe(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`)
     await admin.close()
   }
-  return { db, migrate, drop }
+  return { db, migrate, applySql, drop }
 }
 
 export async function seedUser(db: SQL): Promise<{ id: string; email: string }> {
