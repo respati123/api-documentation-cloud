@@ -68,8 +68,8 @@ export interface UpdateIssueInput {
   dueDate?: string | null
 }
 
-const invalid = () => new AppError('ISSUE_INPUT_INVALID')
-const isAgent = (actor: Actor) => Boolean(actor.apiKeyId)
+export const invalid = () => new AppError('ISSUE_INPUT_INVALID')
+export const isAgent = (actor: Actor) => Boolean(actor.apiKeyId)
 const isIssueType = (value: unknown): value is IssueType => (ISSUE_TYPES as readonly unknown[]).includes(value)
 const hasDiscipline = (roles: ProjectRoles, discipline: string | null) => discipline !== null && roles.disciplines.includes(discipline)
 
@@ -153,7 +153,7 @@ export async function updateIssue(db: SQL, scope: IssueScope, actor: Actor, ref:
 }
 
 // An issue is found by its id or by its key, such as PARI-12. A draft is hidden from members who may not see it.
-async function loadVisible(db: SQL, scope: IssueScope, actor: Actor, roles: ProjectRoles, ref: string): Promise<IssueRow> {
+export async function loadVisible(db: SQL, scope: IssueScope, actor: Actor, roles: ProjectRoles, ref: string): Promise<IssueRow> {
   const keyed = /^([A-Za-z]+)-(\d+)$/.exec(ref)
   const issue = keyed ? await findIssueByNumber(db, scope.projectId, Number(keyed[2])) : await findIssue(db, scope.projectId, ref)
   if (!issue || (keyed && issue.key.toLowerCase() !== ref.toLowerCase())) throw new AppError('ISSUE_NOT_FOUND')
@@ -254,7 +254,7 @@ async function startParentStory(tx: SQL, scope: IssueScope, actor: Actor, issue:
 const recordStatus = (tx: SQL, actor: Actor, issueId: string, from: string | null, to: string) =>
   insertStatusEvent(tx, { id: randomUUID(), issueId, fromStatus: from, toStatus: to, actorId: actor.userId, apiKeyId: actor.apiKeyId ?? null })
 
-const logEvent = (tx: SQL, scope: IssueScope, actor: Actor, issueId: string, action: string, details: Record<string, unknown>) =>
+export const logEvent = (tx: SQL, scope: IssueScope, actor: Actor, issueId: string, action: string, details: Record<string, unknown>) =>
   insertPlanningEvent(tx, { workspaceId: scope.workspaceId, actorId: actor.userId, apiKeyId: actor.apiKeyId ?? null, targetKind: 'issue', targetId: issueId, action, details })
 
 function text(value: unknown, min: number, max: number): string {

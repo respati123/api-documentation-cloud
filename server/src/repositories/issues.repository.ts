@@ -110,3 +110,100 @@ export async function insertStatusEvent(
 ): Promise<void> {
   await db`INSERT INTO issue_status_events (id, issue_id, from_status, to_status, actor_id, api_key_id) VALUES (${event.id}, ${event.issueId}, ${event.fromStatus}, ${event.toStatus}, ${event.actorId}, ${event.apiKeyId})`
 }
+
+// The rank of the closest backlog item above or below a rank, leaving one issue out. Null when there is none.
+export async function neighbourRank(db: SQL, projectId: string, rank: number, direction: 'above' | 'below', excludeId: string): Promise<number | null> {
+  const [row] =
+    direction === 'above'
+      ? await db`SELECT max(rank)::float8 AS rank FROM issues WHERE project_id = ${projectId} AND rank < ${rank} AND id <> ${excludeId}`
+      : await db`SELECT min(rank)::float8 AS rank FROM issues WHERE project_id = ${projectId} AND rank > ${rank} AND id <> ${excludeId}`
+  return row?.rank ?? null
+}
+
+// Spaces the whole backlog one step apart again, keeping its order.
+export async function renumberRanks(db: SQL, projectId: string, step: number): Promise<void> {
+  await db`UPDATE issues SET rank = ordered.position * ${step}
+    FROM (SELECT id, row_number() OVER (ORDER BY rank, number) AS position FROM issues WHERE project_id = ${projectId} AND rank IS NOT NULL) AS ordered
+    WHERE issues.id = ordered.id`
+}
+
+export async function markPublished(db: SQL, projectId: string, id: string): Promise<void> {
+  await db`UPDATE issues SET published_at = coalesce(published_at, now()), updated_at = now() WHERE project_id = ${projectId} AND id = ${id}`
+}
+
+export interface ChecklistRow {
+  id: string
+  issueId: string
+  title: string
+  done: boolean
+  position: number
+}
+
+const checklistColumns = 'id, issue_id AS "issueId", title, done, position'
+
+export async function listChecklistRows(db: SQL, issueId: string): Promise<ChecklistRow[]> {
+  return db`SELECT ${db.unsafe(checklistColumns)} FROM issue_checklist_items WHERE issue_id = ${issueId} ORDER BY position, created_at`
+}
+
+export async function insertChecklistRow(db: SQL, input: { id: string; issueId: string; title: string }): Promise<ChecklistRow> {
+  const [row] = await db`INSERT INTO issue_checklist_items (id, issue_id, title, position)
+    VALUES (${input.id}, ${input.issueId}, ${input.title}, (SELECT coalesce(max(position), 0) + 1 FROM issue_checklist_items WHERE issue_id = ${input.issueId}))
+    RETURNING ${db.unsafe(checklistColumns)}`
+  return row
+}
+
+export async function findChecklistRow(db: SQL, issueId: string, itemId: string): Promise<ChecklistRow | undefined> {
+  const [row] = await db`SELECT ${db.unsafe(checklistColumns)} FROM issue_checklist_items WHERE issue_id = ${issueId} AND id = ${itemId}`
+  return row
+}
+
+export async function setChecklistRowDone(db: SQL, itemId: string, done: boolean): Promise<void> {
+  await db`UPDATE issue_checklist_items SET done = ${done} WHERE id = ${itemId}`
+}
+
+export async function deleteChecklistRow(db: SQL, itemId: string): Promise<void> {
+  await db`DELETE FROM issue_checklist_items WHERE id = ${itemId}`
+}
+
+export interface LinkRow {
+  id: string
+  kind: string
+  direction: 'out' | 'in'
+  issueId: string
+  issueKey: string
+  issueTitle: string
+  issuePublishedAt: Date | null
+  issueCreatedBy: string
+}
+
+const linkEnd = (near: string, far: string, direction: string) =>
+  `SELECT l.id, l.kind, '${direction}' AS direction, o.id AS "issueId", p.key || '-' || o.number AS "issueKey", o.title AS "issueTitle", o.published_at AS "issuePublishedAt", o.created_by AS "issueCreatedBy", l.created_at AS "createdAt"
+   FROM issue_links l JOIN issues o ON o.id = l.${far} JOIN projects p ON p.id = o.project_id WHERE l.${near} = $1`
+
+// Links in both directions: the ones this issue makes (out) and the ones that point at it (in).
+export async function listLinkRows(db: SQL, issueId: string): Promise<LinkRow[]> {
+  return db.unsafe(`${linkEnd('from_id', 'to_id', 'out')} UNION ALL ${linkEnd('to_id', 'from_id', 'in')} ORDER BY "createdAt", id`, [issueId])
+}
+
+export async function insertLinkRow(db: SQL, input: { id: string; fromId: string; toId: string; kind: string; createdBy: string }): Promise<void> {
+  await db`INSERT INTO issue_links (id, from_id, to_id, kind, created_by) VALUES (${input.id}, ${input.fromId}, ${input.toId}, ${input.kind}, ${input.createdBy}) ON CONFLICT (from_id, to_id, kind) DO NOTHING`
+}
+
+export async function findLinkRow(db: SQL, issueId: string, linkId: string): Promise<{ id: string } | undefined> {
+  const [row] = await db`SELECT id FROM issue_links WHERE id = ${linkId} AND (from_id = ${issueId} OR to_id = ${issueId})`
+  return row
+}
+
+export async function deleteLinkRow(db: SQL, linkId: string): Promise<void> {
+  await db`DELETE FROM issue_links WHERE id = ${linkId}`
+}
+
+// True when `startId` already blocks `targetId`, directly or through other issues.
+export async function blocksReach(db: SQL, startId: string, targetId: string): Promise<boolean> {
+  const [row] = await db`WITH RECURSIVE reach(id) AS (
+      SELECT to_id FROM issue_links WHERE from_id = ${startId} AND kind = 'blocks'
+      UNION
+      SELECT l.to_id FROM issue_links l JOIN reach r ON l.from_id = r.id WHERE l.kind = 'blocks'
+    ) SELECT 1 AS hit FROM reach WHERE id = ${targetId} LIMIT 1`
+  return row !== undefined
+}
