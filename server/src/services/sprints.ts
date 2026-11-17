@@ -3,6 +3,7 @@ import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
 import { isBacklogItem, type IssueRow, statusCategory } from '@/models/issue'
 import { findIssue } from '@/repositories/issues.repository'
+import { findProjectSettings } from '@/repositories/project-settings.repository'
 import {
   closeSprintRow,
   findSprint,
@@ -32,10 +33,12 @@ export interface SprintInput {
 const badSprint = () => new AppError('SPRINT_INPUT_INVALID')
 
 // Sprints are planned and run by the PM and the tech lead. An AI agent key never touches them.
+// A project that works in Kanban mode has no sprints, so every change to one is refused there.
 async function manager(db: SQL, scope: IssueScope, actor: Actor): Promise<ProjectRoles> {
   const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
   if (!roles.isApprover) throw new AppError('ROLE_NOT_ALLOWED')
   if (isAgent(actor)) throw new AppError('ISSUE_AGENT_FORBIDDEN')
+  if ((await findProjectSettings(db, scope.projectId))?.mode === 'kanban') throw new AppError('SPRINT_NOT_AVAILABLE')
   return roles
 }
 

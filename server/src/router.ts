@@ -19,6 +19,7 @@ import { handleWorkspaceCollection } from '@/routes/workspace-collection'
 import { handleWorkspaceRecord } from '@/routes/workspace-record'
 import { handleProjectRoutes } from '@/routes/projects'
 import { handleIssueRoutes } from '@/routes/issues'
+import { handleKanbanRoutes } from '@/routes/kanban'
 import { handleMcpRequest } from '@/routes/mcp'
 import { handleReportRoutes } from '@/routes/reports'
 import { handleSprintRoutes } from '@/routes/sprints'
@@ -94,6 +95,8 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (projectResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, projectResponse)
   const issueResponse = await handleIssueRoutes(ctx, request, url, method, workspaceId, action, user)
   if (issueResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, issueResponse)
+  const kanbanResponse = await handleKanbanRoutes(ctx, request, url, method, workspaceId, action, user)
+  if (kanbanResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, kanbanResponse)
   const reportResponse = await handleReportRoutes(ctx, url, method, workspaceId, action, user)
   if (reportResponse) return reportResponse
   const sprintResponse = await handleSprintRoutes(ctx, request, method, workspaceId, action, user)

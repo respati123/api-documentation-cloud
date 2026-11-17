@@ -39,7 +39,7 @@ export function planningScopeOf(action: string): PlanningScope | null {
   if (/^planning\/(document|epic|story|task)\/[\w-]+\/comments$/.test(action) || /^planning\/comments\//.test(action)) return 'comments'
   if (action.startsWith('planning/documents')) return 'documents'
   if (action.startsWith('planning/')) return 'items'
-  if (/^projects\/[\w-]+(\/(issues|sprints|backlog)(\/.*)?|\/documents\/[\w-]+\/draft-backlog)?$/.test(action)) return 'items'
+  if (/^projects\/[\w-]+(\/(issues|sprints|backlog|wip-limits)(\/.*)?|\/documents\/[\w-]+\/draft-backlog)?$/.test(action)) return 'items'
   if (/^tasks\//.test(action) || /^projects\/[\w-]+\/tasks$/.test(action)) return 'tasks'
   if (/^projects\/[\w-]+\/members$/.test(action)) return 'members'
   return null

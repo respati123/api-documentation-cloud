@@ -97,6 +97,7 @@ export const errorDefinitions = {
   SPRINT_NOT_EDITABLE: { status: 409 },
   SPRINT_ITEM_NOT_READY: { status: 409 },
   PROJECT_KEY_TAKEN: { status: 409 },
+  SPRINT_NOT_AVAILABLE: { status: 409 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

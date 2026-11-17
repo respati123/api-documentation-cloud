@@ -100,5 +100,6 @@ export const id = {
   SPRINT_NOT_EDITABLE: 'Sprint ini sedang tidak dalam keadaan yang memungkinkan aksi itu.',
   SPRINT_ITEM_NOT_READY: 'Hanya story Ready yang punya poin, atau task atau bug yang punya poin, yang bisa masuk sprint. PM bisa melewatinya dengan alasan.',
   PROJECT_KEY_TAKEN: 'Project lain di workspace ini sudah memakai key itu, sekarang atau sebelumnya.',
+  SPRINT_NOT_AVAILABLE: 'Sprint hanya dipakai di mode Scrum. Project ini bekerja di mode Kanban.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>

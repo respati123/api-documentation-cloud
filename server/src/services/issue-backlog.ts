@@ -3,6 +3,7 @@ import { AppError } from '@/lib/errors/app-error'
 import { isBacklogItem, type IssueRow, RANK_STEP, rankBetween } from '@/models/issue'
 import { type CursorKeys, cursorValues, encodeCursor, pageOf } from '@/lib/pagination'
 import { findIssue, listBacklogPage, listSprintIssues, markPublished, neighbourRank, renumberRanks, updateIssueFields } from '@/repositories/issues.repository'
+import { findProjectSettings } from '@/repositories/project-settings.repository'
 import { listSprintRows, type SprintRow } from '@/repositories/sprints.repository'
 import { type Actor, invalid, isAgent, type IssueScope, loadVisible, logEvent } from '@/services/issues'
 import { resolveProjectRoles } from '@/services/project-roles'
@@ -82,7 +83,8 @@ export async function readBacklog(
   const after = cursorValues(page.cursor, ['r', 'n'])
   if (after && (Number.isNaN(Number(after.r)) || !Number.isInteger(Number(after.n)))) throw new AppError('PAGINATION_INVALID')
 
-  const open = (await listSprintRows(db, scope.projectId)).filter((sprint) => sprint.status !== 'closed')
+  const kanban = (await findProjectSettings(db, scope.projectId))?.mode === 'kanban'
+  const open = kanban ? [] : (await listSprintRows(db, scope.projectId)).filter((sprint) => sprint.status !== 'closed')
   const sprints = await Promise.all(open.map(async (sprint) => ({ ...sprint, issues: await listSprintIssues(db, sprint.id, { ...visibility, limit: SPRINT_ITEM_LIMIT }) })))
   const rows = await listBacklogPage(db, scope.projectId, { ...visibility, limit: page.limit + 1, after: after ? { rank: Number(after.r), number: Number(after.n) } : null })
   const items = pageOf(rows, page.limit, (row) => encodeCursor({ r: String(row.rank), n: String(row.number) }))

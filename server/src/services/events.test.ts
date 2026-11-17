@@ -60,6 +60,7 @@ describe('planningScopeOf', () => {
     ['projects/p-1/issues/i-1/checklist/c-1', 'items'],
     ['projects/p-1/sprints/s-1/close', 'items'],
     ['projects/p-1/backlog', 'items'],
+    ['projects/p-1/wip-limits/in_progress', 'items'],
     ['projects/p-1/documents/d-1/draft-backlog', 'items'],
     ['projects/p-1/issues/PARI-3/source-reviewed', 'items'],
   ] as const)('%s is %s', (action, scope) => {

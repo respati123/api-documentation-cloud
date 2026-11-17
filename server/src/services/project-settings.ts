@@ -9,6 +9,7 @@ import {
   type ProjectSettings,
   updateProjectRow,
 } from '@/repositories/project-settings.repository'
+import { hasActiveSprint } from '@/repositories/sprints.repository'
 import { type Actor, isAgent, type IssueScope } from '@/services/issues'
 import { resolveProjectRoles } from '@/services/project-roles'
 
@@ -30,6 +31,8 @@ export async function updateProjectSettings(db: SQL, scope: IssueScope, actor: A
   if (patch.key !== undefined && !isProjectKey(patch.key)) throw invalid()
   if (patch.mode !== undefined && patch.mode !== 'scrum' && patch.mode !== 'kanban') throw invalid()
   const goal = patch.productGoal === undefined ? undefined : text(patch.productGoal, 2000)
+  // The running sprint is closed first, so no work is left in a sprint that nothing shows.
+  if (patch.mode === 'kanban' && current.mode !== 'kanban' && (await hasActiveSprint(db, scope.projectId))) throw new AppError('SPRINT_NOT_EDITABLE')
 
   await db.begin(async (tx) => {
     if (patch.key !== undefined && patch.key !== current.key) {

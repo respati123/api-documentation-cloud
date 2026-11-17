@@ -261,6 +261,25 @@ describe.skipIf(!databaseEnabled)('issue, backlog, and sprint routes', () => {
     expect((await call('GET', '/reports/velocity', null)).status).toBe(401)
   })
 
+  test('the Kanban limits and numbers are read by members and set by the PM', async () => {
+    expect((await call('PUT', '/wip-limits/in_progress', plain, { limit: 3 })).json.code).toBe('ROLE_NOT_ALLOWED')
+    const set = await call('PUT', '/wip-limits/in_progress', pm, { limit: 3 })
+    expect(set.status).toBe(200)
+    expect(data(set).limits).toEqual([{ status: 'in_progress', limit: 3 }])
+    expect(data(await call('GET', '/wip-limits', viewer)).limits).toEqual([{ status: 'in_progress', limit: 3 }])
+    expect((await call('PUT', '/wip-limits/in_progress', pm, { limit: 0 })).json.code).toBe('PROJECT_INPUT_INVALID')
+    expect((await call('PUT', '/wip-limits/done', pm, { limit: 2 })).json.code).toBe('PROJECT_INPUT_INVALID')
+    expect((await call('PUT', '/wip-limits/in_progress', pm, { limit: 2, extra: true })).json.code).toBe('PROJECT_INPUT_INVALID')
+    expect(data(await call('PUT', '/wip-limits/in_progress', pm, { limit: null })).limits).toEqual([])
+
+    const flow = await call('GET', '/flow?days=14', plain)
+    expect(flow.status).toBe(200)
+    expect(data(flow)).toMatchObject({ days: 14 })
+    expect(data(flow).cumulativeFlow).toHaveLength(14)
+    expect(data(flow).throughput.perDay).toHaveLength(14)
+    expect((await call('GET', '/flow', stranger)).json.code).toBe('WORKSPACE_NOT_FOUND')
+  })
+
   test('a path that is not a route is not found', async () => {
     expect((await call('DELETE', '/issues', pm)).json.code).toBe('ROUTE_NOT_FOUND')
     expect((await call('GET', '/issues/x/rank', pm)).json.code).toBe('ROUTE_NOT_FOUND')
