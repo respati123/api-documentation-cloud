@@ -21,8 +21,9 @@ export interface ApiDocsViewProps {
 export function ApiDocsView({ tree, totalRequests, query, onQueryChange, selectedRequest, onSelect }: ApiDocsViewProps) {
   const { t } = useTranslation('docs')
   return (
-    <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
-      <aside className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 lg:sticky lg:top-6">
+    // Wide screens: one framed panel with a fixed 300px endpoint list on the left. Both columns scroll on their own.
+    <div className="grid gap-4 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-start md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-card">
+      <aside className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 md:max-h-[40rem] md:grid-rows-[auto_auto_minmax(0,1fr)] md:rounded-none md:border-0 md:border-r md:bg-transparent md:p-4">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">{t(DOCS_TEXT.tree.title)}</p>
           <span className="text-xs tabular-nums text-muted-foreground">{totalRequests}</span>
@@ -45,7 +46,7 @@ export function ApiDocsView({ tree, totalRequests, query, onQueryChange, selecte
             onChange={(event) => onQueryChange(event.target.value)}
           />
         </div>
-        <ScrollArea className="max-h-[60vh]">
+        <ScrollArea className="max-h-[60vh] md:max-h-none md:min-h-0">
           {tree.length ? (
             <CollectionTreeView nodes={tree} selectedId={selectedRequest?.id ?? ''} onSelect={onSelect} />
           ) : (
@@ -53,7 +54,7 @@ export function ApiDocsView({ tree, totalRequests, query, onQueryChange, selecte
           )}
         </ScrollArea>
       </aside>
-      <div className="min-w-0">
+      <div className="min-w-0 md:max-h-[40rem] md:overflow-y-auto md:p-5">
         {selectedRequest ? (
           <EndpointDocumentView request={selectedRequest} />
         ) : (
