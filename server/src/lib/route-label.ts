@@ -1,4 +1,4 @@
-const identifierParents = new Set(['workspaces', 'members', 'invites', 'history', 'restore'])
+const identifierParents = new Set(['workspaces', 'members', 'invites', 'history', 'restore', 'projects', 'issues', 'sprints', 'checklist', 'links', 'items'])
 
 export function routeLabel(path: string): string {
   const segments = path.replace(/\/+$/, '').split('/')

@@ -3,29 +3,29 @@ import type { ProjectRow, TaskPriority, TaskRow, TaskStatus } from '@/models/pro
 import { makeProjectKey } from '@/models/project-key'
 
 export async function listProjects(db: SQL, workspaceId: string): Promise<ProjectRow[]> {
-  return db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.updated_at DESC, p.id`
+  return db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.key, p.mode, p.product_goal AS "productGoal", p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.updated_at DESC, p.id`
 }
 
 export async function ensureWorkspaceProject(db: SQL, workspaceId: string): Promise<ProjectRow> {
-  const [existing] = await db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.created_at, p.id LIMIT 1`
+  const [existing] = await db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.key, p.mode, p.product_goal AS "productGoal", p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.created_at, p.id LIMIT 1`
   if (existing) return existing
 
   // The workspace has no project yet, so its first one takes the plain key for the workspace name.
   const [workspace] = await db`SELECT name FROM workspaces WHERE id = ${workspaceId}`
   const key = makeProjectKey(workspace?.name ?? '', [])
-  const [created] = await db`INSERT INTO projects (id, workspace_id, name, description, created_by, key) SELECT w.id, w.id, w.name, '', w.owner_id, ${key}::text FROM workspaces w WHERE w.id = ${workspaceId} ON CONFLICT (id) DO NOTHING RETURNING id, workspace_id AS "workspaceId", name, description, created_by AS "createdBy", created_at AS "createdAt", 0::int AS "taskCount"`
+  const [created] = await db`INSERT INTO projects (id, workspace_id, name, description, created_by, key) SELECT w.id, w.id, w.name, '', w.owner_id, ${key}::text FROM workspaces w WHERE w.id = ${workspaceId} ON CONFLICT (id) DO NOTHING RETURNING id, workspace_id AS "workspaceId", name, description, key, mode, product_goal AS "productGoal", created_by AS "createdBy", created_at AS "createdAt", 0::int AS "taskCount"`
   if (created) {
     await addProjectMember(db, created.id, created.createdBy, 'pm')
     return created
   }
 
-  const [afterConflict] = await db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.created_at, p.id LIMIT 1`
+  const [afterConflict] = await db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.key, p.mode, p.product_goal AS "productGoal", p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} GROUP BY p.id ORDER BY p.created_at, p.id LIMIT 1`
   if (!afterConflict) throw new Error('Could not initialize workspace task board')
   return afterConflict
 }
 
 export async function listMemberProjects(db: SQL, workspaceId: string, userId: string, projectIds: string[]): Promise<ProjectRow[]> {
-  return db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = ${userId} LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} AND p.id = ANY(ARRAY(SELECT jsonb_array_elements_text((${JSON.stringify(projectIds)}::text)::jsonb))) GROUP BY p.id ORDER BY p.updated_at DESC, p.id`
+  return db`SELECT p.id, p.workspace_id AS "workspaceId", p.name, p.description, p.key, p.mode, p.product_goal AS "productGoal", p.created_at AS "createdAt", count(t.id)::int AS "taskCount" FROM projects p JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = ${userId} LEFT JOIN tasks t ON t.project_id = p.id WHERE p.workspace_id = ${workspaceId} AND p.id = ANY(ARRAY(SELECT jsonb_array_elements_text((${JSON.stringify(projectIds)}::text)::jsonb))) GROUP BY p.id ORDER BY p.updated_at DESC, p.id`
 }
 
 export async function addProjectMember(db: SQL, projectId: string, userId: string, discipline: string): Promise<void> {

@@ -54,6 +54,12 @@ describe('planningScopeOf', () => {
     ['tasks/t-1/subtasks', 'tasks'],
     ['projects/p-1/tasks', 'tasks'],
     ['projects/p-1/members', 'members'],
+    ['projects/p-1', 'items'],
+    ['projects/p-1/issues', 'items'],
+    ['projects/p-1/issues/PARI-12/rank', 'items'],
+    ['projects/p-1/issues/i-1/checklist/c-1', 'items'],
+    ['projects/p-1/sprints/s-1/close', 'items'],
+    ['projects/p-1/backlog', 'items'],
   ] as const)('%s is %s', (action, scope) => {
     expect(planningScopeOf(action)).toBe(scope)
   })

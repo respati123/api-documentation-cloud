@@ -18,7 +18,9 @@ import { handleSync } from '@/routes/sync'
 import { handleWorkspaceCollection } from '@/routes/workspace-collection'
 import { handleWorkspaceRecord } from '@/routes/workspace-record'
 import { handleProjectRoutes } from '@/routes/projects'
+import { handleIssueRoutes } from '@/routes/issues'
 import { handleMcpRequest } from '@/routes/mcp'
+import { handleSprintRoutes } from '@/routes/sprints'
 import { handleOidcRoutes } from '@/routes/oidc'
 import { handleAppRoutes } from '@/routes/app-integrations'
 import { broadcastPlanningChange, planningScopeOf } from '@/services/events'
@@ -89,6 +91,10 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (membersResponse) return membersResponse
   const projectResponse = await handleProjectRoutes(ctx, request, method, workspaceId, action, user)
   if (projectResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, projectResponse)
+  const issueResponse = await handleIssueRoutes(ctx, request, url, method, workspaceId, action, user)
+  if (issueResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, issueResponse)
+  const sprintResponse = await handleSprintRoutes(ctx, request, method, workspaceId, action, user)
+  if (sprintResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, sprintResponse)
   const planningResponse = await handlePlanningRoutes(ctx, request, method, workspaceId, action, user)
   if (planningResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, planningResponse)
   const syncResponse = await handleSync(ctx, request, url, method, workspaceId, action, user)

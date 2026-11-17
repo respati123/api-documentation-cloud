@@ -5,6 +5,9 @@ import { AppError } from '@/lib/errors/app-error'
 import { bodyOf } from '@/lib/http-body'
 import { created, ok } from '@/lib/http'
 import { requireRole } from '@/services/access'
+import { parseInput } from '@/lib/parse-input'
+import { projectSettingsBody } from '@/models/issue-input'
+import { updateProjectSettings } from '@/services/project-settings'
 import { addTaskSubtask, assignProjectMember, changeProjectTask, createProjectTask, getProjectMembers, getProjectTasks, getProjects, getTaskSubtasks, getWorkspaceProjectMembers, setTaskSubtaskDone } from '@/services/projects'
 
 const disciplines: readonly ProjectDiscipline[] = PROJECT_DISCIPLINES
@@ -16,6 +19,12 @@ export async function handleProjectRoutes(ctx: AppContext, request: Request, met
   if (method === 'GET' && action === 'projects') {
     await requireRole(db, workspaceId, user.id, ['owner', 'editor', 'viewer'])
     return ok({ projects: await getProjects(db, workspaceId) })
+  }
+
+  const settingsMatch = action.match(/^projects\/([\w-]+)$/)
+  if (settingsMatch && method === 'PATCH') {
+    const patch = parseInput(projectSettingsBody, await bodyOf(request), 'PROJECT_INPUT_INVALID')
+    return ok({ project: await updateProjectSettings(db, { workspaceId, projectId: settingsMatch[1] }, { userId: user.id }, patch) })
   }
 
   if (method === 'GET' && action === 'project-members') {
