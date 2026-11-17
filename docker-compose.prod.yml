@@ -30,6 +30,8 @@ services:
       SMTP_FROM: "${SMTP_FROM:-API Documentation <no-reply@example.test>}"
       PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:?set PUBLIC_WEB_URL in .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      OIDC_SIGNING_KEY_B64: ${OIDC_SIGNING_KEY_B64:-}
+      OIDC_SIGNING_KEY_ID: ${OIDC_SIGNING_KEY_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
