@@ -58,3 +58,20 @@ describe('OIDC keys', () => {
     await expect(ours.verifyAccessToken(foreign)).rejects.toThrow()
   })
 })
+
+describe('OIDC service tokens', () => {
+  test('a service token names one app, says it is a service token, and lives one minute', async () => {
+    const keys = createOidcKeys({ signingKeyPem: await testPem(), keyId: '2026-11', issuer })
+    const token = await keys.signServiceToken({ user: { id: 'user-1', email: 'ana@example.test', isAdmin: true }, audience: 'stitchkit' })
+    const publicKey = await importJWK((await keys.publicJwks()).keys[0]!, 'ES256')
+    const { payload } = await jwtVerify(token, publicKey, { issuer, audience: 'stitchkit', algorithms: ['ES256'] })
+    expect(payload).toMatchObject({ sub: 'user-1', email: 'ana@example.test', is_admin: true, token_use: 'service' })
+    expect((payload.exp ?? 0) - (payload.iat ?? 0)).toBe(60)
+  })
+
+  test('a service token is not accepted as an access token for user info', async () => {
+    const keys = createOidcKeys({ signingKeyPem: await testPem(), keyId: '2026-11', issuer })
+    const token = await keys.signServiceToken({ user, audience: 'dbdesign' })
+    await expect(keys.verifyAccessToken(token)).rejects.toThrow()
+  })
+})
