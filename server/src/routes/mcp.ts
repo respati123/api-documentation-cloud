@@ -5,11 +5,13 @@ import { isRecord } from '@/lib/validation'
 import { isReadTool, listedTools, type McpPrincipal, type McpTool } from '@/models/mcp'
 import { findMcpReplay, releaseMcpReplay, reserveMcpReplay, saveMcpReplay } from '@/repositories/mcp-replays.repository'
 import { bearerToken } from '@/services/auth'
+import { findAppLink, type AppName } from '@/repositories/app-links.repository'
+import { appActorOf, APPS } from '@/services/app-integrations'
 import { broadcastPlanningChange, type PlanningScope } from '@/services/events'
 import { type AudienceTarget, commentTarget, planningAudience } from '@/services/planning-audience'
 import { guideIsFresh, readMcpGuide, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
-import { addMcpSubtask, attachMcpDesign, linkMcpContract, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
+import { addMcpSubtask, appsForPrincipal, attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
 import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpProjects, listMcpWorkspaces, readMcpDocument, readMcpParticipatingStory, uploadMcpBrd } from '@/services/mcp-access'
 import { listMcpDocuments, listMcpProjectItems, listMcpProjectTasks, readMcpReadableDocument } from '@/services/mcp-access'
 import { DOCUMENT_URI_TEMPLATE, listMcpDocumentResources, listMcpTeamMembers, readMcpDiscussion, listMcpNotifications, markMcpNotificationsRead, readMcpDocumentResource, searchMcpApiRequests } from '@/services/mcp-access'
@@ -32,6 +34,7 @@ const MCP_WRITES: Partial<Record<McpTool, { scope: PlanningScope; target: (args:
   planning_comment: { scope: 'comments', target: (a) => commentTarget(String(a.targetKind), String(a.targetId)) },
   story_attach_design: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
   story_link_api_contract: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
+  story_link_data_model: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
   story_write_test_case: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
   subtask_add: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
   subtask_set_done: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
@@ -49,6 +52,7 @@ const REPLAYABLE = new Set<McpTool>([
   'stories_comment_participating',
   'story_attach_design',
   'story_link_api_contract',
+  'story_link_data_model',
   'story_write_test_case',
   'subtask_add',
 ])
@@ -58,7 +62,7 @@ const IDEMPOTENT = new Set<McpTool>(['tasks_update_assigned_status', 'subtask_se
 
 type RpcRequest = { id?: string | number | null; method?: string; params?: unknown }
 type Args = Record<string, unknown>
-type ToolDefinition = { title: string; description: string; properties: Record<string, unknown>; required: string[]; run: (db: SQL, principal: McpPrincipal, args: Args) => Promise<unknown> }
+type ToolDefinition = { title: string; description: string; properties: Record<string, unknown>; required: string[]; run: (db: SQL, principal: McpPrincipal, args: Args, ctx: AppContext) => Promise<unknown> }
 
 const text = { type: 'string' }
 const workspaceId = { type: 'string', description: 'Workspace id from workspaces_list.' }
@@ -145,6 +149,18 @@ const tools: Record<McpTool, ToolDefinition> = {
     ['storyId', 'requestId'],
     'Link a request from the workspace API docs to a story as its API contract. Find the request id with api_requests_search.',
     (db, p, a) => linkMcpContract(db, p, a.workspaceId, a.storyId, a.requestId),
+  ),
+  story_link_data_model: inWorkspace(
+    'Link a data model table',
+    {
+      storyId: text,
+      projectId: { type: 'string', description: 'DBDesign project id. It must be linked to the workspace; find it with dbdesign_projects_list.' },
+      tableId: { type: 'string', description: 'Table id from dbdesign_project_get.' },
+      clientRequestId,
+    },
+    ['storyId', 'projectId', 'tableId'],
+    'Add a table from a DBDesign project linked to the workspace to the story data model, next to its API contracts.',
+    (db, p, a, ctx) => linkMcpDataModel(db, ctx.apps, p, a.workspaceId, a.storyId, { projectId: a.projectId, tableId: a.tableId }),
   ),
   story_write_test_case: inWorkspace(
     'Write a test case',
@@ -283,8 +299,9 @@ export async function handleMcpRequest(ctx: AppContext, request: Request, method
     case 'resources/read':
       return readResource(ctx, principal, id, params)
     case 'tools/list':
-      return rpcResponse({ jsonrpc: '2.0', id, result: { tools: toolList(principal) } })
+      return rpcResponse({ jsonrpc: '2.0', id, result: { tools: [...toolList(principal), ...(await appToolList(ctx, principal))] } })
     case 'tools/call':
+      if (typeof params.name === 'string' && appOfTool(params.name)) return callAppTool(ctx, principal, id, params)
       return callTool(ctx, principal, id, params)
     default:
       return errorResponse(id, RPC.methodNotFound, 'Method not found.')
@@ -340,11 +357,97 @@ async function callTool(ctx: AppContext, principal: McpPrincipal, id: RpcRequest
 
 async function runTool(ctx: AppContext, principal: McpPrincipal, tool: McpTool, args: Args, replayId: string | null): Promise<unknown> {
   try {
-    const result = await tools[tool].run(ctx.db, principal, args)
+    const result = await tools[tool].run(ctx.db, principal, args, ctx)
     if (replayId) await saveMcpReplay(ctx.db, principal.keyId, tool, replayId, result)
     return result
   } catch (error) {
     if (replayId) await releaseMcpReplay(ctx.db, principal.keyId, tool, replayId)
+    throw error
+  }
+}
+
+// DBDesign and Stitchkit tools, offered through this endpoint so an agent keeps one portal key. Each call is sent to the
+// app with a 60-second service token for the member, so the app applies the member's own access there too.
+// Stitchkit tool names get a stitchkit_ prefix. DBDesign tools already start with dbdesign_.
+const APP_PREFIX: Record<AppName, string> = { dbdesign: '', stitchkit: 'stitchkit_' }
+const APP_LABEL: Record<AppName, string> = { dbdesign: 'DBDesign', stitchkit: 'Stitchkit' }
+// Projects are created, removed, and shared in the app itself, then linked to the workspace by its owner.
+const BLOCKED_APP_TOOLS = new Set([
+  'dbdesign_project_create',
+  'dbdesign_project_trash',
+  'dbdesign_project_restore',
+  'dbdesign_projects_trash',
+  'dbdesign_project_invite',
+  'stitchkit_create_project',
+])
+const APP_TOOLS_TTL_MS = 5 * 60_000
+type AppTool = { name: string; title?: string; description?: string; inputSchema?: { properties?: Record<string, unknown>; required?: string[] }; annotations?: Record<string, unknown> }
+const appToolCache = new Map<AppName, { at: number; tools: AppTool[] }>()
+
+function appOfTool(name: string): AppName | null {
+  if (name.startsWith('dbdesign_')) return 'dbdesign'
+  if (name.startsWith('stitchkit_')) return 'stitchkit'
+  return null
+}
+
+async function appToolsOf(ctx: AppContext, app: AppName, principal: McpPrincipal): Promise<AppTool[]> {
+  const cached = appToolCache.get(app)
+  if (cached && Date.now() - cached.at < APP_TOOLS_TTL_MS) return cached.tools
+  const answer = await ctx.apps.mcp(app, await appActorOf(ctx.db, principal.userId), 'tools/list', {})
+  const tools = Array.isArray((answer.result as { tools?: unknown })?.tools) ? ((answer.result as { tools: AppTool[] }).tools) : []
+  appToolCache.set(app, { at: Date.now(), tools })
+  return tools
+}
+
+async function appToolList(ctx: AppContext, principal: McpPrincipal) {
+  const listed = []
+  const allowed = await appsForPrincipal(ctx.db, principal)
+  for (const app of APPS) {
+    if (!ctx.apps.enabled(app) || !allowed.includes(app)) continue
+    let tools: AppTool[]
+    try {
+      tools = await appToolsOf(ctx, app, principal)
+    } catch (error) {
+      // An app that is down leaves the portal tools working. Its tools come back on the next list.
+      if (!(error instanceof AppError)) throw error
+      continue
+    }
+    for (const tool of tools) {
+      const name = `${APP_PREFIX[app]}${tool.name}`
+      if (BLOCKED_APP_TOOLS.has(name)) continue
+      listed.push({
+        name,
+        title: `${APP_LABEL[app]}: ${tool.title ?? tool.name}`,
+        description: `${tool.description ?? ''} Needs workspaceId, and a project linked to that workspace under Design.`.trim(),
+        inputSchema: {
+          type: 'object',
+          properties: { workspaceId, ...(tool.inputSchema?.properties ?? {}) },
+          required: ['workspaceId', ...(tool.inputSchema?.required ?? []).filter((field) => field !== 'workspaceId')],
+        },
+        annotations: { ...(tool.annotations ?? {}), openWorldHint: true },
+      })
+    }
+  }
+  return listed
+}
+
+async function callAppTool(ctx: AppContext, principal: McpPrincipal, id: RpcRequest['id'], params: Args): Promise<Response> {
+  const name = String(params.name)
+  const app = appOfTool(name) as AppName
+  const args = isRecord(params.arguments) ? { ...params.arguments } : {}
+  const refused = (value: unknown) => rpcResponse({ jsonrpc: '2.0', id, result: textResult(value, true) })
+  try {
+    if (!ctx.apps.enabled(app)) throw new AppError('APP_NOT_CONFIGURED')
+    if (BLOCKED_APP_TOOLS.has(name)) throw new AppError('MCP_PERMISSION_DENIED')
+    const workspaceId = await requireAppWorkspace(ctx.db, principal, app, args.workspaceId)
+    // A tool that names a project may only touch a project linked to this workspace.
+    if (typeof args.projectId === 'string' && !(await findAppLink(ctx.db, workspaceId, app, args.projectId))) throw new AppError('APP_PROJECT_NOT_LINKED')
+    delete args.workspaceId
+    const answer = await ctx.apps.mcp(app, await appActorOf(ctx.db, principal.userId), 'tools/call', { name: name.slice(APP_PREFIX[app].length), arguments: args })
+    if (answer.error) return refused({ code: 'APP_TOOL_FAILED', error: answer.error.message })
+    return rpcResponse({ jsonrpc: '2.0', id, result: answer.result })
+  } catch (error) {
+    if (error instanceof AppError) return refused({ code: error.code, error: error.message })
     throw error
   }
 }

@@ -17,7 +17,7 @@ describe('default MCP tools per key role', () => {
 
   test.each([
     ['ui_ux', ['story_attach_design']],
-    ['backend', ['story_link_api_contract', 'documents_list', 'documents_read']],
+    ['backend', ['story_link_api_contract', 'story_link_data_model', 'documents_list', 'documents_read']],
     ['qa', ['story_write_test_case']],
   ] as const)('%s gets the member tools, its own tools, and no planning tool', (role, own) => {
     const tools = defaultToolsFor(role)
