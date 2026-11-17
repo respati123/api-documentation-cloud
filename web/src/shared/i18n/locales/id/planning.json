@@ -4,7 +4,8 @@
     "flow": "Alur",
     "documents": "Dokumen",
     "epics": "Epic & Story",
-    "board": "Papan tugas"
+    "board": "Papan tugas",
+    "backlog": "Backlog"
   },
   "kind": {
     "brd": "BRD",
@@ -424,5 +425,61 @@
     "tests": "Test case",
     "locked": "Terkunci",
     "lockedDetail": "Task ini terkunci sampai desain story disetujui."
+  },
+  "backlog": {
+    "title": "Backlog",
+    "subtitle": "Rencanakan sprint dan jaga urutan backlog. Epic menyaring yang tampil.",
+    "productGoal": "Product Goal",
+    "noGoal": "Belum ada Product Goal.",
+    "epicsHeading": "Epic",
+    "epicsLabel": "Saring per epic",
+    "allEpics": "Semua item",
+    "noEpic": "Tanpa epic",
+    "sprint": {
+      "planned": "Direncanakan",
+      "active": "Aktif",
+      "dates": "{{from}} sampai {{to}}",
+      "noGoal": "Belum ada tujuan sprint.",
+      "totals": "{{items}} item, {{points}} poin",
+      "doneTotals": "{{done}} selesai, {{donePoints}} poin selesai",
+      "empty": "Belum ada item di sprint ini.",
+      "daysLeft_one": "Sisa {{count}} hari",
+      "daysLeft_other": "Sisa {{count}} hari"
+    },
+    "section": {
+      "title": "Backlog",
+      "count": "{{count}} item",
+      "empty": "Backlog masih kosong.",
+      "emptyFiltered": "Tidak ada item untuk saringan ini."
+    },
+    "type": {
+      "epic": "Epic",
+      "story": "Story",
+      "task": "Task",
+      "bug": "Bug",
+      "subtask": "Sub-task"
+    },
+    "status": {
+      "draft": "Draf",
+      "in_design": "Dalam desain",
+      "ready": "Siap",
+      "todo": "Belum dikerjakan",
+      "in_progress": "Dikerjakan",
+      "in_qa": "Dalam QA",
+      "in_review": "Direview",
+      "done": "Selesai"
+    },
+    "points": "{{count}} poin",
+    "noPoints": "Belum ada poin",
+    "gap": {
+      "status": "Belum siap",
+      "points": "Perlu poin"
+    },
+    "ready": "Siap masuk sprint",
+    "unpublished": "Draf",
+    "outdated": "PRD berubah",
+    "unassigned": "Belum ditugaskan",
+    "error": "Backlog tidak bisa dimuat.",
+    "retry": "Coba lagi"
   }
 }

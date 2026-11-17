@@ -4,7 +4,8 @@
     "flow": "Flow",
     "documents": "Documents",
     "epics": "Epics & stories",
-    "board": "Task board"
+    "board": "Task board",
+    "backlog": "Backlog"
   },
   "kind": {
     "brd": "BRD",
@@ -424,5 +425,61 @@
     "tests": "Test cases",
     "locked": "Locked",
     "lockedDetail": "This task stays locked until the story design is approved."
+  },
+  "backlog": {
+    "title": "Backlog",
+    "subtitle": "Plan the sprints and keep the backlog in order. An epic filters what you see.",
+    "productGoal": "Product Goal",
+    "noGoal": "No Product Goal yet.",
+    "epicsHeading": "Epics",
+    "epicsLabel": "Filter by epic",
+    "allEpics": "All items",
+    "noEpic": "No epic",
+    "sprint": {
+      "planned": "Planned",
+      "active": "Active",
+      "dates": "{{from}} to {{to}}",
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left",
+      "noGoal": "No sprint goal yet.",
+      "totals": "{{items}} items, {{points}} points",
+      "doneTotals": "{{done}} done, {{donePoints}} points done",
+      "empty": "No items in this sprint yet."
+    },
+    "section": {
+      "title": "Backlog",
+      "count": "{{count}} items",
+      "empty": "The backlog is empty.",
+      "emptyFiltered": "Nothing here for this filter."
+    },
+    "type": {
+      "epic": "Epic",
+      "story": "Story",
+      "task": "Task",
+      "bug": "Bug",
+      "subtask": "Sub-task"
+    },
+    "status": {
+      "draft": "Draft",
+      "in_design": "In design",
+      "ready": "Ready",
+      "todo": "To do",
+      "in_progress": "In progress",
+      "in_qa": "In QA",
+      "in_review": "In review",
+      "done": "Done"
+    },
+    "points": "{{count}} pts",
+    "noPoints": "No points",
+    "gap": {
+      "status": "Not ready",
+      "points": "Needs points"
+    },
+    "ready": "Ready for a sprint",
+    "unpublished": "Draft",
+    "outdated": "PRD changed",
+    "unassigned": "Unassigned",
+    "error": "The backlog could not be loaded.",
+    "retry": "Try again"
   }
 }

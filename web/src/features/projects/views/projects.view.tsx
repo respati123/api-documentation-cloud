@@ -2,6 +2,7 @@ import { FlaskConical } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { useProjectsViewModel } from '@/features/projects/viewmodels/use-projects.viewmodel'
+import { BacklogView } from '@/features/projects/views/backlog.view'
 import { DocumentDetailView } from '@/features/projects/views/document-detail.view'
 import { DocumentsListView } from '@/features/projects/views/documents-list.view'
 import { EpicsListView } from '@/features/projects/views/epics-list.view'
@@ -93,6 +94,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
                 onNewStory={(epicId) => planning.dialogs.item.onOpen(epicId)}
               />
             ))}
+          {planning.section === 'backlog' && <BacklogView vm={vm.backlog} />}
           {planning.section === 'board' && vm.selectedProject && <TaskBoardView vm={vm} />}
         </>
       )}

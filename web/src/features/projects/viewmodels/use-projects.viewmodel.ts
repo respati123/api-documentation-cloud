@@ -8,9 +8,11 @@ import type { WorkRole } from '@/features/projects/models/story.model'
 import { projectsService } from '@/features/projects/services/projects.service'
 import { isOverdue } from '@/features/projects/utils/planning'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
+import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
+import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
 
@@ -128,6 +130,13 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     memberList,
   )
 
+  const backlog = useBacklogViewModel(
+    workspaceId,
+    selectedProject?.id,
+    selectedProject?.productGoal ?? '',
+    enabled && AGILE_PROJECT_ENABLED && planning.section === 'backlog',
+  )
+
   const allTasks = tasks.data ?? []
   const taskExtras = useTaskExtrasViewModel(workspaceId, editingTask ?? null, allTasks, planning.codes, true)
   const visible = filterTasks(allTasks, filters, userId)
@@ -138,6 +147,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     workspaceName,
     selectedProject,
     planning,
+    backlog,
     taskComments,
     canSeeTaskComments,
     filters,
