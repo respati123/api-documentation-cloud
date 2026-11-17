@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { SHELL_TEXT } from '@/features/app-shell/constants/app-shell-text.constants'
 import type { AppRoute } from '@/features/app-shell/models/route.model'
 import { buildSidebar } from '@/features/app-shell/utils/sidebar'
-import { readApiExpanded, writeApiExpanded } from '@/features/app-shell/utils/sidebar-storage'
+import { readGroupExpanded, writeGroupExpanded } from '@/features/app-shell/utils/sidebar-storage'
 import { useAppRouteViewModel } from '@/features/app-shell/viewmodels/use-app-route.viewmodel'
 import { useAuthSessionViewModel } from '@/features/auth'
 import { useCreateWorkspaceStore, useWorkspacesQuery, workspacesKeys } from '@/features/workspaces'
@@ -28,7 +28,10 @@ export function useAppShellViewModel() {
   const { t } = useTranslation('shell')
   const { route, navigate: changeRoute } = useAppRouteViewModel()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [apiExpanded, setApiExpanded] = useState(readApiExpanded)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
+    api: readGroupExpanded('api'),
+    design: readGroupExpanded('design'),
+  }))
   const workspaces = workspacesQuery.workspaces
   const currentWorkspace = route.page === 'workspace' ? (workspaces.find((item) => item.id === route.workspaceId) ?? null) : null
 
@@ -57,10 +60,10 @@ export function useAppShellViewModel() {
     workspaces,
     currentWorkspace,
     sidebarItems: buildSidebar(route, workspaces),
-    apiExpanded,
-    setApiExpanded: (expanded: boolean) => {
-      setApiExpanded(expanded)
-      writeApiExpanded(expanded)
+    expandedGroups,
+    setGroupExpanded: (group: string, expanded: boolean) => {
+      setExpandedGroups((current) => ({ ...current, [group]: expanded }))
+      writeGroupExpanded(group, expanded)
     },
     hasMoreWorkspaces: workspacesQuery.hasMore,
     isLoadingMoreWorkspaces: workspacesQuery.isLoadingMore,

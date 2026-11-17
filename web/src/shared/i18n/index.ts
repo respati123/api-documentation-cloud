@@ -3,6 +3,7 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 import enActivity from './locales/en/activity.json'
 import enAdmin from './locales/en/admin.json'
+import enApps from './locales/en/apps.json'
 import enAuth from './locales/en/auth.json'
 import enCommon from './locales/en/common.json'
 import enDesktop from './locales/en/desktop.json'
@@ -19,6 +20,7 @@ import enWorkspace from './locales/en/workspace.json'
 import enWorkspaces from './locales/en/workspaces.json'
 import idActivity from './locales/id/activity.json'
 import idAdmin from './locales/id/admin.json'
+import idApps from './locales/id/apps.json'
 import idAuth from './locales/id/auth.json'
 import idCommon from './locales/id/common.json'
 import idDesktop from './locales/id/desktop.json'
@@ -59,6 +61,7 @@ void i18next
         notifications: enNotifications,
         admin: enAdmin,
         oidc: enOidc,
+        apps: enApps,
       },
       id: {
         common: idCommon,
@@ -77,6 +80,7 @@ void i18next
         notifications: idNotifications,
         admin: idAdmin,
         oidc: idOidc,
+        apps: idApps,
       },
     },
     supportedLngs: supportedLanguages,
@@ -100,6 +104,7 @@ void i18next
       'notifications',
       'admin',
       'oidc',
+      'apps',
     ],
     interpolation: { escapeValue: false },
     detection: {

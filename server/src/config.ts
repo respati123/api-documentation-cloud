@@ -22,6 +22,8 @@ const envSchema = z.object({
   SMTP_FROM: z.string().default('API Documentation <no-reply@example.test>'),
   OIDC_SIGNING_KEY_B64: z.string().optional(),
   OIDC_SIGNING_KEY_ID: z.string().optional(),
+  DBDESIGN_URL: z.url().optional(),
+  STITCHKIT_URL: z.url().optional(),
 })
 
 export interface AppConfig {
@@ -35,6 +37,8 @@ export interface AppConfig {
   dbStatementTimeoutMs: number
   smtp: { host?: string; port: number; secure: boolean; user?: string; password?: string; from: string }
   oidc: OidcConfig | null
+  // Where the portal reaches DBDesign and Stitchkit. An app without an address has no integration.
+  apps: { dbdesign: string | null; stitchkit: string | null }
 }
 
 export interface OidcConfig {
@@ -73,6 +77,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       from: values.SMTP_FROM,
     },
     oidc,
+    apps: {
+      dbdesign: values.DBDESIGN_URL ? values.DBDESIGN_URL.replace(/\/+$/, '') : null,
+      stitchkit: values.STITCHKIT_URL ? values.STITCHKIT_URL.replace(/\/+$/, '') : null,
+    },
   }
 }
 

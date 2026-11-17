@@ -11,7 +11,9 @@
     "history": "History",
     "projects": "Project",
     "team": "Team",
-    "settings": "Settings"
+    "settings": "Settings",
+    "designUi": "UI design",
+    "designDatabase": "Database design"
   },
   "state": {
     "loading": "Loading workspace…",
@@ -77,6 +79,8 @@
     "history": "Every commit pushed to this workspace, with what changed in each endpoint.",
     "projects": "Documents, epics, stories, and tasks for this project.",
     "team": "Members, project roles, and pending invitations.",
-    "settings": "Rename or delete this workspace."
+    "settings": "Rename or delete this workspace.",
+    "designUi": "Screens from the Stitchkit projects linked to this workspace.",
+    "designDatabase": "Data models from the DBDesign projects linked to this workspace."
   }
 }

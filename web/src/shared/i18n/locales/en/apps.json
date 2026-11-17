@@ -1,0 +1,39 @@
+{
+  "title": {
+    "stitchkit": "Stitchkit",
+    "dbdesign": "DBDesign"
+  },
+  "detail": {
+    "stitchkit": "UI screens for this workspace. Link a Stitchkit project to show it here and to attach its screens to stories.",
+    "dbdesign": "Database designs for this workspace. Link a DBDesign project to use its tables in story data models."
+  },
+  "open": "Open",
+  "openApp": "Open {{app}}",
+  "link": "Link a project",
+  "unlink": "Unlink",
+  "loading": "Loading…",
+  "notConfigured": {
+    "title": "Not connected yet",
+    "detail": "This app is not connected to the portal on this server. Ask the administrator to set it up."
+  },
+  "empty": {
+    "title": "No linked projects",
+    "owner": "Link a project you can open in the app. Everyone in the workspace will see it here.",
+    "member": "The workspace owner has not linked a project yet."
+  },
+  "error": {
+    "title": "Could not load the apps",
+    "retry": "Try again",
+    "fallback": "Something went wrong. Try again."
+  },
+  "dialog": {
+    "title": "Link a {{app}} project",
+    "detail": "Only projects your own account can open in the app are listed.",
+    "empty": "No other project is available. Create or share one in the app first.",
+    "choose": "Project",
+    "confirm": "Link",
+    "cancel": "Cancel"
+  },
+  "linked": "Project linked.",
+  "unlinked": "Project unlinked."
+}

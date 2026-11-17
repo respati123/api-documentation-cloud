@@ -8,6 +8,8 @@ export const WORKSPACE_SECTION_DETAIL_TEXT = {
   overview: 'workspace:sectionDetail.overview',
   collections: 'workspace:sectionDetail.collections',
   history: 'workspace:sectionDetail.history',
+  'design-ui': 'workspace:sectionDetail.designUi',
+  'design-database': 'workspace:sectionDetail.designDatabase',
   projects: 'workspace:sectionDetail.projects',
   team: 'workspace:sectionDetail.team',
   settings: 'workspace:sectionDetail.settings',

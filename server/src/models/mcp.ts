@@ -20,6 +20,7 @@ export const MCP_TOOLS = [
   'story_read',
   'story_attach_design',
   'story_link_api_contract',
+  'story_link_data_model',
   'story_write_test_case',
   'tasks_list_ready',
   'subtasks_list',
@@ -108,14 +109,14 @@ const memberTools: McpTool[] = [
 // Documents the role may read: the PM and tech lead read all of them, backend the BRD and approved PRDs.
 const documentTools: McpTool[] = ['documents_list', 'documents_read']
 
-const artifactTools: McpTool[] = ['story_attach_design', 'story_link_api_contract', 'story_write_test_case']
+const artifactTools: McpTool[] = ['story_attach_design', 'story_link_api_contract', 'story_link_data_model', 'story_write_test_case']
 const storyDetailTools: McpTool[] = ['story_write_details']
 
 const roleTools: Record<McpKeyRole, McpTool[]> = {
   pm: [...memberTools, ...PLANNING_TOOLS, 'planning_read_document', 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools],
   tech_lead: [...memberTools, 'planning_list', 'planning_read_document', 'planning_draft_task', 'planning_comment', ...documentTools, ...artifactTools, ...storyDetailTools],
   ui_ux: [...memberTools, 'story_attach_design'],
-  backend: [...memberTools, ...documentTools, 'story_link_api_contract'],
+  backend: [...memberTools, ...documentTools, 'story_link_api_contract', 'story_link_data_model'],
   frontend: memberTools,
   mobile: memberTools,
   qa: [...memberTools, 'story_write_test_case'],
@@ -163,3 +164,9 @@ export interface McpPrincipal {
   guideVersion?: string | null
   guideReadAt?: Date | null
 }
+
+// Project roles that may use each app's tools through the portal MCP: UI work in Stitchkit, data design in DBDesign.
+export const APP_TOOL_ROLES = {
+  stitchkit: ['ui_ux', 'pm', 'tech_lead'],
+  dbdesign: ['backend', 'tech_lead', 'pm'],
+} as const satisfies Record<'dbdesign' | 'stitchkit', readonly McpKeyRole[]>

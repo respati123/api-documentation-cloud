@@ -154,6 +154,10 @@ export function StoryTabs({ extras, description, acceptance }: { extras: Extras;
                 {t(PLANNING_TEXT.story.tabContract)}
                 <RoleDot discipline="backend" />
               </TabsTrigger>
+              <TabsTrigger value="data" data-testid="projects-story-tab-data" className={triggerClass}>
+                {t(PLANNING_TEXT.story.tabDataModel)}
+                <RoleDot discipline="backend" />
+              </TabsTrigger>
               <TabsTrigger value="tests" data-testid="projects-story-tab-tests" className={triggerClass}>
                 {t(PLANNING_TEXT.story.tabTests)}
                 <RoleDot discipline="qa" />
@@ -256,6 +260,15 @@ export function StoryTabs({ extras, description, acceptance }: { extras: Extras;
               </div>
             ))
           )}
+          {extras.stitchkit.options.length > 0 && (
+            <AppPicker
+              id="story-stitchkit-screen"
+              testId="projects-story-stitchkit"
+              label={t(PLANNING_TEXT.story.pickScreen)}
+              action={t(PLANNING_TEXT.story.attachScreen)}
+              picker={{ ...extras.stitchkit, submit: extras.stitchkit.attach }}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="contract" className="px-[18px] py-4">
@@ -286,6 +299,49 @@ export function StoryTabs({ extras, description, acceptance }: { extras: Extras;
                 ))}
               </ul>
             </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="data" className="grid gap-2 px-[18px] py-4">
+          {extras.dataModels.length === 0 ? (
+            <PanelEmpty>{t(PLANNING_TEXT.story.dataModelsEmpty)}</PanelEmpty>
+          ) : (
+            <>
+              <p className="text-[12.5px] text-muted-foreground">{t(PLANNING_TEXT.story.dataModelHint)}</p>
+              <ul className="divide-y divide-muted">
+                {extras.dataModels.map((model) => (
+                  <li
+                    key={model.id}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 py-2.5"
+                    data-testid={`projects-story-data-model-${model.id}`}
+                  >
+                    <span className="grid min-w-0">
+                      <span className="truncate font-mono text-[12.5px]">{model.tableName}</span>
+                      <span className="text-xs text-muted-foreground">{model.projectName}</span>
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      data-testid={`projects-story-data-model-remove-${model.id}`}
+                      disabled={extras.removingDataModelId === model.id}
+                      onClick={() => extras.onRemoveDataModel(model.id)}
+                    >
+                      <X data-icon="inline-start" />
+                      {t(PLANNING_TEXT.story.removeTable)}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {extras.dbdesign.options.length > 0 && (
+            <AppPicker
+              id="story-dbdesign-table"
+              testId="projects-story-dbdesign"
+              label={t(PLANNING_TEXT.story.pickTable)}
+              action={t(PLANNING_TEXT.story.addTable)}
+              picker={{ ...extras.dbdesign, submit: extras.dbdesign.add }}
+            />
           )}
         </TabsContent>
 
@@ -321,6 +377,46 @@ export function StoryTabs({ extras, description, acceptance }: { extras: Extras;
         </TabsContent>
       </Tabs>
     </section>
+  )
+}
+
+// A choice from a linked Stitchkit or DBDesign project, and the button that adds it to the story.
+function AppPicker({
+  id,
+  testId,
+  label,
+  action,
+  picker,
+}: {
+  id: string
+  testId: string
+  label: string
+  action: string
+  picker: {
+    options: Array<{ value: string; label: string }>
+    choice: string
+    setChoice: (value: string) => void
+    submit: () => void
+    isBusy: boolean
+  }
+}) {
+  return (
+    <div className="mt-1 flex flex-wrap items-end gap-2" data-testid={`${testId}-picker`}>
+      <div className="min-w-56 flex-1">
+        <SelectField
+          id={id}
+          label={label}
+          value={picker.choice}
+          onValueChange={picker.setChoice}
+          options={picker.options}
+          testId={`${testId}-select`}
+        />
+      </div>
+      <Button size="sm" data-testid={`${testId}-submit`} disabled={!picker.choice || picker.isBusy} onClick={picker.submit}>
+        <Plus data-icon="inline-start" />
+        {action}
+      </Button>
+    </div>
   )
 }
 

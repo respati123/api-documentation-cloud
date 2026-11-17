@@ -399,7 +399,15 @@
     "dodRole": "Role",
     "addDod": "Tambah item",
     "removeDod": "Hapus item",
-    "dodProgress": "{{done}} dari {{total}} selesai"
+    "dodProgress": "{{done}} dari {{total}} selesai",
+    "tabDataModel": "Data model",
+    "dataModelsEmpty": "Belum ada tabel. Hubungkan project DBDesign ke workspace di menu Desain, lalu tambahkan tabelnya di sini.",
+    "dataModelHint": "Tabel dari DBDesign yang dibaca atau ditulis story ini.",
+    "pickTable": "Tabel",
+    "addTable": "Tambah tabel",
+    "removeTable": "Hapus",
+    "pickScreen": "Layar Stitchkit",
+    "attachScreen": "Lampirkan layar"
   },
   "task": {
     "role": "Role",

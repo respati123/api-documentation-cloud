@@ -23,6 +23,9 @@ import {
 } from '@/repositories/stories.repository'
 import { insertPlanningEvent } from '@/repositories/planning-events.repository'
 import { findUserById } from '@/repositories/users.repository'
+import { deleteDataModel, findAppLink, insertDataModel, listDataModels } from '@/repositories/app-links.repository'
+import type { AppsClient } from '@/services/apps-client'
+import type { OidcUser } from '@/services/oidc-keys'
 import { notify } from '@/services/notifications'
 import { canManagePlanning, getPlanningItem, type PlanningVia, requirePlanningApprover, requirePlanningPm } from '@/services/planning'
 
@@ -71,12 +74,13 @@ export function contractPath(url: string): string {
 export async function getStoryDetails(db: SQL, workspaceId: string, storyId: string, userId: string, via?: PlanningVia) {
   await getPlanningItem(db, workspaceId, storyId, userId, via)
   const story = await storyOf(db, workspaceId, storyId)
-  const [dod, designs, links, testCases, snapshot] = await Promise.all([
+  const [dod, designs, links, testCases, snapshot, dataModels] = await Promise.all([
     listDodItems(db, storyId),
     listDesigns(db, storyId),
     listContractLinks(db, storyId),
     listTestCases(db, storyId),
     findHeadSnapshot(db, workspaceId),
+    listDataModels(db, storyId),
   ])
   const requests = collectionRequests(snapshot)
   return {
@@ -86,6 +90,7 @@ export async function getStoryDetails(db: SQL, workspaceId: string, storyId: str
     flow: story.flow,
     definitionOfDone: dod,
     designs,
+    dataModels: dataModels.map((model) => ({ id: model.id, projectId: model.appProjectId, projectName: model.projectName, tableId: model.tableId, tableName: model.tableName })),
     designApprovedBy: story.designApprovedByEmail,
     designApprovedAt: story.designApprovedAt,
     contracts: links.map((link) => {
@@ -199,6 +204,48 @@ export async function addStoryTestCase(db: SQL, workspaceId: string, storyId: st
   const number = await insertTestCase(db, { id, storyId, title: textOf(input.title, 180, true), precondition: textOf(input.precondition ?? '', 2000), steps, expected, createdBy: userId, apiKeyId: via?.apiKeyId ?? null })
   await storyEvent(db, workspaceId, storyId, userId, 'test_case_added', via)
   return { id, code: `TC-${number}` }
+}
+
+// Links a table from a DBDesign project linked to the workspace. The table must still exist in the app.
+export async function linkStoryDataModel(
+  db: SQL,
+  apps: AppsClient,
+  actor: OidcUser,
+  workspaceId: string,
+  storyId: string,
+  input: Record<string, unknown>,
+  via?: PlanningVia,
+) {
+  await requireContributor(db, workspaceId, storyId, actor.id, via)
+  await storyOf(db, workspaceId, storyId)
+  const projectId = textOf(input.projectId, 100, true)
+  const tableId = textOf(input.tableId, 100, true)
+  const link = await findAppLink(db, workspaceId, 'dbdesign', projectId)
+  if (!link) throw new AppError('APP_PROJECT_NOT_LINKED')
+  const { tables } = await apps.dbdesignTables(actor, projectId)
+  const table = tables.find((item) => item.id === tableId)
+  if (!table) throw new AppError('APP_TABLE_NOT_FOUND')
+  const id = randomUUID()
+  const added = await insertDataModel(db, {
+    id,
+    storyId,
+    appProjectId: projectId,
+    projectName: link.appProjectName,
+    tableId,
+    tableName: table.name.slice(0, 200),
+    createdBy: actor.id,
+    apiKeyId: via?.apiKeyId ?? null,
+  })
+  if (!added) throw new AppError('PLANNING_CONFLICT')
+  await storyEvent(db, workspaceId, storyId, actor.id, 'data_model_linked', via)
+  return { id }
+}
+
+export async function unlinkStoryDataModel(db: SQL, workspaceId: string, storyId: string, userId: string, dataModelId: string) {
+  await requireContributor(db, workspaceId, storyId, userId)
+  await storyOf(db, workspaceId, storyId)
+  if (!(await deleteDataModel(db, storyId, dataModelId))) throw new AppError('DATA_MODEL_NOT_FOUND')
+  await storyEvent(db, workspaceId, storyId, userId, 'data_model_unlinked')
 }
 
 function storyEvent(db: SQL, workspaceId: string, storyId: string, actorId: string, action: string, via?: PlanningVia) {

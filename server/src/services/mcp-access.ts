@@ -1,6 +1,9 @@
 import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
-import { isMcpRole, isReadTool, PLANNING_TOOLS, toolsForRoles, type McpPrincipal, type McpTool } from '@/models/mcp'
+import { APP_TOOL_ROLES, isMcpRole, isReadTool, PLANNING_TOOLS, toolsForRoles, type McpPrincipal, type McpTool } from '@/models/mcp'
+import type { AppName } from '@/repositories/app-links.repository'
+import type { AppsClient } from '@/services/apps-client'
+import { appActorOf } from '@/services/app-integrations'
 import type { TaskStatus } from '@/models/project'
 import { findMcpKeyAuth, markGuideRead, touchMcpKey } from '@/repositories/mcp-keys.repository'
 import { listUserDisciplines } from '@/repositories/planning-audience.repository'
@@ -8,7 +11,7 @@ import { GUIDE_VERSION, guideFor } from '@/services/mcp-guides'
 import { findRole, listUserWorkspaces, listWorkspaceTeam } from '@/repositories/memberships.repository'
 import { findAssignedTask, findTaskInWorkspace, listAssignedTasks, listProjects, listTasks, listUserRolesByWorkspace, updateAssignedTaskStatus } from '@/repositories/projects.repository'
 import { addTaskSubtask, getTaskSubtasks, recordTaskEvent, setTaskSubtaskDone } from '@/services/projects'
-import { addStoryTestCase, attachStoryDesign, getStoryDetails, linkStoryContract, updateStoryDetails } from '@/services/stories'
+import { addStoryTestCase, attachStoryDesign, getStoryDetails, linkStoryContract, linkStoryDataModel, updateStoryDetails } from '@/services/stories'
 import { listParticipatingStories, isStoryParticipant } from '@/repositories/planning.repository'
 import { mcpKeyHash } from '@/services/mcp-keys'
 import { searchCollectionRequests } from '@/services/collection-search'
@@ -254,6 +257,34 @@ export async function attachMcpDesign(db: SQL, principal: McpPrincipal, workspac
   const id = await requireWorkspace(db, principal, 'story_attach_design', workspaceId)
   if (typeof storyId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
   return attachStoryDesign(db, id, storyId, principal.userId, input, via(principal, id))
+}
+
+export async function linkMcpDataModel(db: SQL, apps: AppsClient, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, input: { projectId: unknown; tableId: unknown }) {
+  const id = await requireWorkspace(db, principal, 'story_link_data_model', workspaceId)
+  if (typeof storyId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
+  return linkStoryDataModel(db, apps, await appActorOf(db, principal.userId), id, storyId, input, via(principal, id))
+}
+
+// The apps whose tools tools/list shows: a project role that reaches the app in some workspace, or owning a workspace.
+// Each call checks the named workspace again.
+export async function appsForPrincipal(db: SQL, principal: McpPrincipal): Promise<AppName[]> {
+  const ownsWorkspace = (await listUserWorkspaces(db, principal.userId)).some((workspace) => workspace.role === 'owner')
+  return (Object.keys(APP_TOOL_ROLES) as AppName[]).filter(
+    (app) => ownsWorkspace || principal.roles.some((role) => (APP_TOOL_ROLES[app] as readonly string[]).includes(role)),
+  )
+}
+
+// App tools need a workspace where the member is not a viewer and holds a project role that reaches the app.
+// The owner may use both apps, so a workspace owner without a project role is not locked out.
+export async function requireAppWorkspace(db: SQL, principal: McpPrincipal, app: AppName, workspaceId: unknown): Promise<string> {
+  if (typeof workspaceId !== 'string') throw new AppError('WORKSPACE_NOT_FOUND')
+  const membership = await findRole(db, workspaceId, principal.userId)
+  if (!membership) throw new AppError('WORKSPACE_NOT_FOUND')
+  if (membership === 'viewer') throw new AppError('MCP_PERMISSION_DENIED')
+  if (membership === 'owner') return workspaceId
+  const roles = await listUserDisciplines(db, workspaceId, principal.userId)
+  if (!roles.some((role) => (APP_TOOL_ROLES[app] as readonly string[]).includes(role))) throw new AppError('MCP_PERMISSION_DENIED')
+  return workspaceId
 }
 
 export async function linkMcpContract(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, requestId: unknown) {

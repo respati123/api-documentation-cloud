@@ -15,6 +15,7 @@ export interface OidcUser {
 
 const ID_TOKEN_LIFETIME = '5m'
 const ACCESS_TOKEN_LIFETIME = '5m'
+const SERVICE_TOKEN_LIFETIME = '60s'
 
 // Signs and checks the OIDC tokens. The private key is read once, from the environment, and is never returned.
 export function createOidcKeys(options: OidcKeyOptions) {
@@ -57,6 +58,21 @@ export function createOidcKeys(options: OidcKeyOptions) {
         .setAudience(userInfoAudience)
         .setIssuedAt()
         .setExpirationTime(ACCESS_TOKEN_LIFETIME)
+        .setJti(randomUUID())
+        .sign(signing)
+    },
+
+    // A short token the portal sends when it calls DBDesign or Stitchkit for a member. The app checks the audience
+    // and token_use, so an ID token for the same client is never accepted in its place.
+    async signServiceToken(input: { user: OidcUser; audience: string }): Promise<string> {
+      const { signing } = await load()
+      return new SignJWT({ token_use: 'service', email: input.user.email, is_admin: input.user.isAdmin })
+        .setProtectedHeader({ alg: 'ES256', kid: options.keyId, typ: 'JWT' })
+        .setIssuer(options.issuer)
+        .setSubject(input.user.id)
+        .setAudience(input.audience)
+        .setIssuedAt()
+        .setExpirationTime(SERVICE_TOKEN_LIFETIME)
         .setJti(randomUUID())
         .sign(signing)
     },

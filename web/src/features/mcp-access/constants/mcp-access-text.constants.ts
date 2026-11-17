@@ -120,6 +120,7 @@ export const MCP_TOOL_TEXT: Record<string, string> = {
   story_read: 'mcp:tool.story_read',
   story_attach_design: 'mcp:tool.story_attach_design',
   story_link_api_contract: 'mcp:tool.story_link_api_contract',
+  story_link_data_model: 'mcp:tool.story_link_data_model',
   story_write_test_case: 'mcp:tool.story_write_test_case',
   tasks_list_ready: 'mcp:tool.tasks_list_ready',
   subtasks_list: 'mcp:tool.subtasks_list',

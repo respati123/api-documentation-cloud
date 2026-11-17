@@ -32,6 +32,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       OIDC_SIGNING_KEY_B64: ${OIDC_SIGNING_KEY_B64:-}
       OIDC_SIGNING_KEY_ID: ${OIDC_SIGNING_KEY_ID:-}
+      DBDESIGN_URL: ${DBDESIGN_URL:-}
+      STITCHKIT_URL: ${STITCHKIT_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

@@ -15,8 +15,8 @@ export interface AppShellViewProps {
   workspaces: CloudWorkspaceRef[]
   currentWorkspace: CloudWorkspaceRef | null
   sidebarItems: SidebarItem[]
-  apiExpanded: boolean
-  onApiExpandedChange: (expanded: boolean) => void
+  expandedGroups: Record<string, boolean>
+  onGroupExpandedChange: (group: string, expanded: boolean) => void
   apiOnline: boolean | null
   mobileNavOpen: boolean
   onMobileNavOpenChange: (open: boolean) => void
@@ -35,8 +35,8 @@ export function AppShellView({
   workspaces,
   currentWorkspace,
   sidebarItems,
-  apiExpanded,
-  onApiExpandedChange,
+  expandedGroups,
+  onGroupExpandedChange,
   mobileNavOpen,
   onMobileNavOpenChange,
   onNavigate,
@@ -52,8 +52,8 @@ export function AppShellView({
     <ShellSidebarView
       items={sidebarItems}
       inWorkspace={route.page === 'workspace'}
-      apiExpanded={apiExpanded}
-      onApiExpandedChange={onApiExpandedChange}
+      expandedGroups={expandedGroups}
+      onGroupExpandedChange={onGroupExpandedChange}
       onNavigate={(next) => {
         onMobileNavOpenChange(false)
         onNavigate(next)

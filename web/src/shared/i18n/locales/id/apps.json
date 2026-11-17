@@ -1,0 +1,39 @@
+{
+  "title": {
+    "stitchkit": "Stitchkit",
+    "dbdesign": "DBDesign"
+  },
+  "detail": {
+    "stitchkit": "Layar UI untuk workspace ini. Hubungkan project Stitchkit supaya tampil di sini dan layarnya bisa dilampirkan ke story.",
+    "dbdesign": "Desain database untuk workspace ini. Hubungkan project DBDesign supaya tabelnya bisa dipakai di data model story."
+  },
+  "open": "Buka",
+  "openApp": "Buka {{app}}",
+  "link": "Hubungkan project",
+  "unlink": "Putuskan",
+  "loading": "Memuat…",
+  "notConfigured": {
+    "title": "Belum terhubung",
+    "detail": "Aplikasi ini belum terhubung ke portal di server ini. Minta administrator mengaturnya."
+  },
+  "empty": {
+    "title": "Belum ada project yang terhubung",
+    "owner": "Hubungkan project yang bisa kamu buka di aplikasinya. Semua anggota workspace akan melihatnya di sini.",
+    "member": "Owner workspace belum menghubungkan project."
+  },
+  "error": {
+    "title": "Aplikasi tidak bisa dimuat",
+    "retry": "Coba lagi",
+    "fallback": "Terjadi kesalahan. Coba lagi."
+  },
+  "dialog": {
+    "title": "Hubungkan project {{app}}",
+    "detail": "Hanya project yang bisa dibuka akunmu di aplikasi itu yang ditampilkan.",
+    "empty": "Tidak ada project lain. Buat atau bagikan project di aplikasinya dulu.",
+    "choose": "Project",
+    "confirm": "Hubungkan",
+    "cancel": "Batal"
+  },
+  "linked": "Project terhubung.",
+  "unlinked": "Project diputus."
+}

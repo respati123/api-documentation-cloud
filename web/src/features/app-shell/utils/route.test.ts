@@ -68,3 +68,13 @@ describe('routeUrl', () => {
     expect(routeUrl({ page: 'admin-workspaces' })).toBe('/admin/workspaces')
   })
 })
+
+describe('design routes', () => {
+  test('the Design sections live under /w/:id/design/ and round-trip', () => {
+    expect(readRoute('/w/ws-1/design/ui')).toEqual({ page: 'workspace', workspaceId: 'ws-1', tab: 'design-ui' })
+    expect(readRoute('/w/ws-1/design/database')).toEqual({ page: 'workspace', workspaceId: 'ws-1', tab: 'design-database' })
+    expect(readRoute('/w/ws-1/design')).toEqual({ page: 'workspace', workspaceId: 'ws-1', tab: 'design-ui' })
+    expect(routeUrl({ page: 'workspace', workspaceId: 'ws-1', tab: 'design-database' })).toBe('/w/ws-1/design/database')
+    expect(routeUrl({ page: 'workspace', workspaceId: 'ws-1', tab: 'design-ui' })).toBe('/w/ws-1/design/ui')
+  })
+})

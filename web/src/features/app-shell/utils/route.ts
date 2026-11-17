@@ -1,4 +1,12 @@
-import { API_TABS, type ApiTab, type AppRoute, WORKSPACE_TABS, type WorkspaceTab } from '@/features/app-shell/models/route.model'
+import {
+  API_TABS,
+  type ApiTab,
+  type AppRoute,
+  DESIGN_TABS,
+  type DesignTab,
+  WORKSPACE_TABS,
+  type WorkspaceTab,
+} from '@/features/app-shell/models/route.model'
 
 // Links saved before the API section existed still open the matching section.
 const LEGACY_TABS: Record<string, WorkspaceTab> = { docs: 'collections', activity: 'history' }
@@ -22,6 +30,7 @@ export function routeUrl(route: AppRoute): string {
     const base = `/w/${encodeURIComponent(route.workspaceId)}`
     const tab = route.tab ?? 'overview'
     if (tab === 'history' && route.commitId) return `${base}/api/history/${encodeURIComponent(route.commitId)}`
+    if (isDesignTab(tab)) return `${base}/design/${tab.replace('design-', '')}`
     return isApiTab(tab) ? `${base}/api/${tab}` : `${base}/${tab}`
   }
   return '/'
@@ -31,8 +40,14 @@ export function isApiTab(tab: WorkspaceTab): tab is ApiTab {
   return API_TABS.some((item) => item === tab)
 }
 
+export function isDesignTab(tab: WorkspaceTab): tab is DesignTab {
+  return DESIGN_TABS.some((item) => item === tab)
+}
+
 function readWorkspaceRoute(id: string, rest: string[]): AppRoute {
   const workspaceId = decodeURIComponent(id)
+  if (rest[0] === 'design')
+    return { page: 'workspace', workspaceId, tab: DESIGN_TABS.find((item) => item === `design-${rest[1]}`) ?? 'design-ui' }
   if (rest[0] === 'api') {
     const tab = API_TABS.find((item) => item === rest[1]) ?? 'collections'
     if (tab === 'history' && rest[2]) return { page: 'workspace', workspaceId, tab, commitId: decodeURIComponent(rest[2]) }

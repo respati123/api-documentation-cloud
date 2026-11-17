@@ -20,6 +20,7 @@ import { handleWorkspaceRecord } from '@/routes/workspace-record'
 import { handleProjectRoutes } from '@/routes/projects'
 import { handleMcpRequest } from '@/routes/mcp'
 import { handleOidcRoutes } from '@/routes/oidc'
+import { handleAppRoutes } from '@/routes/app-integrations'
 import { broadcastPlanningChange, planningScopeOf } from '@/services/events'
 import { audienceFromAction, planningAudience } from '@/services/planning-audience'
 import { handleAdminWorkspaceRoutes } from '@/routes/admin-workspaces'
@@ -96,6 +97,8 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (branchResponse) return branchResponse
   const variablesResponse = await handleWorkspaceVariables(ctx, request, method, workspaceId, action, user)
   if (variablesResponse) return variablesResponse
+  const appResponse = await handleAppRoutes(ctx, request, method, workspaceId, action, user)
+  if (appResponse) return appResponse
 
   throw new AppError('ROUTE_NOT_FOUND')
 }

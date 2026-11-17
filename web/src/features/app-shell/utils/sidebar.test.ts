@@ -20,10 +20,10 @@ describe('buildSidebar', () => {
     expect(items[1].count).toBe(2)
   })
 
-  test('shows the workspace menu inside a workspace, with API grouping collections and history', () => {
+  test('shows the workspace menu inside a workspace, with API grouping collections and history, then Design', () => {
     const items = buildSidebar({ page: 'workspace', workspaceId: 'a', tab: 'overview' }, [workspace('a', 'owner')])
 
-    expect(items.map((item) => item.id)).toEqual(['overview', 'api', 'projects', 'team', 'settings'])
+    expect(items.map((item) => item.id)).toEqual(['overview', 'api', 'design', 'projects', 'team', 'settings'])
     expect(items[1].children?.map((item) => item.id)).toEqual(['collections', 'history'])
     expect(items[1].children?.[1].route).toEqual({ page: 'workspace', workspaceId: 'a', tab: 'history' })
   })
@@ -48,5 +48,19 @@ describe('buildSidebar', () => {
 
     expect(items.map((item) => item.id)).not.toContain('settings')
     expect(items[0].active).toBe(true)
+  })
+})
+
+describe('design group', () => {
+  test('a workspace sidebar has a Design group with the UI and database sections after API', () => {
+    const items = buildSidebar({ page: 'workspace', workspaceId: 'ws-1', tab: 'design-database' }, [])
+    const ids = items.map((item) => item.id)
+    expect(ids.indexOf('design')).toBe(ids.indexOf('api') + 1)
+    const design = items.find((item) => item.id === 'design')
+    expect(design?.active).toBe(true)
+    expect(design?.children?.map((child) => [child.id, child.active])).toEqual([
+      ['design-ui', false],
+      ['design-database', true],
+    ])
   })
 })

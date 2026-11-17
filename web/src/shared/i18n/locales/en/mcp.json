@@ -95,7 +95,8 @@
     "notifications_list": "View notifications",
     "notifications_mark_read": "Mark notifications read",
     "team_members_list": "List the team",
-    "discussion_read": "Read a discussion"
+    "discussion_read": "Read a discussion",
+    "story_link_data_model": "Link data model tables"
   },
   "guide": {
     "title": "Required agent playbook",

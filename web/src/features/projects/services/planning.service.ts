@@ -118,4 +118,10 @@ export const planningService = {
     workspaceCall(workspaceId, `/planning/stories/${storyId}/approve-design`, { token, method: 'POST' }),
   setDodItem: (token: string, workspaceId: string, storyId: string, itemId: string, done: boolean) =>
     workspaceCall(workspaceId, `/planning/stories/${storyId}/dod/${itemId}`, { token, method: 'PATCH', body: { done } }),
+  attachDesign: (token: string, workspaceId: string, storyId: string, input: { title: string; url: string; note: string }) =>
+    workspaceCall(workspaceId, `/planning/stories/${storyId}/designs`, { token, method: 'POST', body: input }),
+  linkDataModel: (token: string, workspaceId: string, storyId: string, input: { projectId: string; tableId: string }) =>
+    workspaceCall(workspaceId, `/planning/stories/${storyId}/data-models`, { token, method: 'POST', body: input }),
+  unlinkDataModel: (token: string, workspaceId: string, storyId: string, dataModelId: string) =>
+    workspaceCall(workspaceId, `/planning/stories/${storyId}/data-models/${dataModelId}`, { token, method: 'DELETE' }),
 }

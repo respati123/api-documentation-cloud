@@ -1,11 +1,14 @@
 import {
   BookOpen,
   ChevronRight,
+  Database,
   FolderKanban,
   GitCommitHorizontal,
   Home,
   Layers,
   LayoutGrid,
+  LayoutTemplate,
+  Palette,
   Settings,
   Users,
   Waypoints,
@@ -28,6 +31,9 @@ const ITEM_ICON: Record<SidebarItemId, typeof Home> = {
   api: Waypoints,
   collections: BookOpen,
   history: GitCommitHorizontal,
+  design: Palette,
+  'design-ui': LayoutTemplate,
+  'design-database': Database,
   projects: FolderKanban,
   team: Users,
   settings: Settings,
@@ -36,12 +42,12 @@ const ITEM_ICON: Record<SidebarItemId, typeof Home> = {
 export interface ShellSidebarViewProps {
   items: SidebarItem[]
   inWorkspace: boolean
-  apiExpanded: boolean
-  onApiExpandedChange: (expanded: boolean) => void
+  expandedGroups: Record<string, boolean>
+  onGroupExpandedChange: (group: string, expanded: boolean) => void
   onNavigate: (route: AppRoute) => void
 }
 
-export function ShellSidebarView({ items, inWorkspace, apiExpanded, onApiExpandedChange, onNavigate }: ShellSidebarViewProps) {
+export function ShellSidebarView({ items, inWorkspace, expandedGroups, onGroupExpandedChange, onNavigate }: ShellSidebarViewProps) {
   const { t } = useTranslation('shell')
   return (
     <nav
@@ -51,14 +57,14 @@ export function ShellSidebarView({ items, inWorkspace, apiExpanded, onApiExpande
     >
       {items.map((item) =>
         item.children ? (
-          <Collapsible key={item.id} open={apiExpanded} onOpenChange={onApiExpandedChange}>
+          <Collapsible key={item.id} open={expandedGroups[item.id] ?? true} onOpenChange={(open) => onGroupExpandedChange(item.id, open)}>
             <CollapsibleTrigger
               render={
                 <SidebarButton
                   item={item}
-                  highlight={item.active && !apiExpanded}
+                  highlight={item.active && !(expandedGroups[item.id] ?? true)}
                   className="aria-expanded:bg-transparent aria-expanded:hover:bg-muted"
-                  aria-label={t(SHELL_TEXT.nav.toggleApi)}
+                  aria-label={t(item.id === 'design' ? SHELL_TEXT.nav.toggleDesign : SHELL_TEXT.nav.toggleApi)}
                   testId={`cloud-nav-${item.id}-toggle`}
                 />
               }
@@ -66,7 +72,10 @@ export function ShellSidebarView({ items, inWorkspace, apiExpanded, onApiExpande
               <SidebarLabel item={item} />
               <ChevronRight
                 aria-hidden="true"
-                className={cn('ml-auto size-3.5 text-muted-foreground transition-transform duration-150', apiExpanded && 'rotate-90')}
+                className={cn(
+                  'ml-auto size-3.5 text-muted-foreground transition-transform duration-150',
+                  (expandedGroups[item.id] ?? true) && 'rotate-90',
+                )}
               />
             </CollapsibleTrigger>
             <CollapsibleContent

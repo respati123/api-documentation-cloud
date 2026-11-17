@@ -1,0 +1,22 @@
+export const APPS_TEXT = {
+  title: { stitchkit: 'apps:title.stitchkit', dbdesign: 'apps:title.dbdesign' },
+  detail: { stitchkit: 'apps:detail.stitchkit', dbdesign: 'apps:detail.dbdesign' },
+  open: 'apps:open',
+  openApp: 'apps:openApp',
+  link: 'apps:link',
+  unlink: 'apps:unlink',
+  loading: 'apps:loading',
+  notConfigured: { title: 'apps:notConfigured.title', detail: 'apps:notConfigured.detail' },
+  empty: { title: 'apps:empty.title', owner: 'apps:empty.owner', member: 'apps:empty.member' },
+  error: { title: 'apps:error.title', retry: 'apps:error.retry', fallback: 'apps:error.fallback' },
+  dialog: {
+    title: 'apps:dialog.title',
+    detail: 'apps:dialog.detail',
+    empty: 'apps:dialog.empty',
+    choose: 'apps:dialog.choose',
+    confirm: 'apps:dialog.confirm',
+    cancel: 'apps:dialog.cancel',
+  },
+  linked: 'apps:linked',
+  unlinked: 'apps:unlinked',
+} as const
