@@ -8,6 +8,10 @@ export const projectSchema = z.object({
   description: z.string(),
   createdAt: z.string(),
   taskCount: z.number(),
+  // Sent by servers that have the agile model. Older servers leave them out.
+  key: z.optional(z.string()),
+  mode: z.optional(z.enum(['scrum', 'kanban'])),
+  productGoal: z.optional(z.string()),
 })
 export const taskSchema = z.object({
   id: z.string(),
