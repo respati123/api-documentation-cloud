@@ -2,7 +2,7 @@ import type { McpKeyRole } from '@/models/mcp'
 
 // The playbook every agent must read through planning_guide before it writes project data.
 // Bump GUIDE_VERSION whenever a guide changes, so agents that read an older version have to read it again.
-export const GUIDE_VERSION = '2026-11-17.1'
+export const GUIDE_VERSION = '2026-11-18.1'
 
 const shared = `## Rules for every agent
 
@@ -15,6 +15,15 @@ const shared = `## Rules for every agent
 - Give every write that adds something a clientRequestId. If a call times out, send it again with the same clientRequestId, so nothing is created twice.
 - Keep secrets out of every document and comment.
 - A document a person discarded is no longer worked on. Do not draft from it or quote it.
+
+## Issues, sprints, and statuses
+
+- Work is kept as issues: epics, stories, tasks, bugs, and sub-tasks. A story, task, or bug has points on the scale 1, 2, 3, 5, 8, 13. A sub-task is the work of one role inside a story, task, or bug, and has a role instead of points.
+- A story moves through draft, in_design, ready, in_progress, in_qa, and done. It becomes ready only with acceptance criteria and an approved design. A task, bug, or sub-task moves through todo, in_progress, in_review, and done. The old status backlog is todo now. An epic has no status of its own: it follows its stories.
+- Read the whole picture with backlog_list (the open sprints with their items, then the backlog in rank order) and sprint_get_active. Read one issue, with its checklist and links, with issue_read. Use the id or the key such as PARI-12.
+- A story, task, or bug enters a sprint only when it has points, and a story only when it is ready. The PM and the tech lead plan sprints and order the backlog. You never do.
+- A task that tasks_list_ready shows with locked true waits for its story. Its design is not approved yet. Do not start it, and read story_read to see what is missing.
+- Draft any issue with issue_draft. It stays a draft until a person publishes it. Move a sub-task assigned to you with subtask_update_status, and tick the lines of a checklist with checklist_set_done. You cannot accept a story as done.
 
 ## Discussions
 
@@ -37,7 +46,7 @@ ${shared}
 | 2. PRD | documents_read (the confirmed BRD) | planning_draft_prd | owner, PM, or tech lead in the web app |
 | 3. Epics | documents_read (the approved PRD) | planning_draft_item kind "epic" | PM in the web app |
 | 4. Stories | planning_list | planning_draft_item kind "story", then story_write_details | owner, PM, or tech lead marks them ready |
-| 5. Tasks | story_read | planning_draft_task | PM publishes the epic, which puts tasks on the board |
+| 5. Tasks | story_read | planning_draft_task (a sub-task under the story, with a role), or issue_draft for a task, bug, or sub-task | PM publishes the epic, which puts the work on the board |
 
 Do the steps in order. Do not start epics before the PRD is approved, and do not publish anything yourself.
 
@@ -175,7 +184,7 @@ ${shared}
 - Attach each design with story_attach_design: a clear title, an http or https link, and a short note (screens, devices).
 - A person approves the design in the web app. Approval opens the backend, frontend, mobile, and QA tasks.
 - When the workspace links a Stitchkit project under Design, build the screens there with the stitchkit_ tools (each needs workspaceId), then attach each screen with story_attach_design using the screen link.
-- Track your steps with subtask_add and subtask_set_done, and move your task with tasks_update_assigned_status.
+- Track your steps with subtask_add and subtask_set_done, and move your task with tasks_update_assigned_status or subtask_update_status.
 
 ${projectView}`
 
@@ -189,7 +198,7 @@ ${shared}
 - Read the BRD and the approved PRD behind the story with documents_list and documents_read, so the API covers the business rules and limits they state.
 - Keep the API contract in the workspace API docs. Find each request's id with api_requests_search (by name, path, or method), then link it to the story with story_link_api_contract.
 - When the workspace links a DBDesign project under Design, design the tables there with the dbdesign_ tools (each needs workspaceId), then add the tables the story reads or writes with story_link_data_model.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status.
+- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
 
 ${projectView}
 - documents_list shows the confirmed BRDs and the approved PRDs only. Drafts and PRDs still in review are not shown.`
@@ -202,7 +211,7 @@ ${shared}
 
 - Find work with tasks_list_ready. Read the story with story_read: the approved design, the API contracts, and the acceptance criteria.
 - Build to the approved design and the linked contracts. Show the server's error messages as they come.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status.
+- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
 
 ${projectView}`
 
@@ -215,7 +224,7 @@ ${shared}
 - Read the story with story_read. Write one test case per acceptance criterion with story_write_test_case: a title, the precondition, numbered steps, and the expected results.
 - Cover the main flow and each failure flow in the story.
 - Run end-to-end tests only after the backend and frontend tasks are done. project_tasks_list shows whether they are.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status.
+- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
 
 ${projectView}`
 
@@ -227,7 +236,7 @@ ${shared}
 
 - The workspace owner has not given you a project role yet, so you have the member tools only.
 - Read your assigned tasks with tasks_list_assigned and the stories you take part in with stories_list_participating, then story_read for the details.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status.
+- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
 - To draft, attach designs, link contracts, or write test cases, ask the workspace owner for a project role.
 
 ${projectView}`

@@ -10,7 +10,7 @@ import { appRolesOf } from '@/services/app-access'
 import { appActorOf, APPS } from '@/services/app-integrations'
 import { broadcastPlanningChange, type PlanningScope } from '@/services/events'
 import { type AudienceTarget, commentTarget, planningAudience } from '@/services/planning-audience'
-import { guideIsFresh, readMcpGuide, writeMcpStoryDetails } from '@/services/mcp-access'
+import { commentMcpIssue, draftMcpIssue, getMcpActiveSprint, guideIsFresh, listMcpBacklog, readMcpGuide, readMcpIssue, setMcpChecklistItemDone, updateMcpSubtaskStatus, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
 import { addMcpSubtask, attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
 import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpProjects, listMcpWorkspaces, readMcpDocument, readMcpParticipatingStory, uploadMcpBrd } from '@/services/mcp-access'
@@ -40,6 +40,10 @@ const MCP_WRITES: Partial<Record<McpTool, { scope: PlanningScope; target: (args:
   subtask_add: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
   subtask_set_done: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
   story_write_details: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
+  issue_draft: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  issue_comment: { scope: 'comments', target: (a) => ({ kind: 'item', id: String(a.issueId) }) },
+  subtask_update_status: { scope: 'items', target: () => ({ kind: 'everyone' }) },
+  checklist_set_done: { scope: 'items', target: () => ({ kind: 'everyone' }) },
 }
 
 // Writes that add something. A retry with the same clientRequestId returns the first result instead of adding twice.
@@ -56,10 +60,12 @@ const REPLAYABLE = new Set<McpTool>([
   'story_link_data_model',
   'story_write_test_case',
   'subtask_add',
+  'issue_draft',
+  'issue_comment',
 ])
 // story_write_details replaces the Definition of Done. Setting a status or a done flag twice changes nothing more.
 const DESTRUCTIVE = new Set<McpTool>(['story_write_details'])
-const IDEMPOTENT = new Set<McpTool>(['tasks_update_assigned_status', 'subtask_set_done', 'story_write_details', 'notifications_mark_read'])
+const IDEMPOTENT = new Set<McpTool>(['tasks_update_assigned_status', 'subtask_set_done', 'subtask_update_status', 'checklist_set_done', 'story_write_details', 'notifications_mark_read'])
 
 type RpcRequest = { id?: string | number | null; method?: string; params?: unknown }
 type Args = Record<string, unknown>
@@ -76,6 +82,30 @@ function inWorkspace(title: string, properties: Record<string, unknown>, require
 }
 
 const tools: Record<McpTool, ToolDefinition> = {
+  backlog_list: inWorkspace('Read the backlog', { limit: { type: 'integer', minimum: 1, maximum: 100 }, cursor: { type: 'string', description: 'The nextCursor of the previous answer, to read the next page of loose items.' } }, [], 'Read the backlog of the project: the planned and active sprints with their items, then the items that belong to no sprint, in rank order. Drafts are shown only to the PM and the tech lead.', (db, p, a) => listMcpBacklog(db, p, a.workspaceId, { limit: a.limit, cursor: a.cursor })),
+  sprint_get_active: inWorkspace('Read the active sprint', {}, [], 'Read the sprint that is running now, with its goal, dates, and items. The sprint is null when none is running.', (db, p, a) => getMcpActiveSprint(db, p, a.workspaceId)),
+  issue_read: inWorkspace('Read an issue', { issueId: { type: 'string', description: 'The id of the issue, or its key such as PARI-12.' } }, ['issueId'], 'Read one epic, story, task, bug, or sub-task with its checklist and links.', (db, p, a) => readMcpIssue(db, p, a.workspaceId, a.issueId)),
+  issue_draft: inWorkspace(
+    'Draft an issue',
+    {
+      type: { type: 'string', enum: ['epic', 'story', 'task', 'bug', 'subtask'] },
+      title: text,
+      description: text,
+      acceptanceCriteria: text,
+      parentId: { type: 'string', description: 'An epic for a story, task, or bug. A story, task, or bug for a sub-task, which is required there.' },
+      points: { type: 'integer', enum: [1, 2, 3, 5, 8, 13] },
+      priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+      role: { type: 'string', enum: ['ui_ux', 'backend', 'frontend', 'mobile', 'qa'], description: 'The role of a sub-task. Required for a sub-task.' },
+      assigneeId: text,
+      clientRequestId,
+    },
+    ['type', 'title'],
+    'Draft an epic, story, task, bug, or sub-task. A draft waits for the PM or the tech lead to publish it. The PM and the tech lead draft epics, stories, and tasks, and any member drafts a bug. A sub-task is drafted by the tech lead, or by a member whose role matches it. Follow planning_guide for what a good story holds.',
+    (db, p, a) => draftMcpIssue(db, p, a.workspaceId, a),
+  ),
+  issue_comment: inWorkspace('Comment on an issue', { issueId: text, body: commentBody, parentId, clientRequestId }, ['issueId', 'body'], 'Comment on an issue you may read, or answer a comment on it. Write @handle to mention a member.', (db, p, a) => commentMcpIssue(db, p, a.workspaceId, a.issueId, { body: a.body, parentId: a.parentId })),
+  subtask_update_status: inWorkspace('Move my sub-task', { subtaskId: text, status: { type: 'string', enum: ['todo', 'in_progress', 'in_review', 'done'] } }, ['subtaskId', 'status'], 'Change the status of a sub-task assigned to this member. The first sub-task to start moves its Ready story to In Progress.', (db, p, a) => updateMcpSubtaskStatus(db, p, a.workspaceId, a.subtaskId, a.status)),
+  checklist_set_done: inWorkspace('Tick a checklist line', { issueId: text, itemId: text, done: { type: 'boolean' } }, ['issueId', 'itemId', 'done'], 'Tick or untick one line of the checklist of an issue assigned to this member.', (db, p, a) => setMcpChecklistItemDone(db, p, a.workspaceId, a.issueId, a.itemId, a.done)),
   workspaces_list: { title: 'List workspaces', description: 'List the workspaces this member belongs to. Every other tool needs one of these ids.', properties: {}, required: [], run: (db, p) => listMcpWorkspaces(db, p) },
   projects_list: inWorkspace('List projects', {}, [], 'List the projects of a workspace.', (db, p, a) => listMcpProjects(db, p, a.workspaceId)),
   tasks_list_assigned: inWorkspace('List my tasks', {}, [], 'List published tasks in the workspace assigned to this member.', (db, p, a) => listMcpAssignedTasks(db, p, a.workspaceId)),

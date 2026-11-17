@@ -15,6 +15,12 @@ import { addTaskSubtask, getTaskSubtasks, recordTaskEvent, setTaskSubtaskDone } 
 import { addStoryTestCase, attachStoryDesign, getStoryDetails, linkStoryContract, linkStoryDataModel, updateStoryDetails } from '@/services/stories'
 import { listParticipatingStories, isStoryParticipant } from '@/repositories/planning.repository'
 import { mcpKeyHash } from '@/services/mcp-keys'
+import { decodeCursor } from '@/lib/pagination'
+import { parseInput } from '@/lib/parse-input'
+import { createIssueBody } from '@/models/issue-input'
+import { listChecklist, listLinks, setChecklistItemDone } from '@/services/issue-details'
+import { readBacklog } from '@/services/issue-backlog'
+import { createIssue, getIssue, updateIssue } from '@/services/issues'
 import { searchCollectionRequests } from '@/services/collection-search'
 import { listNotificationsPage } from '@/services/notifications'
 import { countUnreadNotifications, listUnreadNotifications, markAllNotificationsRead, markNotificationRead } from '@/repositories/notifications.repository'
@@ -393,4 +399,70 @@ export async function readMcpDocumentResource(db: SQL, principal: McpPrincipal, 
   if (!match) throw new AppError('PLANNING_NOT_FOUND')
   const document = (await readMcpReadableDocument(db, principal, match[1], match[2])) as { content: string }
   return [{ uri: uri as string, mimeType: 'text/markdown', text: document.content }]
+}
+
+// The issue tools work in the one project of the workspace, as the member who owns the key. A key only drafts and moves
+// its owner's own sub-tasks, and the issue service holds it to that.
+const asAgent = (principal: McpPrincipal) => ({ userId: principal.userId, apiKeyId: principal.keyId })
+
+async function issueScope(db: SQL, workspaceId: string) {
+  const [project] = await listProjects(db, workspaceId)
+  if (!project) throw new AppError('PROJECT_NOT_FOUND')
+  return { workspaceId, projectId: project.id }
+}
+
+const issueRef = (value: unknown): string => {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 100) throw new AppError('ISSUE_INPUT_INVALID')
+  return value
+}
+
+// The open sprints with their items, then the loose items in pages. The same view as the Backlog tab.
+export async function listMcpBacklog(db: SQL, principal: McpPrincipal, workspaceId: unknown, input: { limit?: unknown; cursor?: unknown }) {
+  const id = await requireWorkspace(db, principal, 'backlog_list', workspaceId)
+  const limit = typeof input.limit === 'number' && Number.isInteger(input.limit) && input.limit >= 1 ? Math.min(input.limit, 100) : 50
+  return readBacklog(db, await issueScope(db, id), asAgent(principal), { limit, cursor: decodeCursor(typeof input.cursor === 'string' ? input.cursor : null) })
+}
+
+export async function getMcpActiveSprint(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
+  const id = await requireWorkspace(db, principal, 'sprint_get_active', workspaceId)
+  const { sprints } = await readBacklog(db, await issueScope(db, id), asAgent(principal), { limit: 1, cursor: null })
+  const active = sprints.find((sprint) => sprint.status === 'active')
+  if (!active) return { sprint: null, issues: [] }
+  const { issues, ...sprint } = active
+  return { sprint, issues }
+}
+
+export async function readMcpIssue(db: SQL, principal: McpPrincipal, workspaceId: unknown, issueId: unknown) {
+  const id = await requireWorkspace(db, principal, 'issue_read', workspaceId)
+  const scope = await issueScope(db, id)
+  const issue = await getIssue(db, scope, asAgent(principal), issueRef(issueId))
+  return { issue, checklist: await listChecklist(db, scope, asAgent(principal), issue.id), links: await listLinks(db, scope, asAgent(principal), issue.id) }
+}
+
+// Everything an agent drafts waits for a person to publish it.
+export async function draftMcpIssue(db: SQL, principal: McpPrincipal, workspaceId: unknown, input: Record<string, unknown>) {
+  const id = await requireWorkspace(db, principal, 'issue_draft', workspaceId)
+  const { workspaceId: _workspace, clientRequestId: _request, ...fields } = input
+  return createIssue(db, await issueScope(db, id), asAgent(principal), parseInput(createIssueBody, fields, 'ISSUE_INPUT_INVALID'))
+}
+
+export async function commentMcpIssue(db: SQL, principal: McpPrincipal, workspaceId: unknown, issueId: unknown, input: CommentInput) {
+  const id = await requireWorkspace(db, principal, 'issue_comment', workspaceId)
+  const issue = await getIssue(db, await issueScope(db, id), asAgent(principal), issueRef(issueId))
+  const kind: TargetKind = issue.type === 'epic' ? 'epic' : issue.type === 'story' ? 'story' : 'task'
+  return postMcpComment(db, principal, id, kind, issue.id, input)
+}
+
+export async function updateMcpSubtaskStatus(db: SQL, principal: McpPrincipal, workspaceId: unknown, subtaskId: unknown, status: unknown) {
+  const id = await requireWorkspace(db, principal, 'subtask_update_status', workspaceId)
+  const scope = await issueScope(db, id)
+  const subtask = await getIssue(db, scope, asAgent(principal), issueRef(subtaskId))
+  if (subtask.type !== 'subtask' || typeof status !== 'string') throw new AppError('ISSUE_INPUT_INVALID')
+  return updateIssue(db, scope, asAgent(principal), subtask.id, { status })
+}
+
+export async function setMcpChecklistItemDone(db: SQL, principal: McpPrincipal, workspaceId: unknown, issueId: unknown, itemId: unknown, done: unknown) {
+  const id = await requireWorkspace(db, principal, 'checklist_set_done', workspaceId)
+  if (typeof itemId !== 'string' || typeof done !== 'boolean') throw new AppError('ISSUE_INPUT_INVALID')
+  return setChecklistItemDone(db, await issueScope(db, id), asAgent(principal), issueRef(issueId), itemId, done)
 }
