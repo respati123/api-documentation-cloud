@@ -23,7 +23,7 @@ export function ApiDocsView({ tree, totalRequests, query, onQueryChange, selecte
   return (
     // Wide screens: one framed panel with a fixed 300px endpoint list on the left. Both columns scroll on their own.
     <div className="grid gap-4 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-start md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-card">
-      <aside className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 md:max-h-[40rem] md:grid-rows-[auto_auto_minmax(0,1fr)] md:rounded-none md:border-0 md:border-r md:bg-transparent md:p-4">
+      <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border bg-card p-3 md:max-h-[40rem] md:grid-rows-[auto_auto_minmax(0,1fr)] md:rounded-none md:border-0 md:border-r md:bg-transparent md:p-4">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">{t(DOCS_TEXT.tree.title)}</p>
           <span className="text-xs tabular-nums text-muted-foreground">{totalRequests}</span>

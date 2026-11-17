@@ -19,7 +19,7 @@ export function CollectionTreeView({
   depth?: number
 }) {
   return (
-    <ul className="grid gap-0.5">
+    <ul className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-0.5">
       {nodes.map((node) =>
         node.kind === 'folder' ? (
           <li key={node.id}>
