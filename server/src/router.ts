@@ -20,6 +20,7 @@ import { handleWorkspaceRecord } from '@/routes/workspace-record'
 import { handleProjectRoutes } from '@/routes/projects'
 import { handleIssueRoutes } from '@/routes/issues'
 import { handleMcpRequest } from '@/routes/mcp'
+import { handleReportRoutes } from '@/routes/reports'
 import { handleSprintRoutes } from '@/routes/sprints'
 import { handleOidcRoutes } from '@/routes/oidc'
 import { handleAppRoutes } from '@/routes/app-integrations'
@@ -93,6 +94,8 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (projectResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, projectResponse)
   const issueResponse = await handleIssueRoutes(ctx, request, url, method, workspaceId, action, user)
   if (issueResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, issueResponse)
+  const reportResponse = await handleReportRoutes(ctx, url, method, workspaceId, action, user)
+  if (reportResponse) return reportResponse
   const sprintResponse = await handleSprintRoutes(ctx, request, method, workspaceId, action, user)
   if (sprintResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, sprintResponse)
   const planningResponse = await handlePlanningRoutes(ctx, request, method, workspaceId, action, user)

@@ -85,6 +85,9 @@ These routes sit under `/api/workspaces/:workspaceId/projects/:projectId`. Every
 | `POST /sprints/:sprintId/items` | PM, tech lead | `201` `{ sprints }`. Body `{ issueId, overrideReason? }` |
 | `DELETE /sprints/:sprintId/items/:issueId` | PM, tech lead | `204` |
 | `POST /sprints/:sprintId/start`, `/close` | PM, tech lead | `200` `{ sprint }`. Close takes `{ carryTo: sprintId \| 'backlog' }` |
+| `GET /sprints/:sprintId/burndown` | member | `200` `{ sprintId, total, days: [{ date, remaining, ideal }] }`. `remaining` is null for a day that has not come |
+| `GET /sprints/:sprintId/report` | member | `200` the sprint, committed and completed points, and the lists of completed, not completed, added, removed, and re-estimated items |
+| `GET /reports/velocity?limit=` | member | `200` `{ sprints, averageCompleted }`. The last closed sprints, oldest first. `limit` 1 to 24, default 6 |
 | `PATCH /` (the project) | PM | `200` `{ project }`. Body `{ key?, mode?, productGoal? }` |
 
 An AI agent key never ranks, publishes, links, or changes sprints, and it moves only a sub-task assigned to its owner. Error codes: `ISSUE_*`, `SPRINT_*`, and `PROJECT_KEY_TAKEN` in `src/lib/errors/codes.ts`.

@@ -232,6 +232,35 @@ describe.skipIf(!databaseEnabled)('issue, backlog, and sprint routes', () => {
     expect(data(reviewed).issue).toMatchObject({ sourceOutdated: false, sourceReviewedVersion: 2 })
   })
 
+  test('the sprint reports are read by members, with a burndown, a report, and the velocity', async () => {
+    const task = await makeTask('report work', { points: 5 })
+    const start = new Date().toISOString().slice(0, 10)
+    const end = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10)
+    const sprint = data(await call('POST', '/sprints', pm, { name: 'Reported', startsOn: start, endsOn: end })).sprint as Body
+    await call('POST', `/sprints/${sprint.id}/items`, pm, { issueId: task.id })
+    await call('POST', `/sprints/${sprint.id}/start`, pm)
+
+    const burndown = await call('GET', `/sprints/${sprint.id}/burndown`, plain)
+    expect(burndown.status).toBe(200)
+    expect(data(burndown)).toMatchObject({ sprintId: sprint.id, total: 5 })
+    expect(data(burndown).days).toHaveLength(7)
+    expect(data(burndown).days[0]).toMatchObject({ date: start, remaining: 5, ideal: 5 })
+
+    const report = await call('GET', `/sprints/${sprint.id}/report`, viewer)
+    expect(data(report)).toMatchObject({ committedPoints: 5, completedPoints: 0 })
+    expect(data(report).notCompleted.map((item: Body) => item.id)).toEqual([task.id])
+
+    await call('POST', `/sprints/${sprint.id}/close`, pm, { carryTo: 'backlog' })
+    const velocity = await call('GET', '/reports/velocity?limit=2', plain)
+    expect(velocity.status).toBe(200)
+    expect(data(velocity).sprints.at(-1)).toMatchObject({ name: 'Reported', committedPoints: 5, completedPoints: 0 })
+    expect(typeof data(velocity).averageCompleted).toBe('number')
+
+    expect((await call('GET', `/sprints/${sprint.id}/report`, stranger)).json.code).toBe('WORKSPACE_NOT_FOUND')
+    expect((await call('GET', `/sprints/${crypto.randomUUID()}/burndown`, pm)).json.code).toBe('SPRINT_NOT_FOUND')
+    expect((await call('GET', '/reports/velocity', null)).status).toBe(401)
+  })
+
   test('a path that is not a route is not found', async () => {
     expect((await call('DELETE', '/issues', pm)).json.code).toBe('ROUTE_NOT_FOUND')
     expect((await call('GET', '/issues/x/rank', pm)).json.code).toBe('ROUTE_NOT_FOUND')
