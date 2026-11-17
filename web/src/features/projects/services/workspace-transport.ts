@@ -4,7 +4,7 @@ import { apiCall } from '@/shared/services/api-client'
 
 interface CallOptions {
   token?: string
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
 }
 

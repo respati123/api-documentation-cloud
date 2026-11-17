@@ -1,4 +1,4 @@
-const allowedMethods = 'GET, POST, PATCH, DELETE, OPTIONS'
+const allowedMethods = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
 const allowedHeaders = 'Authorization, Content-Type, Accept-Language, X-Request-Id'
 
 export function corsHeaders(origin: string | null, allowedOrigins: readonly string[]): Headers {
