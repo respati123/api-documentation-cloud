@@ -79,6 +79,12 @@ Four separate steps, in order:
 
 The tag is the release. Nothing deploys on its own.
 
+## OpenID Connect (sign-in for other apps)
+
+The portal is the identity provider for DBDesign and Stitchkit. It needs two values in the server `.env`: `OIDC_SIGNING_KEY_B64` (the PKCS#8 signing key, base64) and `OIDC_SIGNING_KEY_ID`. Both are optional. Set both or neither. Create the key once, as in `PLAN-sso-oidc.md`, Task 0.1, and never commit it.
+
+Register each app with `bun run api:oidc-client -- create --client-id <id> --name <name> --redirect-uri <https url> --post-logout-uri <https url>`. The secret is printed once. Rotating or disabling uses `rotate-secret` or `disable`.
+
 ## Actions that need an explicit request
 
 An agent does these only when asked for that action, in that conversation:

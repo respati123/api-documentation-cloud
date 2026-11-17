@@ -17,16 +17,19 @@ export function createTestHttp(db: SQL, databaseUrl: string) {
   const logger = createLogger({ level: 'error', service: 'api', version: 'test', sink: () => undefined })
   const app = createApp(createAppContext({ db, config, logger }))
 
-  async function call(method: string, path: string, { token, body }: { token?: string; body?: unknown } = {}) {
+  // A form option sends application/x-www-form-urlencoded, the encoding OAuth token requests use.
+  async function call(method: string, path: string, { token, body, form, headers: extra }: { token?: string; body?: unknown; form?: Record<string, string>; headers?: Record<string, string> } = {}) {
+    const encoded = form ? new URLSearchParams(form).toString() : undefined
     const response = await app.fetch(
       new Request(`http://api.test${path}`, {
         method,
         headers: {
-          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...(encoded !== undefined ? { 'Content-Type': 'application/x-www-form-urlencoded' } : body === undefined ? {} : { 'Content-Type': 'application/json' }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(extra ?? {}),
           'CF-Connecting-IP': `test-${randomUUID()}`,
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: encoded ?? (body === undefined ? undefined : JSON.stringify(body)),
       }),
     )
     if (!response) throw new Error('The route did not answer.')

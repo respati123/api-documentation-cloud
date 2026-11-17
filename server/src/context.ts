@@ -2,6 +2,7 @@ import type { SQL } from 'bun'
 import type { AppConfig } from '@/config'
 import type { Logger } from '@/lib/logger'
 import { RateLimiter } from '@/middleware/rate-limit'
+import { createOidcKeys, type OidcKeys } from '@/services/oidc-keys'
 import type { SyncSocketData, SyncSocketTicket } from '@/models/workspace'
 
 // Everything a request handler needs. One context is built at startup and shared by every request.
@@ -13,6 +14,7 @@ export interface AppContext {
   syncSocketTickets: Map<string, SyncSocketTicket>
   syncSockets: Set<Bun.ServerWebSocket<SyncSocketData>>
   desktopLoginCodes: Map<string, { userId: string; expiresAt: number }>
+  oidcKeys: OidcKeys | null
 }
 
 export function createAppContext(parts: Pick<AppContext, 'db' | 'config' | 'logger'>): AppContext {
@@ -22,5 +24,6 @@ export function createAppContext(parts: Pick<AppContext, 'db' | 'config' | 'logg
     syncSocketTickets: new Map(),
     syncSockets: new Set(),
     desktopLoginCodes: new Map(),
+    oidcKeys: parts.config.oidc ? createOidcKeys(parts.config.oidc) : null,
   }
 }

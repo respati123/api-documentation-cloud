@@ -9,6 +9,7 @@
     "api:dev": "bun --cwd server --env-file=../.env --watch src/index.ts",
     "api:start": "bun --cwd server --env-file=../.env src/index.ts",
     "api:seed-admin": "bun --cwd server --env-file=../.env src/scripts/seed-admin.ts",
+    "api:oidc-client": "bun --cwd server --env-file=../.env src/scripts/oidc-client.ts",
     "api:typecheck": "cd server && bun run typecheck",
     "api:test": "bun test server",
     "cloud:test": "cd web && bun run test",

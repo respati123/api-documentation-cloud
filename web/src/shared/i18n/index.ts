@@ -9,6 +9,7 @@ import enDesktop from './locales/en/desktop.json'
 import enDocs from './locales/en/docs.json'
 import enMcp from './locales/en/mcp.json'
 import enNotifications from './locales/en/notifications.json'
+import enOidc from './locales/en/oidc.json'
 import enPlanning from './locales/en/planning.json'
 import enProjects from './locales/en/projects.json'
 import enSettings from './locales/en/settings.json'
@@ -24,6 +25,7 @@ import idDesktop from './locales/id/desktop.json'
 import idDocs from './locales/id/docs.json'
 import idMcp from './locales/id/mcp.json'
 import idNotifications from './locales/id/notifications.json'
+import idOidc from './locales/id/oidc.json'
 import idPlanning from './locales/id/planning.json'
 import idProjects from './locales/id/projects.json'
 import idSettings from './locales/id/settings.json'
@@ -56,6 +58,7 @@ void i18next
         planning: enPlanning,
         notifications: enNotifications,
         admin: enAdmin,
+        oidc: enOidc,
       },
       id: {
         common: idCommon,
@@ -73,6 +76,7 @@ void i18next
         planning: idPlanning,
         notifications: idNotifications,
         admin: idAdmin,
+        oidc: idOidc,
       },
     },
     supportedLngs: supportedLanguages,
@@ -95,6 +99,7 @@ void i18next
       'planning',
       'notifications',
       'admin',
+      'oidc',
     ],
     interpolation: { escapeValue: false },
     detection: {

@@ -1,0 +1,15 @@
+{
+  "authorize": {
+    "title": "Continue to the app",
+    "working": "Signing you in…",
+    "retry": "Try again",
+    "signInPrompt": "Sign in to continue to the app you came from.",
+    "failed": "Could not finish signing you in."
+  },
+  "logout": {
+    "title": "Signing you out",
+    "working": "Signing you out…",
+    "retry": "Try again",
+    "failed": "Could not finish signing you out."
+  }
+}

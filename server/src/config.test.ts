@@ -34,3 +34,30 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...required, LOG_LEVEL: 'verbose' })).toThrow('LOG_LEVEL')
   })
 })
+
+describe('loadConfig OIDC settings', () => {
+  const pem = '-----BEGIN PRIVATE KEY-----\nMIGHAgEA\n-----END PRIVATE KEY-----\n'
+  const pemB64 = Buffer.from(pem).toString('base64')
+
+  test('OIDC is off when neither key variable is set', () => {
+    expect(loadConfig(required).oidc).toBeNull()
+  })
+
+  test('refuses a signing key without its key id, and names the missing variable', () => {
+    expect(() => loadConfig({ ...required, OIDC_SIGNING_KEY_B64: pemB64 })).toThrow('OIDC_SIGNING_KEY_ID')
+  })
+
+  test('refuses a key id without its signing key, and names the missing variable', () => {
+    expect(() => loadConfig({ ...required, OIDC_SIGNING_KEY_ID: '2026-11' })).toThrow('OIDC_SIGNING_KEY_B64')
+  })
+
+  test('builds the issuer from PUBLIC_WEB_URL and decodes the key', () => {
+    const config = loadConfig({ ...required, OIDC_SIGNING_KEY_B64: pemB64, OIDC_SIGNING_KEY_ID: '2026-11' })
+    expect(config.oidc).toEqual({ signingKeyPem: pem, keyId: '2026-11', issuer: 'https://docs.example.com/api/oidc' })
+  })
+
+  test('drops a trailing slash from PUBLIC_WEB_URL in the issuer', () => {
+    const config = loadConfig({ ...required, PUBLIC_WEB_URL: 'https://docs.example.com/', OIDC_SIGNING_KEY_B64: pemB64, OIDC_SIGNING_KEY_ID: '2026-11' })
+    expect(config.oidc?.issuer).toBe('https://docs.example.com/api/oidc')
+  })
+})

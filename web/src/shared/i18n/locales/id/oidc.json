@@ -1,0 +1,15 @@
+{
+  "authorize": {
+    "title": "Lanjut ke aplikasi",
+    "working": "Sedang memproses masuk…",
+    "retry": "Coba lagi",
+    "signInPrompt": "Masuk untuk lanjut ke aplikasi asal kamu.",
+    "failed": "Proses masuk belum bisa diselesaikan."
+  },
+  "logout": {
+    "title": "Keluar dari akun",
+    "working": "Sedang keluar…",
+    "retry": "Coba lagi",
+    "failed": "Proses keluar belum bisa diselesaikan."
+  }
+}
