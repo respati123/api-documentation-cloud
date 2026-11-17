@@ -25,7 +25,11 @@
     "projects": "Proyek",
     "team": "Tim",
     "settings": "Pengaturan",
-    "toggleApi": "Tampilkan atau sembunyikan bagian API"
+    "toggleApi": "Tampilkan atau sembunyikan bagian API",
+    "design": "Desain",
+    "designUi": "UI · Stitchkit",
+    "designDatabase": "Database · DBDesign",
+    "toggleDesign": "Tampilkan atau sembunyikan bagian Desain"
   },
   "account": {
     "signOut": "Keluar",

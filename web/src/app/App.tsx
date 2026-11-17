@@ -58,8 +58,8 @@ export default function App() {
         workspaces={shell.workspaces}
         currentWorkspace={shell.currentWorkspace}
         sidebarItems={shell.sidebarItems}
-        apiExpanded={shell.apiExpanded}
-        onApiExpandedChange={shell.setApiExpanded}
+        expandedGroups={shell.expandedGroups}
+        onGroupExpandedChange={shell.setGroupExpanded}
         apiOnline={shell.apiOnline}
         mobileNavOpen={shell.mobileNavOpen}
         onMobileNavOpenChange={shell.setMobileNavOpen}

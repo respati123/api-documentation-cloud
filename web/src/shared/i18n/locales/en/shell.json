@@ -25,7 +25,11 @@
     "projects": "Project",
     "team": "Team",
     "settings": "Settings",
-    "toggleApi": "Show or hide API sections"
+    "toggleApi": "Show or hide API sections",
+    "design": "Design",
+    "designUi": "UI · Stitchkit",
+    "designDatabase": "Database · DBDesign",
+    "toggleDesign": "Show or hide Design sections"
   },
   "account": {
     "signOut": "Sign out",

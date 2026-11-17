@@ -11,7 +11,9 @@
     "history": "Riwayat",
     "projects": "Proyek",
     "team": "Tim",
-    "settings": "Pengaturan"
+    "settings": "Pengaturan",
+    "designUi": "Desain UI",
+    "designDatabase": "Desain database"
   },
   "state": {
     "loading": "Memuat workspace…",
@@ -77,6 +79,8 @@
     "history": "Semua commit yang di-push ke workspace ini, beserta perubahan di tiap endpoint.",
     "projects": "Dokumen, epic, story, dan task untuk proyek ini.",
     "team": "Anggota, role proyek, dan undangan yang belum diterima.",
-    "settings": "Ganti nama atau hapus workspace ini."
+    "settings": "Ganti nama atau hapus workspace ini.",
+    "designUi": "Layar dari project Stitchkit yang terhubung ke workspace ini.",
+    "designDatabase": "Data model dari project DBDesign yang terhubung ke workspace ini."
   }
 }
