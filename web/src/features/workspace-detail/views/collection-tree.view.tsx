@@ -31,7 +31,7 @@ export function CollectionTreeView({
           <li key={node.id}>
             <Button
               variant="ghost"
-              className="h-auto w-full justify-start gap-2 py-1.5 text-left font-normal"
+              className="h-auto w-full min-w-0 justify-start gap-2 py-1.5 text-left font-normal"
               style={{ paddingInlineStart: `${depth * 0.75 + 0.5}rem` }}
               aria-current={selectedId === node.id ? 'true' : undefined}
               data-testid={`docs-request-${node.id}`}
@@ -40,7 +40,7 @@ export function CollectionTreeView({
               <Badge variant={methodVariant(node.method)} className="shrink-0 font-mono">
                 {node.method}
               </Badge>
-              <span className="truncate text-sm">{node.name}</span>
+              <span className="min-w-0 flex-1 truncate text-left text-sm">{node.name}</span>
             </Button>
           </li>
         ),
