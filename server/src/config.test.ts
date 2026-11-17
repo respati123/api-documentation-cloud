@@ -61,3 +61,18 @@ describe('loadConfig OIDC settings', () => {
     expect(config.oidc?.issuer).toBe('https://docs.example.com/api/oidc')
   })
 })
+
+describe('loadConfig app addresses', () => {
+  test('apps are off when their address is not set', () => {
+    expect(loadConfig(required).apps).toEqual({ dbdesign: null, stitchkit: null })
+  })
+
+  test('reads each app address and drops a trailing slash', () => {
+    const config = loadConfig({ ...required, DBDESIGN_URL: 'https://dbdesign.example.com/', STITCHKIT_URL: 'https://stitchkit.example.com' })
+    expect(config.apps).toEqual({ dbdesign: 'https://dbdesign.example.com', stitchkit: 'https://stitchkit.example.com' })
+  })
+
+  test('refuses an address that is not a URL', () => {
+    expect(() => loadConfig({ ...required, DBDESIGN_URL: 'not a url' })).toThrow('DBDESIGN_URL')
+  })
+})
