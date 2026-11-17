@@ -5,6 +5,7 @@ import { AppShellView, SHELL_TEXT, useAppShellViewModel } from '@/features/app-s
 import { AuthPage, isPasswordResetRoute, useAuthSessionViewModel } from '@/features/auth'
 import { DESKTOP_TEXT, DesktopLoginPage, hasDesktopLoginRequest } from '@/features/desktop-login'
 import { AdminMcpKeysPage, MyMcpKeyPage } from '@/features/mcp-access'
+import { isOidcAuthorizeRoute, OIDC_AUTHORIZE_TEXT, OidcAuthorizePage } from '@/features/oidc-authorize'
 import { usePendingInviteViewModel, WORKSPACE_TEXT, WorkspacePage } from '@/features/workspace-detail'
 import { CreateWorkspaceDialog, WORKSPACES_TEXT, WorkspacesPage } from '@/features/workspaces'
 import { LoadingState } from '@/shared/components/state-views'
@@ -24,6 +25,12 @@ export default function App() {
         <LoadingState label={t(SHELL_TEXT.session.checking)} testId="cloud-session-checking" />
       </div>
     )
+  }
+
+  // Another app sends the user here to sign in. The page completes the sign-in once the user is signed in to the portal.
+  if (isOidcAuthorizeRoute(window.location.pathname)) {
+    if (session.status !== 'authenticated') return <AuthPage inviteMessage={t(OIDC_AUTHORIZE_TEXT.signInPrompt)} />
+    return <OidcAuthorizePage />
   }
 
   const desktopRequested = hasDesktopLoginRequest(window.location.search)
