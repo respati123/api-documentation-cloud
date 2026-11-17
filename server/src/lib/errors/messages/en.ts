@@ -94,5 +94,10 @@ export const en = {
   ISSUE_NOT_READY: 'A story needs acceptance criteria and an approved design before it is Ready.',
   ISSUE_SUBTASKS_OPEN: 'Finish every sub-task before moving this issue to Done.',
   ISSUE_AGENT_FORBIDDEN: 'An AI agent key cannot do this. A person has to.',
+  SPRINT_NOT_FOUND: 'Sprint not found.',
+  SPRINT_INPUT_INVALID: 'Sprint details are invalid. A sprint has a name and lasts from one day to four weeks.',
+  SPRINT_ALREADY_ACTIVE: 'This project already has an active sprint. Close it before starting another.',
+  SPRINT_NOT_EDITABLE: 'This sprint is not in a state where that can be done.',
+  SPRINT_ITEM_NOT_READY: 'Only a Ready story with points, or a task or bug with points, can enter a sprint. A PM can override this with a reason.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>

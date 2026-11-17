@@ -27,6 +27,7 @@ import {
 } from '@/repositories/issues.repository'
 import { insertPlanningEvent } from '@/repositories/planning-events.repository'
 import { ensureAssigneeInProject } from '@/repositories/projects.repository'
+import { findSprint, insertScopeEvent } from '@/repositories/sprints.repository'
 import { type ProjectRoles, resolveProjectRoles } from '@/services/project-roles'
 
 export interface IssueScope {
@@ -143,6 +144,7 @@ export async function updateIssue(db: SQL, scope: IssueScope, actor: Actor, ref:
 
   await db.begin(async (tx) => {
     await updateIssueFields(tx, scope.projectId, issue.id, fields)
+    await recordPointsChange(tx, scope, actor, issue, patch.points)
     if (patch.status !== undefined && patch.status !== issue.status) {
       await recordStatus(tx, actor, issue.id, issue.status, patch.status)
       await startParentStory(tx, scope, actor, issue, patch.status)
@@ -240,6 +242,24 @@ async function checkStatusRules(db: SQL, issue: IssueRow, patch: UpdateIssueInpu
     const open = (await listChildren(db, issue.id)).some((child) => child.type === 'subtask' && child.status !== 'done')
     if (open) throw new AppError('ISSUE_SUBTASKS_OPEN')
   }
+}
+
+// A new estimate on an item in an open sprint is scope history. The sprint report reads it.
+async function recordPointsChange(tx: SQL, scope: IssueScope, actor: Actor, issue: IssueRow, next: number | null | undefined): Promise<void> {
+  if (next === undefined || next === issue.points || !issue.sprintId) return
+  const sprint = await findSprint(tx, scope.projectId, issue.sprintId)
+  if (!sprint || sprint.status === 'closed') return
+  await insertScopeEvent(tx, {
+    id: randomUUID(),
+    sprintId: sprint.id,
+    issueId: issue.id,
+    action: 'points_changed',
+    pointsBefore: issue.points,
+    pointsAfter: next,
+    afterStart: sprint.status === 'active',
+    overrideReason: null,
+    actorId: actor.userId,
+  })
 }
 
 // The first sub-task to leave todo moves a Ready story to In Progress.

@@ -94,5 +94,10 @@ export const id = {
   ISSUE_NOT_READY: 'Story harus punya acceptance criteria dan desain yang sudah disetujui sebelum berstatus Ready.',
   ISSUE_SUBTASKS_OPEN: 'Selesaikan semua sub-task sebelum memindahkan issue ini ke Done.',
   ISSUE_AGENT_FORBIDDEN: 'Key agen AI tidak bisa melakukan ini. Harus dilakukan oleh orang.',
+  SPRINT_NOT_FOUND: 'Sprint tidak ditemukan.',
+  SPRINT_INPUT_INVALID: 'Detail sprint tidak valid. Sprint punya nama dan berlangsung satu hari sampai empat minggu.',
+  SPRINT_ALREADY_ACTIVE: 'Project ini sudah punya sprint aktif. Tutup dulu sebelum memulai yang lain.',
+  SPRINT_NOT_EDITABLE: 'Sprint ini sedang tidak dalam keadaan yang memungkinkan aksi itu.',
+  SPRINT_ITEM_NOT_READY: 'Hanya story Ready yang punya poin, atau task atau bug yang punya poin, yang bisa masuk sprint. PM bisa melewatinya dengan alasan.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>
