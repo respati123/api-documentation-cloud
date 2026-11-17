@@ -4,8 +4,9 @@ import { decodeJwt, exportPKCS8, generateKeyPair } from 'jose'
 import type { SQL } from 'bun'
 import { databaseEnabled, openTestDatabase } from '@/testing/database'
 import { createTestHttp, type TestAccount } from '@/testing/http'
+import { resetAppToolCacheForTests } from '@/routes/mcp'
 
-type Seen = { audience?: unknown; calls: Array<{ name: string; args: Record<string, unknown> }> }
+type Seen = { audience?: unknown; failToolsList?: boolean; calls: Array<{ name: string; args: Record<string, unknown> }> }
 
 // A fake DBDesign or Stitchkit: project lists, one project detail, and an MCP endpoint that echoes tool calls.
 function fakeApp(kind: 'dbdesign' | 'stitchkit') {
@@ -27,6 +28,7 @@ function fakeApp(kind: 'dbdesign' | 'stitchkit') {
       if (url.pathname === '/api/projects/s1') return Response.json({ screens: [{ screen: { id: 'sc1', name: 'Masuk', kind: 'screen' } }] })
       if (url.pathname === '/mcp') {
         const body = (await request.json()) as { id: number; method: string; params: { name: string; arguments: Record<string, unknown> } }
+        if (body.method === 'tools/list' && seen.failToolsList) return Response.json({ jsonrpc: '2.0', id: body.id, error: { code: -32000, message: 'down' } })
         if (body.method === 'tools/list') return Response.json({ jsonrpc: '2.0', id: body.id, result: { tools } })
         seen.calls.push({ name: body.params.name, args: body.params.arguments })
         return Response.json({ jsonrpc: '2.0', id: body.id, result: { content: [{ type: 'text', text: JSON.stringify({ called: body.params.name }) }] } })
@@ -131,6 +133,21 @@ describe.skipIf(!databaseEnabled)('DBDesign and Stitchkit integration', () => {
     })
     const tables = await http.call('GET', `/api/workspaces/${workspaceId}/apps/dbdesign/tables`, { token: member.token })
     expect(tables.json.data).toEqual({ projects: [{ projectId: 'd1', projectName: 'Toko', items: [{ id: 't1', name: 'orders' }], error: null }] })
+  })
+
+  test('an app that cannot list its tools is left out, and its tools return on the next list', async () => {
+    const { owner, workspaceId } = await team('apps-tools-down', ['backend'])
+    await link(owner, workspaceId, 'dbdesign', 'd1')
+    const secret = ((await http.call('POST', '/api/me/mcp-keys', { token: owner.token, body: { name: 'Laptop', validDays: 30 } })).json.data as { secret: string }).secret
+    const names = async () => (((await http.mcp(secret, 'tools/list')).json.result as { tools: Array<{ name: string }> }).tools).map((item) => item.name)
+
+    resetAppToolCacheForTests()
+    dbdesign.seen.failToolsList = true
+    expect((await names()).some((name) => name.startsWith('dbdesign_'))).toBe(false)
+
+    dbdesign.seen.failToolsList = false
+    expect(await names()).toContain('dbdesign_project_get')
+    resetAppToolCacheForTests()
   })
 
   test('DBDesign is closed to disciplines outside backend, tech lead, and PM', async () => {

@@ -391,13 +391,21 @@ function appOfTool(name: string): AppName | null {
   return null
 }
 
+// Only a good answer is cached. A failed answer is never stored, so the next list asks the app again.
 async function appToolsOf(ctx: AppContext, app: AppName, principal: McpPrincipal): Promise<AppTool[]> {
   const cached = appToolCache.get(app)
   if (cached && Date.now() - cached.at < APP_TOOLS_TTL_MS) return cached.tools
   const answer = await ctx.apps.mcp(app, await appActorOf(ctx.db, principal.userId), 'tools/list', {})
-  const tools = Array.isArray((answer.result as { tools?: unknown })?.tools) ? ((answer.result as { tools: AppTool[] }).tools) : []
+  const listed = (answer.result as { tools?: unknown } | undefined)?.tools
+  if (answer.error || !Array.isArray(listed)) throw new AppError('APP_UNAVAILABLE')
+  const tools = listed as AppTool[]
   appToolCache.set(app, { at: Date.now(), tools })
   return tools
+}
+
+// Tests start from an empty cache, so one test's app answers do not leak into another.
+export function resetAppToolCacheForTests(): void {
+  appToolCache.clear()
 }
 
 async function appToolList(ctx: AppContext, principal: McpPrincipal) {
@@ -411,6 +419,7 @@ async function appToolList(ctx: AppContext, principal: McpPrincipal) {
     } catch (error) {
       // An app that is down leaves the portal tools working. Its tools come back on the next list.
       if (!(error instanceof AppError)) throw error
+      ctx.logger.warn('mcp.app_tools_unavailable', { app, code: error.code })
       continue
     }
     for (const tool of tools) {
