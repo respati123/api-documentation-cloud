@@ -21,6 +21,7 @@ export interface CommitRecord {
   message: string
   snapshot: unknown
   createdAt: Date
+  authorEmail: string
 }
 
 // Ignores a commit whose id already exists, so a repeated push does not fail. A commit with a branch id belongs to that branch, not to the workspace head.
@@ -49,7 +50,7 @@ export async function listCommitsPage(db: SQL, query: { workspaceId: string; bra
 }
 
 export async function findCommitInWorkspace(db: SQL, workspaceId: string, commitId: string): Promise<CommitRecord | undefined> {
-  const [row] = await db`SELECT id, parent_ids AS "parentIds", message, snapshot, created_at AS "createdAt" FROM commits WHERE workspace_id = ${workspaceId} AND id = ${commitId}`
+  const [row] = await db`SELECT c.id, c.parent_ids AS "parentIds", c.message, c.snapshot, c.created_at AS "createdAt", COALESCE(u.email, '') AS "authorEmail" FROM commits c LEFT JOIN users u ON u.id = c.author_id WHERE c.workspace_id = ${workspaceId} AND c.id = ${commitId}`
   return toRecord(row)
 }
 
@@ -60,7 +61,9 @@ export async function commitIdUsedElsewhere(db: SQL, commit: { id: string; works
   return rows.length > 0
 }
 
-function toRecord(row: { id: unknown; parentIds: unknown; message: unknown; snapshot: unknown; createdAt: Date } | undefined): CommitRecord | undefined {
+function toRecord(
+  row: { id: unknown; parentIds: unknown; message: unknown; snapshot: unknown; createdAt: Date; authorEmail?: unknown } | undefined,
+): CommitRecord | undefined {
   if (!row) return undefined
   return {
     id: String(row.id),
@@ -68,5 +71,6 @@ function toRecord(row: { id: unknown; parentIds: unknown; message: unknown; snap
     message: String(row.message),
     snapshot: parseJson<unknown>(row.snapshot, []),
     createdAt: row.createdAt,
+    authorEmail: row.authorEmail ? String(row.authorEmail) : '',
   }
 }

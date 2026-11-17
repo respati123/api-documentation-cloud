@@ -30,7 +30,7 @@ Every import uses the `@/` alias, which points to `src/`. This applies inside a 
 ```ts
 // correct
 import { teamService } from '@/features/team/services/team.service'
-import { Button } from '@/shared/components/ui/button'
+import { Button } from '@/shared/components/primitives/button'
 
 // wrong
 import { teamService } from '../services/team.service'
@@ -59,7 +59,7 @@ src/
 │   └── workspace-settings/   rename, delete
 └── shared/
     ├── components/
-    │   ├── ui/               shadcn/ui components, generated, do not hand-edit
+    │   ├── primitives/       our styled components, built on Base UI primitives
     │   ├── atoms/
     │   ├── molecules/
     │   ├── organisms/

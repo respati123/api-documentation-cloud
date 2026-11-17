@@ -9,6 +9,7 @@ export const TEAM_TEXT = {
   columns: {
     member: 'team:columns.member',
     role: 'team:columns.role',
+    projectRole: 'team:columns.projectRole',
     joined: 'team:columns.joined',
     actions: 'team:columns.actions',
   },

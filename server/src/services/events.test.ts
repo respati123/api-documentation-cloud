@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { isAllowedSyncOrigin } from '@/services/events'
+import { isAllowedSyncOrigin, planningScopeOf } from '@/services/events'
 
 const portal = 'https://docs.respati.web.id'
 
@@ -39,5 +39,27 @@ describe('sync socket origins', () => {
 
   test('a local PUBLIC_WEB_URL during development is allowed too', () => {
     expect(isAllowedSyncOrigin('http://localhost:5174', 'http://localhost:5174')).toBe(true)
+  })
+})
+
+describe('planningScopeOf', () => {
+  test.each([
+    ['planning/documents', 'documents'],
+    ['planning/documents/doc-1/status', 'documents'],
+    ['planning/items/item-1', 'items'],
+    ['planning/stories/st-1/approve-design', 'items'],
+    ['planning/story/st-1/comments', 'comments'],
+    ['planning/comments/c-1/resolve', 'comments'],
+    ['tasks/t-1', 'tasks'],
+    ['tasks/t-1/subtasks', 'tasks'],
+    ['projects/p-1/tasks', 'tasks'],
+    ['projects/p-1/members', 'members'],
+  ] as const)('%s is %s', (action, scope) => {
+    expect(planningScopeOf(action)).toBe(scope)
+  })
+
+  test('routes outside project data are not announced', () => {
+    expect(planningScopeOf('members/u-1')).toBeNull()
+    expect(planningScopeOf('projects')).toBeNull()
   })
 })

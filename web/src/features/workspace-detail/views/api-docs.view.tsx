@@ -1,9 +1,9 @@
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Input } from '@/shared/components/primitives/input'
+import { Label } from '@/shared/components/primitives/label'
+import { ScrollArea } from '@/shared/components/primitives/scroll-area'
 import { EmptyState } from '@/shared/components/state-views'
-import { Input } from '@/shared/components/ui/input'
-import { Label } from '@/shared/components/ui/label'
-import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import type { ApiNode, RequestNode } from '@/shared/models/cloud-workspace.model'
 import { DOCS_TEXT } from '../constants/docs-text.constants'
 import { CollectionTreeView } from './collection-tree.view'
@@ -22,7 +22,7 @@ export function ApiDocsView({ tree, totalRequests, query, onQueryChange, selecte
   const { t } = useTranslation('docs')
   return (
     <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
-      <aside className="grid min-w-0 gap-3 rounded-lg border border-border bg-card p-3">
+      <aside className="grid min-w-0 gap-3 rounded-xl border border-border bg-card p-3 lg:sticky lg:top-6">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">{t(DOCS_TEXT.tree.title)}</p>
           <span className="text-xs tabular-nums text-muted-foreground">{totalRequests}</span>

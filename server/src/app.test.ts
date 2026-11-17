@@ -286,7 +286,12 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     expect(firstIds).toEqual([third.id, second.id])
     expect(secondIds).toEqual([first])
     expect((secondPage.json.meta as { nextCursor: string | null }).nextCursor).toBeNull()
-    expect((detail.json.data as { commit: { id: string; message: string } }).commit).toMatchObject({ id: third.id, message: 'third' })
+    expect((detail.json.data as { commit: { id: string; message: string } }).commit).toMatchObject({
+      id: third.id,
+      message: 'third',
+      parentIds: [second.id],
+      authorEmail: owner.user.email,
+    })
     expect(missing.status).toBe(404)
     expect(missing.json.code).toBe('COMMIT_NOT_FOUND')
   })
@@ -831,6 +836,18 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     expect(out.status).toBe(204)
     expect(out.setCookie).toContain('Max-Age=0')
     expect((await raw('GET', '/api/me', { cookie })).status).toBe(401)
+  })
+
+  test('logout clears the cookie session even from an origin that is not allowed, or with no Origin header', async () => {
+    const foreign = await webLogin('cookie-logout-foreign')
+    const fromForeign = await raw('POST', '/api/auth/logout', { cookie: foreign.cookie, origin: 'http://localhost:5199' })
+    expect(fromForeign.status).toBe(204)
+    expect(fromForeign.setCookie).toContain('Max-Age=0')
+    expect((await raw('GET', '/api/me', { cookie: foreign.cookie })).status).toBe(401)
+
+    const bare = await webLogin('cookie-logout-bare')
+    expect((await raw('POST', '/api/auth/logout', { cookie: bare.cookie })).status).toBe(204)
+    expect((await raw('GET', '/api/me', { cookie: bare.cookie })).status).toBe(401)
   })
 
   test('sessions are listed per device, and a desktop session is marked as one', async () => {

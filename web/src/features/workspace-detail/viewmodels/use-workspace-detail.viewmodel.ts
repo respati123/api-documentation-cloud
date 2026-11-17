@@ -13,7 +13,7 @@ import { workspaceDetailKeys } from './workspace-detail.keys'
 
 const EMPTY_TREE: ApiNode[] = []
 
-// The snapshot is loaded for every tab. History and members load only on the tabs that show them.
+// The snapshot is loaded for every tab. History and members load only on the tabs that show them; the overview counts members.
 export function useWorkspaceDetailViewModel(workspaceId: string, tab: WorkspaceTab) {
   const { t } = useTranslation('workspace')
   const token = useAuthSessionStore((state) => state.token)
@@ -30,8 +30,8 @@ export function useWorkspaceDetailViewModel(workspaceId: string, tab: WorkspaceT
     enabled: signedIn && workspaceId !== '',
     staleTime: 30_000,
   })
-  const history = useWorkspaceHistoryList(workspaceId, tab === 'overview' || tab === 'activity')
-  const members = useWorkspaceMembersList(workspaceId, tab === 'team')
+  const history = useWorkspaceHistoryList(workspaceId, tab === 'overview' || tab === 'history')
+  const members = useWorkspaceMembersList(workspaceId, tab === 'team' || tab === 'overview')
 
   const [query, setQuery] = useState('')
   const [chosenRequestId, setChosenRequestId] = useState('')

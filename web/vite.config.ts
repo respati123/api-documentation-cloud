@@ -34,9 +34,10 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 5174,
+    // The object form keeps the browser's Host header, so the API sees the portal's own origin on any port.
     proxy: {
-      '/api/': 'http://localhost:3001',
-      '/health': 'http://localhost:3001'
+      '/api/': { target: 'http://localhost:3001', changeOrigin: false, ws: true },
+      '/health': { target: 'http://localhost:3001', changeOrigin: false }
     }
   },
   build: {

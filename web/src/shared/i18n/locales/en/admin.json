@@ -1,0 +1,14 @@
+{
+  "workspaces": {
+    "title": "All workspaces",
+    "subtitle": "An overview of every workspace in the app. Open a workspace to read what is inside without changing anything.",
+    "search": "Search workspace name or owner email",
+    "name": "Workspace",
+    "owner": "Owner",
+    "members": "Members",
+    "created": "Created",
+    "empty": "No workspaces yet.",
+    "error": "The workspace list could not be loaded.",
+    "privacy": "You are not listed as a member when you open a workspace. To change it, ask its owner to invite you from the Team tab."
+  }
+}

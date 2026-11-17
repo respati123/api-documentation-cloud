@@ -1,0 +1,16 @@
+{
+  "title": "Notifications",
+  "open": "Open notifications",
+  "empty": "No notifications yet.",
+  "markAll": "Mark all read",
+  "error": "Notifications could not be loaded.",
+  "kind": {
+    "mcp_key_ready": "MCP key \"{{keyName}}\" is ready to claim.",
+    "unknown": "There is an update for you.",
+    "comment_mention": "{{actor}} mentioned you: \"{{preview}}\"",
+    "comment_reply": "{{actor}} replied to you: \"{{preview}}\"",
+    "task_comment": "{{actor}} commented on your task: \"{{preview}}\"",
+    "task_assigned": "{{actor}} assigned \"{{title}}\" to you",
+    "design_approved": "{{actor}} approved the design of \"{{title}}\". Your task is open."
+  }
+}

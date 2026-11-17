@@ -1,8 +1,8 @@
 import { Layers } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Alert, AlertDescription } from '@/shared/components/ui/alert'
-import { Button } from '@/shared/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
+import { Button } from '@/shared/components/primitives/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/components/primitives/card'
 import { DESKTOP_TEXT } from '../constants/desktop-login-text.constants'
 
 export interface DesktopLoginViewProps {

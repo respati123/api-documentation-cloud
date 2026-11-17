@@ -40,6 +40,8 @@ export type WorkspaceSnapshot = CloudWorkspaceRef & {
   tree: ApiNode[]
   // True once the workspace syncs by collection branches. Its tree then comes from the branch heads, and history and restore are per branch.
   usesBranches?: boolean
+  // The app admin reads a workspace they are not a member of. Access is read only.
+  adminView?: boolean
   variables?: { globals: unknown[]; environments: unknown[] }
   parentIds?: string[]
   message?: string

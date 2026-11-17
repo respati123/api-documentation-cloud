@@ -6,7 +6,8 @@ import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagin
 import { sanitizeWorkspaceVariables, validateTree, validateWorkspaceVariables } from '@/lib/validation'
 import type { AuthUser, Role, TreeNode, WorkspaceVariables } from '@/models/workspace'
 import { insertCommit } from '@/repositories/commits.repository'
-import { insertMembership } from '@/repositories/memberships.repository'
+import { insertMembership, listMemberIds } from '@/repositories/memberships.repository'
+import { revokeKeyIfNoWorkspace } from '@/services/mcp-keys'
 import {
   deleteWorkspace as deleteWorkspaceRow,
   findWorkspaceForMember,
@@ -56,7 +57,9 @@ export async function deleteWorkspace(ctx: AppContext, workspaceId: string, conf
   if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
   if (typeof confirmName !== 'string' || confirmName.trim() !== workspace.name) throw new AppError('WORKSPACE_DELETE_CONFIRMATION_MISMATCH')
   await broadcastWorkspaceChange(ctx, workspaceId, 'deleted')
+  const memberIds = await listMemberIds(ctx.db, workspaceId)
   await deleteWorkspaceRow(ctx.db, workspaceId)
+  for (const memberId of memberIds) await revokeKeyIfNoWorkspace(ctx.db, memberId)
 }
 
 function withoutSortAt({ sortAt: _sortAt, ...workspace }: WorkspaceListRow) {

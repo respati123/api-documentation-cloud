@@ -17,6 +17,15 @@ import { refusesCookieWrite, trustedOrigins } from '@/services/auth'
 import { handleSync } from '@/routes/sync'
 import { handleWorkspaceCollection } from '@/routes/workspace-collection'
 import { handleWorkspaceRecord } from '@/routes/workspace-record'
+import { handleProjectRoutes } from '@/routes/projects'
+import { handleMcpRequest } from '@/routes/mcp'
+import { broadcastPlanningChange, planningScopeOf } from '@/services/events'
+import { audienceFromAction, planningAudience } from '@/services/planning-audience'
+import { handleAdminWorkspaceRoutes } from '@/routes/admin-workspaces'
+import { handleMcpKeyRoutes } from '@/routes/mcp-keys'
+import { handleNotificationRoutes } from '@/routes/notifications'
+import { handlePlanningRoutes } from '@/routes/planning'
+import { refuseAdminWrite } from '@/services/access'
 
 // Order matters. Public routes come first, then the socket upgrade, then routes that need a signed-in user.
 // A route module returns undefined when the method and path do not match, so the next module gets a turn.
@@ -30,12 +39,16 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (method === 'OPTIONS') return preflightResponse(request.headers.get('Origin'), ctx.config.corsOrigins)
 
   // A write that carries only the session cookie must come from a trusted origin.
-  if (refusesCookieWrite(request, trustedOrigins(ctx.config.corsOrigins, ctx.config.publicWebUrl))) throw new AppError('CSRF_ORIGIN_REFUSED')
+  // Logout is exempt: the most a foreign page can do with it is sign the user out, and a refused logout would leave the cookie behind.
+  const isLogout = method === 'POST' && path === '/api/auth/logout'
+  if (!isLogout && refusesCookieWrite(request, trustedOrigins(ctx.config.corsOrigins, ctx.config.publicWebUrl))) throw new AppError('CSRF_ORIGIN_REFUSED')
 
   if (method === 'GET' && path === '/api/sync/events') {
     if (!server) throw new AppError('WEBSOCKET_UNAVAILABLE')
     return handleSyncSocketUpgrade(ctx, request, url, method, path, server)
   }
+
+  if (path === '/api/mcp') return handleMcpRequest(ctx, request, method)
 
   const publicResponse = await handlePublicRoutes(ctx, request, method, path)
   if (publicResponse) return publicResponse
@@ -44,6 +57,12 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (sessionsResponse) return sessionsResponse
 
   const user = await currentUser(ctx.db, request)
+  const mcpKeyResponse = await handleMcpKeyRoutes(ctx, request, url, method, path, user)
+  if (mcpKeyResponse) return mcpKeyResponse
+  const adminWorkspaceResponse = await handleAdminWorkspaceRoutes(ctx, url, method, path, user)
+  if (adminWorkspaceResponse) return adminWorkspaceResponse
+  const notificationResponse = await handleNotificationRoutes(ctx, url, method, path, user)
+  if (notificationResponse) return notificationResponse
   const ticketResponse = await handleSyncTicket(ctx, method, path, user)
   if (ticketResponse) return ticketResponse
   const desktopResponse = await handleDesktopApprove(ctx, request, method, path, user)
@@ -57,11 +76,16 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (!workspaceMatch) throw new AppError('ROUTE_NOT_FOUND')
   const workspaceId = workspaceMatch[1]
   const action = workspaceMatch[2] || ''
+  if (method !== 'GET') await refuseAdminWrite(ctx.db, workspaceId, user.id)
 
   const recordResponse = await handleWorkspaceRecord(ctx, request, method, workspaceId, action, user)
   if (recordResponse) return recordResponse
   const membersResponse = await handleMembers(ctx, request, url, method, workspaceId, action, user)
   if (membersResponse) return membersResponse
+  const projectResponse = await handleProjectRoutes(ctx, request, method, workspaceId, action, user)
+  if (projectResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, projectResponse)
+  const planningResponse = await handlePlanningRoutes(ctx, request, method, workspaceId, action, user)
+  if (planningResponse) return announcePlanningWrite(ctx, method, workspaceId, action, user.id, planningResponse)
   const syncResponse = await handleSync(ctx, request, url, method, workspaceId, action, user)
   if (syncResponse) return syncResponse
   const branchResponse = await handleBranches(ctx, request, url, method, workspaceId, action, user)
@@ -70,4 +94,12 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (variablesResponse) return variablesResponse
 
   throw new AppError('ROUTE_NOT_FOUND')
+}
+
+// A successful write to project data is announced to the workspace's open pages, so they refresh without polling.
+async function announcePlanningWrite(ctx: AppContext, method: string, workspaceId: string, action: string, actorId: string, response: Response): Promise<Response> {
+  const scope = planningScopeOf(action)
+  const target = audienceFromAction(action)
+  if (method !== 'GET' && response.ok && scope && target) broadcastPlanningChange(ctx, workspaceId, scope, actorId, await planningAudience(ctx.db, workspaceId, target))
+  return response
 }

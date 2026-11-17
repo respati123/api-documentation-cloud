@@ -26,7 +26,7 @@ Read this before you migrate a feature out of `src/App.tsx` or `src/components/`
 Install a package only when the first feature that needs it is migrated. Add it as a separate change, and say in the commit message what it is for.
 
 Expected additions, in the order they are likely needed:
-- `tailwindcss` and shadcn/ui setup (`components.json`, the global entry stylesheet, theme tokens): first step of the refactor, before any feature moves. Remove `graphite.css` and `styles.css` after the last feature that uses them is migrated.
+- `tailwindcss` setup (the global entry stylesheet, theme tokens): first step of the refactor, before any feature moves. Remove `graphite.css` and `styles.css` after the last feature that uses them is migrated.
 - `@tanstack/react-query`: first feature with server data.
 - `i18next`, `react-i18next`, `i18next-browser-languagedetector`: first feature with user-facing text. Add `id` and `en` files for each feature.
 - `react-error-boundary`: with the app shell, before the first route is migrated.

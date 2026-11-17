@@ -2,8 +2,8 @@ import { QueryErrorResetBoundary } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary'
 import { useTranslation } from 'react-i18next'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
-import { Button } from '@/shared/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/primitives/alert'
+import { Button } from '@/shared/components/primitives/button'
 
 export function AppErrorBoundary({ children }: { children: ReactNode }) {
   return (

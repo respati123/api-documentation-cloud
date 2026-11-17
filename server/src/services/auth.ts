@@ -73,7 +73,20 @@ export function refusesCookieWrite(request: Request, trustedOrigins: readonly st
   if (bearerToken(request) || !cookieToken(request)) return false
   if (request.method === 'GET' || request.method === 'HEAD' || request.method === 'OPTIONS') return false
   const origin = request.headers.get('origin')
-  return !origin || !trustedOrigins.includes(origin)
+  if (!origin) return true
+  return !trustedOrigins.includes(origin) && !isSameHost(origin, request.headers.get('host'))
+}
+
+// A page served from the host the request went to, like the portal behind its own proxy on any port.
+// Another site cannot set the Host header of a browser request to the portal's host.
+function isSameHost(origin: string, host: string | null): boolean {
+  if (!host) return false
+  try {
+    const url = new URL(origin)
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.host === host.toLowerCase()
+  } catch {
+    return false
+  }
 }
 
 export function trustedOrigins(corsOrigins: readonly string[], publicWebUrl: string): string[] {

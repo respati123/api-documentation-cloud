@@ -4,7 +4,7 @@ This folder holds the cloud side of API Documentation. It is split into two inde
 
 | Folder | What it is | Guide |
 |---|---|---|
-| `web/` | Browser portal (React, Vite, shadcn/ui, Tailwind) | `web/AGENTS.md` |
+| `web/` | Browser portal (React, Vite, Tailwind) | `web/AGENTS.md` |
 | `server/` | API (Bun, PostgreSQL) | `server/AGENTS.md` |
 
 Shared files at this level: `docker-compose.yml` (local stack), `docker-compose.prod.yml` (production stack), `.env.example`, `.github/workflows/cloud.yml` (CI and deploy), and the root `package.json` that runs both apps.
@@ -13,7 +13,7 @@ Nothing in `web/` may import from `server/`, and nothing in `server/` may import
 
 ## Library documentation (mandatory)
 
-- **Always use Context7 for library, framework, and API details.** Before you write or change code that calls a library (React, Vite, Tailwind, shadcn/ui, TanStack Query, zod, i18next, Bun, PostgreSQL drivers, and so on), resolve the library ID with the Context7 MCP tools, then query the docs for the exact API you need.
+- **Always use Context7 for library, framework, and API details.** Before you write or change code that calls a library (React, Vite, Tailwind, TanStack Query, zod, i18next, Bun, PostgreSQL drivers, and so on), resolve the library ID with the Context7 MCP tools, then query the docs for the exact API you need.
 - Do not write library API calls from memory. If the docs and your memory disagree, the docs win.
 - If the Context7 MCP tools are not available in the session, use the official documentation through WebFetch or WebSearch, and say in your reply that Context7 was not available.
 

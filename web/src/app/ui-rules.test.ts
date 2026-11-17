@@ -20,11 +20,12 @@ function featureSources(folder: 'views' | 'pages' | 'viewmodels'): Record<string
   )
 }
 
-// Composition and shared presentational components are views too. Generated shadcn files in ui/ are not.
+// Composition and shared presentational components are views too. The primitives folder wraps raw elements on purpose.
 function presentationSources(): Record<string, string> {
   return Object.fromEntries(
     Object.entries(sources).filter(
-      ([path]) => isSource(path) && (path.startsWith('../app/') || (path.startsWith('../shared/components/') && !path.includes('/ui/'))),
+      ([path]) =>
+        isSource(path) && (path.startsWith('../app/') || (path.startsWith('../shared/components/') && !path.includes('/primitives/'))),
     ),
   )
 }
@@ -41,12 +42,12 @@ function violations(files: Record<string, string>, pattern: RegExp): string[] {
 const viewFiles = { ...featureSources('views'), ...featureSources('pages'), ...presentationSources() }
 const translatedFiles = { ...viewFiles, ...featureSources('viewmodels') }
 
-describe('shadcn-only markup in views', () => {
+describe('shared components in views', () => {
   test('the rules scan real view and page files', () => {
     expect(Object.keys(viewFiles).length).toBeGreaterThan(0)
   })
 
-  test('views use shadcn components instead of raw interactive elements', () => {
+  test('views use shared components instead of raw interactive elements', () => {
     expect(violations(viewFiles, RAW_ELEMENT)).toEqual([])
   })
 })

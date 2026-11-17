@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
+import { ProjectRoleSelect, type useProjectRolesViewModel } from '@/features/projects'
 import { WORKSPACES_ROLE_TEXT } from '@/features/workspaces'
 import { CopyButton } from '@/shared/components/copy-button'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
-import { EmptyState, LoadingState } from '@/shared/components/state-views'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/primitives/alert'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,12 +13,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/shared/components/ui/alert-dialog'
-import { Badge } from '@/shared/components/ui/badge'
-import { Button } from '@/shared/components/ui/button'
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
+} from '@/shared/components/primitives/alert-dialog'
+import { Badge } from '@/shared/components/primitives/badge'
+import { Button } from '@/shared/components/primitives/button'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/primitives/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/primitives/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/primitives/table'
+import { EmptyState, LoadingState } from '@/shared/components/state-views'
 import type { CloudInvite, CloudMember } from '@/shared/models/cloud-workspace.model'
 import { formatDate } from '@/shared/utils/format'
 import { TEAM_TEXT } from '../constants/team-text.constants'
@@ -45,6 +46,7 @@ export interface TeamViewProps {
   onChangeRole: (member: CloudMember, role: MemberRole) => void
   onRemoveMember: (member: CloudMember) => void
   onCopyLink: () => void
+  projectRoles: ReturnType<typeof useProjectRolesViewModel>
 }
 
 export function TeamView({
@@ -68,6 +70,7 @@ export function TeamView({
   onChangeRole,
   onRemoveMember,
   onCopyLink,
+  projectRoles,
 }: TeamViewProps) {
   const { t, i18n } = useTranslation('team')
   return (
@@ -84,7 +87,12 @@ export function TeamView({
             </CardAction>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-4">
+          {projectRoles.error && (
+            <Alert variant="destructive">
+              <AlertDescription>{projectRoles.error}</AlertDescription>
+            </Alert>
+          )}
           {membersLoading ? (
             <LoadingState label={t(TEAM_TEXT.people.loading)} />
           ) : !members.length ? (
@@ -95,6 +103,7 @@ export function TeamView({
                 <TableRow>
                   <TableHead>{t(TEAM_TEXT.columns.member)}</TableHead>
                   <TableHead>{t(TEAM_TEXT.columns.role)}</TableHead>
+                  <TableHead>{t(TEAM_TEXT.columns.projectRole)}</TableHead>
                   <TableHead className="hidden md:table-cell">{t(TEAM_TEXT.columns.joined)}</TableHead>
                   <TableHead>
                     <span className="sr-only">{t(TEAM_TEXT.columns.actions)}</span>
@@ -132,6 +141,15 @@ export function TeamView({
                         ) : (
                           <Badge variant="secondary">{t(WORKSPACES_ROLE_TEXT[member.role])}</Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <ProjectRoleSelect
+                          value={projectRoles.rolesOf(member.id)}
+                          editable={projectRoles.canAssign && member.role !== 'viewer'}
+                          saving={projectRoles.savingMemberId === member.id}
+                          onChange={(disciplines) => projectRoles.onAssign(member.id, disciplines)}
+                          testId={`team-project-role-${member.id}`}
+                        />
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">
                         {formatDate(member.joinedAt, i18n.language)}

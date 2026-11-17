@@ -4,10 +4,20 @@ export const LIVE_STATUS_TEXT = {
   offline: 'workspace:live.offline',
 } as const
 
+export const WORKSPACE_SECTION_DETAIL_TEXT = {
+  overview: 'workspace:sectionDetail.overview',
+  collections: 'workspace:sectionDetail.collections',
+  history: 'workspace:sectionDetail.history',
+  projects: 'workspace:sectionDetail.projects',
+  team: 'workspace:sectionDetail.team',
+  settings: 'workspace:sectionDetail.settings',
+} as const
+
 export const WORKSPACE_TEXT = {
   header: {
     subtitle: 'workspace:header.subtitle',
     invite: 'workspace:header.invite',
+    adminView: 'workspace:header.adminView',
   },
   tabs: {
     label: 'workspace:tabs.label',
@@ -28,6 +38,7 @@ export const WORKSPACE_TEXT = {
     members: 'workspace:overview.members',
     latestChange: 'workspace:overview.latestChange',
     latestVersion: 'workspace:overview.latestVersion',
+    changes: 'workspace:overview.changes',
     notAvailable: 'workspace:overview.notAvailable',
     dateUnavailable: 'workspace:overview.dateUnavailable',
     collectionsTitle: 'workspace:overview.collectionsTitle',
@@ -46,6 +57,14 @@ export const WORKSPACE_TEXT = {
     created: 'workspace:overview.created',
     workspaceId: 'workspace:overview.workspaceId',
     manageTeam: 'workspace:overview.manageTeam',
+    contentsTitle: 'workspace:overview.contentsTitle',
+    collectionCount: 'workspace:overview.collectionCount',
+    moreEndpoints: 'workspace:overview.moreEndpoints',
+    details: 'workspace:overview.details',
+    createdLabel: 'workspace:overview.createdLabel',
+    copyId: 'workspace:overview.copyId',
+    copied: 'workspace:overview.copied',
+    copyIdLabel: 'workspace:overview.copyIdLabel',
   },
   live: {
     connecting: 'workspace:live.connecting',

@@ -1,0 +1,14 @@
+{
+  "workspaces": {
+    "title": "Semua workspace",
+    "subtitle": "Ringkasan semua workspace di aplikasi. Buka workspace untuk melihat isinya tanpa bisa mengubah apa pun.",
+    "search": "Cari nama workspace atau email owner",
+    "name": "Workspace",
+    "owner": "Owner",
+    "members": "Anggota",
+    "created": "Dibuat",
+    "empty": "Belum ada workspace.",
+    "error": "Daftar workspace belum bisa dimuat.",
+    "privacy": "Kamu tidak muncul di daftar anggota saat membuka workspace. Untuk mengubah isinya, minta owner mengundang kamu lewat tab Team."
+  }
+}

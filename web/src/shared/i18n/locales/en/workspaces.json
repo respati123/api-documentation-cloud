@@ -19,8 +19,10 @@
     "columns": {
       "workspace": "Workspace",
       "role": "Your role",
-      "action": "Action"
-    }
+      "action": "Action",
+      "updated": "Last change"
+    },
+    "updatedUnavailable": "No changes yet"
   },
   "overview": {
     "title": "Overview",
@@ -29,7 +31,10 @@
   "summary": {
     "total": "Workspaces",
     "owned": "Owned by you",
-    "shared": "Shared with you"
+    "shared": "Shared with you",
+    "totalHint": "Across your account",
+    "ownedHint": "You can invite and remove members",
+    "sharedHint": "Joined by invitation"
   },
   "roles": {
     "owner": "Owner",

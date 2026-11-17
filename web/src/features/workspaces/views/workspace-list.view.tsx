@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
-import { Button } from '@/shared/components/ui/button'
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/shared/components/ui/empty'
-import { Skeleton } from '@/shared/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/primitives/alert'
+import { Button } from '@/shared/components/primitives/button'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/shared/components/primitives/empty'
+import { Skeleton } from '@/shared/components/primitives/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/primitives/table'
 import { COMMON_TEXT } from '@/shared/constants/common-text.constants'
 import type { CloudWorkspaceRef } from '@/shared/models/workspace.model'
+import { formatRelativeDate } from '@/shared/utils/format'
 import { WORKSPACES_ROLE_TEXT, WORKSPACES_TEXT } from '../constants/workspaces-text.constants'
 import type { WorkspaceListStatus } from '../models/workspaces.model'
 
@@ -35,7 +36,8 @@ export function WorkspaceListView({
   onCreate,
   onRetry,
 }: WorkspaceListViewProps) {
-  const { t } = useTranslation(['workspaces', 'common'])
+  const { t, i18n } = useTranslation(['workspaces', 'common'])
+  const locale = i18n.language
 
   if (status === 'loading') {
     return (
@@ -77,12 +79,13 @@ export function WorkspaceListView({
 
   return (
     <div className="grid gap-2">
-      <div className="overflow-hidden rounded-md border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
         <Table data-testid="workspaces-list-container">
           <TableHeader>
             <TableRow>
               <TableHead>{t(WORKSPACES_TEXT.list.columns.workspace)}</TableHead>
               <TableHead>{t(WORKSPACES_TEXT.list.columns.role)}</TableHead>
+              <TableHead>{t(WORKSPACES_TEXT.list.columns.updated)}</TableHead>
               <TableHead className="text-right">
                 <span className="sr-only">{t(WORKSPACES_TEXT.list.columns.action)}</span>
               </TableHead>
@@ -91,10 +94,20 @@ export function WorkspaceListView({
           <TableBody>
             {workspaces.map((workspace) => (
               <TableRow key={workspace.id}>
-                <TableCell className="truncate font-medium">{workspace.name}</TableCell>
+                <TableCell className="font-medium">
+                  <span className="flex items-center gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+                      {workspace.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="truncate">{workspace.name}</span>
+                  </span>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{t(WORKSPACES_ROLE_TEXT[workspace.role])}</TableCell>
+                <TableCell className="text-muted-foreground tabular-nums">
+                  {(workspace.updatedAt && formatRelativeDate(workspace.updatedAt, locale)) || t(WORKSPACES_TEXT.list.updatedUnavailable)}
+                </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" data-testid={`workspaces-row-${workspace.id}`} onClick={() => onOpen(workspace.id)}>
+                  <Button variant="outline" size="sm" data-testid={`workspaces-row-${workspace.id}`} onClick={() => onOpen(workspace.id)}>
                     {t(WORKSPACES_TEXT.list.open)}
                   </Button>
                 </TableCell>

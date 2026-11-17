@@ -52,3 +52,17 @@ export async function listMembersPage(db: SQL, query: { workspaceId: string; aft
   const afterId = query.after?.id ?? null
   return db`SELECT * FROM (SELECT u.id, u.email, m.role, m.created_at AS "joinedAt", CASE m.role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END AS rank, m.created_at::text AS "sortAt" FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${query.workspaceId}) q WHERE ${afterRank}::int IS NULL OR (q.rank, q."sortAt"::timestamptz, q.id) > (${afterRank}::int, ${afterAt}::timestamptz, ${afterId}::text) ORDER BY q.rank, q."sortAt"::timestamptz, q.id LIMIT ${query.limit}`
 }
+
+export async function countMemberships(db: SQL, userId: string): Promise<number> {
+  const [row] = await db`SELECT count(*)::int AS count FROM memberships WHERE user_id = ${userId}`
+  return row.count
+}
+
+export async function listUserWorkspaces(db: SQL, userId: string): Promise<Array<{ id: string; name: string; role: Role }>> {
+  return db`SELECT w.id, w.name, m.role FROM memberships m JOIN workspaces w ON w.id = m.workspace_id WHERE m.user_id = ${userId} ORDER BY w.name, w.id LIMIT 200`
+}
+
+// Everyone in the workspace with their workspace role and their roles on its projects, for mentions.
+export async function listWorkspaceTeam(db: SQL, workspaceId: string): Promise<Array<{ id: string; email: string; role: Role; disciplines: string[] }>> {
+  return db`SELECT u.id, u.email, m.role, COALESCE(r.disciplines, '{}') AS disciplines FROM memberships m JOIN users u ON u.id = m.user_id LEFT JOIN LATERAL (SELECT array_agg(DISTINCT pm.discipline ORDER BY pm.discipline) AS disciplines FROM project_members pm JOIN projects p ON p.id = pm.project_id WHERE p.workspace_id = ${workspaceId} AND pm.user_id = u.id) r ON true WHERE m.workspace_id = ${workspaceId} ORDER BY u.email`
+}

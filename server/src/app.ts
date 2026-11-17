@@ -1,3 +1,5 @@
+import { onNotification } from '@/services/notification-bus'
+import { sendToUser } from '@/services/events'
 import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { negotiateLocale } from '@/lib/locale'
@@ -13,6 +15,7 @@ import { isRecord } from '@/lib/validation'
 // Builds the Bun server handlers: the websocket callbacks and the fetch wrapper that logs each request.
 export function createApp(ctx: AppContext) {
   const { logger, config, syncSockets } = ctx
+  onNotification((userId, notification) => sendToUser(ctx, userId, JSON.stringify({ type: 'notification.created', notification })))
 
   function logRequest({ method, path, status, durationMs, requestId }: { method: string; path: string; status: number; durationMs: number; requestId: string }) {
     const fields = { method, route: routeLabel(path), status, durationMs: Math.round(durationMs), requestId }

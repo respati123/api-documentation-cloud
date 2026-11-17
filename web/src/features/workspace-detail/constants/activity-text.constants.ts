@@ -1,4 +1,6 @@
-import type { ChangeKind } from '../utils/snapshot-diff'
+import type { DiffLayout } from '@/features/workspace-detail/models/history.model'
+import type { BreakingReason } from '@/features/workspace-detail/utils/breaking-changes'
+import type { ChangeKind } from '@/features/workspace-detail/utils/snapshot-diff'
 
 export const ACTIVITY_TEXT = {
   empty: {
@@ -20,6 +22,43 @@ export const ACTIVITY_TEXT = {
     confirmDetail: 'activity:actions.confirmDetail',
     confirm: 'activity:actions.confirm',
     cancel: 'activity:actions.cancel',
+    retry: 'activity:actions.retry',
+  },
+  list: {
+    title: 'activity:list.title',
+    count: 'activity:list.count',
+    day: 'activity:list.day',
+    latest: 'activity:list.latest',
+    copyId: 'activity:list.copyId',
+    copied: 'activity:list.copied',
+    open: 'activity:list.open',
+    unknownAuthor: 'activity:list.unknownAuthor',
+  },
+  commit: {
+    back: 'activity:commit.back',
+    committed: 'activity:commit.committed',
+    parent: 'activity:commit.parent',
+    commitId: 'activity:commit.commitId',
+    summary: 'activity:commit.summary',
+    additions: 'activity:commit.additions',
+    deletions: 'activity:commit.deletions',
+    tree: 'activity:commit.tree',
+    root: 'activity:commit.root',
+    viewed: 'activity:commit.viewed',
+    collapse: 'activity:commit.collapse',
+    expand: 'activity:commit.expand',
+    expandLines: 'activity:commit.expandLines',
+    folder: 'activity:commit.folder',
+    jumpTo: 'activity:commit.jumpTo',
+  },
+  layout: {
+    label: 'activity:layout.label',
+  },
+  breaking: {
+    badge: 'activity:breaking.badge',
+    badgeCount: 'activity:breaking.badgeCount',
+    title: 'activity:breaking.title',
+    detail: 'activity:breaking.detail',
   },
   detail: {
     loading: 'activity:detail.loading',
@@ -42,4 +81,23 @@ export const ACTIVITY_KIND_TEXT: Record<ChangeKind, string> = {
   added: 'activity:kind.added',
   modified: 'activity:kind.modified',
   deleted: 'activity:kind.deleted',
+}
+
+export const ACTIVITY_KIND_SHORT_TEXT: Record<ChangeKind, string> = {
+  added: 'activity:kindShort.added',
+  modified: 'activity:kindShort.modified',
+  deleted: 'activity:kindShort.deleted',
+}
+
+export const DIFF_LAYOUT_TEXT: Record<DiffLayout, string> = {
+  split: 'activity:layout.split',
+  unified: 'activity:layout.unified',
+}
+
+export const BREAKING_REASON_TEXT: Record<BreakingReason, string> = {
+  'endpoint-removed': 'activity:breaking.reason.endpoint-removed',
+  'method-changed': 'activity:breaking.reason.method-changed',
+  'path-changed': 'activity:breaking.reason.path-changed',
+  'response-removed': 'activity:breaking.reason.response-removed',
+  'response-field-removed': 'activity:breaking.reason.response-field-removed',
 }

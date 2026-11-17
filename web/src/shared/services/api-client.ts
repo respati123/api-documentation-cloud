@@ -2,6 +2,11 @@ import i18next from '@/shared/i18n'
 
 const apiBaseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 
+// The absolute address of an API path, for text the user copies into another tool.
+export function absoluteApiUrl(path: string): string {
+  return `${apiBaseUrl || window.location.origin}${path}`
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly code: string | undefined
@@ -35,6 +40,15 @@ export async function apiCall<T = unknown>(path: string, options: ApiCallOptions
   return unwrapData<T>(await send(path, options))
 }
 
+export async function apiBlob(path: string, token?: string): Promise<Blob> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!response.ok) throw new ApiError(`Download failed (${response.status}).`, response.status)
+  return response.blob()
+}
+
 // For list endpoints. The response meta carries the cursor for the next page, or null on the last page.
 export async function apiPage<T = unknown>(path: string, options: ApiCallOptions = {}): Promise<ApiPage<T>> {
   const result = await send(path, options)
@@ -42,16 +56,17 @@ export async function apiPage<T = unknown>(path: string, options: ApiCallOptions
 }
 
 async function send(path: string, options: ApiCallOptions): Promise<unknown> {
+  const form = options.body instanceof FormData
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method ?? 'GET',
     // The session lives in an HttpOnly cookie, so the browser must send it with every request.
     credentials: 'include',
     headers: {
-      ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(options.body === undefined || form ? {} : { 'Content-Type': 'application/json' }),
       'Accept-Language': i18next.resolvedLanguage ?? i18next.language,
       ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
     },
-    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+    ...(options.body === undefined ? {} : { body: form ? (options.body as FormData) : JSON.stringify(options.body) }),
   })
   const result: unknown = await response.json().catch(() => ({}))
   if (!response.ok)

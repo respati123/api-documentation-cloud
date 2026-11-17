@@ -7,6 +7,7 @@ interface AuthSessionState {
   token: string
   signedIn: boolean
   userId: string
+  isAdmin: boolean
   sessionExpired: boolean
   saveSession: (user: CloudUser) => void
   clearSession: (options?: { expired?: boolean }) => void
@@ -19,9 +20,10 @@ export const useAuthSessionStore = create<AuthSessionState>((set) => ({
   token: '',
   signedIn: false,
   userId: '',
+  isAdmin: false,
   sessionExpired: false,
-  saveSession: (user) => set({ signedIn: true, userId: user.id, sessionExpired: false }),
-  clearSession: (options) => set({ signedIn: false, userId: '', sessionExpired: options?.expired ?? false }),
+  saveSession: (user) => set({ signedIn: true, userId: user.id, isAdmin: user.isAdmin === true, sessionExpired: false }),
+  clearSession: (options) => set({ signedIn: false, userId: '', isAdmin: false, sessionExpired: options?.expired ?? false }),
 }))
 
 function removeLegacyTokens() {

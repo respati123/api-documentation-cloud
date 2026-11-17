@@ -6,12 +6,21 @@
     "loading": "Loading members…",
     "empty": "No members found."
   },
-  "columns": { "member": "Member", "role": "Role", "joined": "Joined", "actions": "Actions" },
+  "columns": {
+    "member": "Member",
+    "role": "Role",
+    "joined": "Joined",
+    "actions": "Actions",
+    "projectRole": "Project role"
+  },
   "you": "You",
   "roleSelect": "Role for {{email}}",
   "roleEditor": "Editor",
   "roleViewer": "Viewer",
-  "actions": { "remove": "Remove", "leave": "Leave workspace" },
+  "actions": {
+    "remove": "Remove",
+    "leave": "Leave workspace"
+  },
   "pending": {
     "title": "Pending invitations",
     "detail": "Invitations expire seven days after they are sent.",

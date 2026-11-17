@@ -4,6 +4,10 @@ export function countRequests(nodes: ApiNode[]): number {
   return nodes.reduce((total, node) => total + (node.kind === 'request' ? 1 : countRequests(node.children)), 0)
 }
 
+export function collectRequests(nodes: ApiNode[]): RequestNode[] {
+  return nodes.flatMap((node) => (node.kind === 'request' ? [node] : collectRequests(node.children)))
+}
+
 export function countFolders(nodes: ApiNode[]): number {
   return nodes.reduce((total, node) => (node.kind === 'folder' ? total + 1 + countFolders(node.children) : total), 0)
 }

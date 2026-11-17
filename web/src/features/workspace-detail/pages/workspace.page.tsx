@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { type AppRoute, SHELL_TEXT, type WorkspaceTab } from '@/features/app-shell'
+import { ProjectsView } from '@/features/projects'
+import { CommitDetailView } from '@/features/workspace-detail/views/commit-detail.view'
+import { HistoryListView } from '@/features/workspace-detail/views/history-list.view'
+import { Button } from '@/shared/components/primitives/button'
 import { EmptyState, ErrorState, LoadingState } from '@/shared/components/state-views'
-import { Button } from '@/shared/components/ui/button'
 import { WORKSPACE_TEXT } from '../constants/workspace-detail-text.constants'
 import { useWorkspacePageViewModel } from '../viewmodels/use-workspace-page.viewmodel'
-import { ActivityView } from '../views/activity.view'
 import { ApiDocsView } from '../views/api-docs.view'
 import { InviteDialogView } from '../views/invite-dialog.view'
 import { WorkspaceSettingsView } from '../views/settings.view'
@@ -15,12 +17,13 @@ import { WorkspacePageView } from '../views/workspace-page.view'
 export interface WorkspacePageProps {
   workspaceId: string
   tab: WorkspaceTab
+  commitId?: string
   navigate: (route: AppRoute, replace?: boolean) => void
 }
 
-export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps) {
+export function WorkspacePage({ workspaceId, tab, commitId, navigate }: WorkspacePageProps) {
   const { t } = useTranslation()
-  const vm = useWorkspacePageViewModel(workspaceId, tab, navigate)
+  const vm = useWorkspacePageViewModel(workspaceId, tab, commitId, navigate)
 
   if (vm.detailStatus === 'loading') return <LoadingState label={t(WORKSPACE_TEXT.state.loading)} testId="workspace-loading-state" />
   if (!vm.workspace && vm.detailStatus === 'error') {
@@ -53,11 +56,10 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
   return (
     <WorkspacePageView
       workspace={workspace}
+      adminView={vm.snapshot?.adminView === true}
       activeTab={vm.activeTab}
-      tabs={vm.visibleTabs}
-      memberCount={vm.members.length}
+      canInvite={vm.canInvite}
       liveStatus={vm.liveStatus}
-      onTabChange={vm.selectTab}
       onInvite={vm.inviteDialog.open}
     >
       {vm.detailStatus === 'loading' && <LoadingState label={t(WORKSPACE_TEXT.state.loadingView)} testId="workspace-view-loading" />}
@@ -90,7 +92,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
               onTab={vm.selectTab}
             />
           )}
-          {vm.activeTab === 'docs' && (
+          {vm.activeTab === 'collections' && (
             <ApiDocsView
               tree={vm.tree}
               totalRequests={vm.counts.requests}
@@ -100,24 +102,43 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
               onSelect={vm.selectRequest}
             />
           )}
-          {vm.activeTab === 'activity' && (
-            <ActivityView
-              commits={vm.commits}
-              commitsHasMore={vm.commitsHasMore}
-              commitsLoadingMore={vm.commitsLoadingMore}
-              onLoadMoreCommits={vm.loadMoreCommits}
-              // Restore works on the workspace head, which a branch workspace does not move. It is hidden until branch restore exists.
-              canRestore={workspace.role !== 'viewer' && !workspace.usesBranches}
+          {vm.activeTab === 'history' && vm.history.mode === 'list' && (
+            <HistoryListView
+              dayGroups={vm.history.dayGroups}
+              commitCount={vm.history.commitCount}
               usesBranches={Boolean(workspace.usesBranches)}
-              selectedCommit={vm.activity.selectedCommit}
-              latestCommitId={vm.activity.latestCommitId}
-              onSelectCommit={vm.activity.selectCommit}
-              loading={vm.activity.loading}
-              error={vm.activity.error}
-              changes={vm.activity.changes}
-              activeChange={vm.activity.activeChange}
-              onSelectChange={vm.activity.selectChange}
-              onRestore={vm.actions.restoreCommit.mutate}
+              hasMore={vm.commitsHasMore}
+              isLoadingMore={vm.commitsLoadingMore}
+              onLoadMore={vm.loadMoreCommits}
+              onOpenCommit={vm.history.onOpenCommit}
+            />
+          )}
+          {vm.activeTab === 'history' && vm.history.mode === 'detail' && vm.history.commit && (
+            <CommitDetailView
+              commit={vm.history.commit}
+              status={vm.history.status}
+              error={vm.history.error}
+              files={vm.history.files}
+              tree={vm.history.tree}
+              breakingChanges={vm.history.breakingChanges}
+              breakingFileIds={vm.history.breakingFileIds}
+              totals={vm.history.totals}
+              layout={vm.history.layout}
+              diffLayout={vm.history.diffLayout}
+              canChooseLayout={vm.history.canChooseLayout}
+              viewedIds={vm.history.viewedIds}
+              collapsedIds={vm.history.collapsedIds}
+              expandedGapKeys={vm.history.expandedGapKeys}
+              canRestore={vm.history.canRestore}
+              onBack={vm.history.onOpenList}
+              onOpenCommit={vm.history.onOpenCommit}
+              onRetry={vm.history.retry}
+              onLayoutChange={vm.history.setLayout}
+              onToggleViewed={vm.history.toggleViewed}
+              onToggleCollapsed={vm.history.toggleCollapsed}
+              onExpandGap={vm.history.expandGap}
+              onJumpToFile={vm.history.onJumpToFile}
+              onRestore={vm.history.onRestore}
             />
           )}
           {vm.activeTab === 'team' && (
@@ -144,6 +165,7 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
                 vm.actions.removeMember.mutate({ memberId: member.id, email: member.email, workspaceName: workspace.name })
               }
               onCopyLink={() => void vm.inviteDialog.copyLink()}
+              projectRoles={vm.projectRoles}
             />
           )}
           {vm.activeTab === 'settings' && vm.isOwner && (
@@ -154,6 +176,9 @@ export function WorkspacePage({ workspaceId, tab, navigate }: WorkspacePageProps
             />
           )}
         </>
+      )}
+      {vm.detailStatus === 'ready' && vm.activeTab === 'projects' && (
+        <ProjectsView {...vm.projects} onManageTeam={() => vm.selectTab('team')} />
       )}
       <InviteDialogView
         isOpen={vm.inviteDialog.isOpen}

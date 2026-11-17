@@ -10,11 +10,14 @@ import { countBranches } from '@/repositories/branches.repository'
 import { findWorkspaceSnapshotRow, lockWorkspaceHead, setWorkspaceHead } from '@/repositories/workspaces.repository'
 import { type ChangeSummary, summarizeChanges } from '@/services/change-summary'
 import { broadcastWorkspaceUpdate } from '@/services/events'
+import type { WorkspaceAccess } from '@/services/access'
 
-export async function pullWorkspace(db: SQL, workspaceId: string, userId: string) {
-  const row = await findWorkspaceSnapshotRow(db, workspaceId, userId)
+// The caller's access is checked by the route. `adminView` tells the portal that the admin reads a workspace they are not a member of.
+export async function pullWorkspace(db: SQL, workspaceId: string, access: WorkspaceAccess) {
+  const row = await findWorkspaceSnapshotRow(db, workspaceId)
   if (!row) throw new AppError('WORKSPACE_NOT_FOUND')
-  const { snapshot, parentIds, ...workspace } = row
+  const { snapshot, parentIds, ...head } = row
+  const workspace = { ...head, role: access.role, adminView: access.viaAdmin }
   // A client that still syncs through the head uses this to see that the collections now sync by branch.
   const usesBranches = (await countBranches(db, workspaceId)) > 0
   return { ...workspace, parentIds: parseJson<string[]>(parentIds, []), usesBranches, ...parseSnapshot(parseJson<unknown>(snapshot, [])) }
@@ -30,7 +33,14 @@ export async function historyPage(db: SQL, workspaceId: string, limit: number, c
 export async function commitDetail(db: SQL, workspaceId: string, commitId: string) {
   const commit = await findCommitInWorkspace(db, workspaceId, commitId)
   if (!commit) throw new AppError('COMMIT_NOT_FOUND')
-  return { id: commit.id, parentIds: commit.parentIds, message: commit.message, createdAt: commit.createdAt, ...parseSnapshot(commit.snapshot) }
+  return {
+    id: commit.id,
+    parentIds: commit.parentIds,
+    message: commit.message,
+    createdAt: commit.createdAt,
+    authorEmail: commit.authorEmail,
+    ...parseSnapshot(commit.snapshot),
+  }
 }
 
 // A restore is a new commit on top of the head, so the history keeps every version.

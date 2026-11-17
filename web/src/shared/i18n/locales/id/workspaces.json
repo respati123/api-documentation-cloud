@@ -19,8 +19,10 @@
     "columns": {
       "workspace": "Workspace",
       "role": "Peran kamu",
-      "action": "Aksi"
-    }
+      "action": "Aksi",
+      "updated": "Perubahan terakhir"
+    },
+    "updatedUnavailable": "Belum ada perubahan"
   },
   "overview": {
     "title": "Ringkasan",
@@ -29,7 +31,10 @@
   "summary": {
     "total": "Workspace",
     "owned": "Milik kamu",
-    "shared": "Dibagikan ke kamu"
+    "shared": "Dibagikan ke kamu",
+    "totalHint": "Dari seluruh akun kamu",
+    "ownedHint": "Kamu bisa mengundang dan menghapus anggota",
+    "sharedHint": "Bergabung lewat undangan"
   },
   "roles": {
     "owner": "Owner",

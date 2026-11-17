@@ -1,13 +1,15 @@
 {
   "header": {
     "subtitle": "Shared collection, API reference, and change history.",
-    "invite": "Invite teammate"
+    "invite": "Invite teammate",
+    "adminView": "Admin · read only"
   },
   "tabs": {
     "label": "Workspace sections",
     "overview": "Overview",
-    "docs": "API docs",
-    "activity": "Activity",
+    "collections": "Collections",
+    "history": "History",
+    "projects": "Project",
     "team": "Team",
     "settings": "Settings"
   },
@@ -27,6 +29,7 @@
     "members": "Team members",
     "latestChange": "Latest change",
     "latestVersion": "Latest version",
+    "changes": "Recent changes",
     "notAvailable": "Not available",
     "dateUnavailable": "Date unavailable",
     "collectionsTitle": "Collections",
@@ -45,7 +48,16 @@
     "syncNote": "This browser view reflects the latest version pushed to the cloud. Edit and sync local drafts from the desktop app.",
     "created": "Created {{date}}",
     "workspaceId": "Workspace ID",
-    "manageTeam": "Manage team"
+    "manageTeam": "Manage team",
+    "contentsTitle": "Collections and endpoints",
+    "collectionCount_one": "{{count}} collection",
+    "collectionCount_other": "{{count}} collections",
+    "moreEndpoints": "{{count}} more in API docs",
+    "details": "Details",
+    "copyId": "Copy",
+    "copied": "Copied",
+    "copyIdLabel": "Copy workspace ID",
+    "createdLabel": "Created"
   },
   "invite": {
     "accepting": "Accepting your workspace invitation…",
@@ -58,5 +70,13 @@
     "live": "Live",
     "offline": "Reconnecting…",
     "updated": "{{actor}} pushed a new version."
+  },
+  "sectionDetail": {
+    "overview": "Shared collection, API reference, and change history.",
+    "collections": "Every collection and endpoint, as last pushed from the desktop app.",
+    "history": "Every commit pushed to this workspace, with what changed in each endpoint.",
+    "projects": "Documents, epics, stories, and tasks for this project.",
+    "team": "Members, project roles, and pending invitations.",
+    "settings": "Rename or delete this workspace."
   }
 }

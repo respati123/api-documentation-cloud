@@ -1,0 +1,16 @@
+{
+  "title": "Notifikasi",
+  "open": "Buka notifikasi",
+  "empty": "Belum ada notifikasi.",
+  "markAll": "Tandai semua dibaca",
+  "error": "Notifikasi belum bisa dimuat.",
+  "kind": {
+    "mcp_key_ready": "Key MCP \"{{keyName}}\" siap diklaim.",
+    "unknown": "Ada pembaruan untuk kamu.",
+    "comment_mention": "{{actor}} menyebut kamu: \"{{preview}}\"",
+    "comment_reply": "{{actor}} membalas komentarmu: \"{{preview}}\"",
+    "task_comment": "{{actor}} berkomentar di task kamu: \"{{preview}}\"",
+    "task_assigned": "{{actor}} menugaskan \"{{title}}\" ke kamu",
+    "design_approved": "{{actor}} menyetujui desain \"{{title}}\". Task kamu sudah terbuka."
+  }
+}

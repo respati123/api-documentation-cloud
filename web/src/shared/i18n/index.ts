@@ -2,20 +2,30 @@ import i18next from 'i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 import enActivity from './locales/en/activity.json'
+import enAdmin from './locales/en/admin.json'
 import enAuth from './locales/en/auth.json'
 import enCommon from './locales/en/common.json'
 import enDesktop from './locales/en/desktop.json'
 import enDocs from './locales/en/docs.json'
+import enMcp from './locales/en/mcp.json'
+import enNotifications from './locales/en/notifications.json'
+import enPlanning from './locales/en/planning.json'
+import enProjects from './locales/en/projects.json'
 import enSettings from './locales/en/settings.json'
 import enShell from './locales/en/shell.json'
 import enTeam from './locales/en/team.json'
 import enWorkspace from './locales/en/workspace.json'
 import enWorkspaces from './locales/en/workspaces.json'
 import idActivity from './locales/id/activity.json'
+import idAdmin from './locales/id/admin.json'
 import idAuth from './locales/id/auth.json'
 import idCommon from './locales/id/common.json'
 import idDesktop from './locales/id/desktop.json'
 import idDocs from './locales/id/docs.json'
+import idMcp from './locales/id/mcp.json'
+import idNotifications from './locales/id/notifications.json'
+import idPlanning from './locales/id/planning.json'
+import idProjects from './locales/id/projects.json'
 import idSettings from './locales/id/settings.json'
 import idShell from './locales/id/shell.json'
 import idTeam from './locales/id/team.json'
@@ -41,6 +51,11 @@ void i18next
         team: enTeam,
         settings: enSettings,
         desktop: enDesktop,
+        projects: enProjects,
+        mcp: enMcp,
+        planning: enPlanning,
+        notifications: enNotifications,
+        admin: enAdmin,
       },
       id: {
         common: idCommon,
@@ -53,13 +68,34 @@ void i18next
         team: idTeam,
         settings: idSettings,
         desktop: idDesktop,
+        projects: idProjects,
+        mcp: idMcp,
+        planning: idPlanning,
+        notifications: idNotifications,
+        admin: idAdmin,
       },
     },
     supportedLngs: supportedLanguages,
     load: 'languageOnly',
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'auth', 'workspaces', 'shell', 'workspace', 'docs', 'activity', 'team', 'settings', 'desktop'],
+    ns: [
+      'common',
+      'auth',
+      'workspaces',
+      'shell',
+      'workspace',
+      'docs',
+      'activity',
+      'team',
+      'settings',
+      'desktop',
+      'projects',
+      'mcp',
+      'planning',
+      'notifications',
+      'admin',
+    ],
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],
