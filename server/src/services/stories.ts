@@ -23,6 +23,7 @@ import {
 } from '@/repositories/stories.repository'
 import { insertPlanningEvent } from '@/repositories/planning-events.repository'
 import { findUserById } from '@/repositories/users.repository'
+import { requireWorkspaceApp } from '@/services/app-access'
 import { deleteDataModel, findAppLink, insertDataModel, listDataModels } from '@/repositories/app-links.repository'
 import type { AppsClient } from '@/services/apps-client'
 import type { OidcUser } from '@/services/oidc-keys'
@@ -217,6 +218,7 @@ export async function linkStoryDataModel(
   via?: PlanningVia,
 ) {
   await requireContributor(db, workspaceId, storyId, actor.id, via)
+  await requireWorkspaceApp(db, actor.id, workspaceId, 'dbdesign', true)
   await storyOf(db, workspaceId, storyId)
   const projectId = textOf(input.projectId, 100, true)
   const tableId = textOf(input.tableId, 100, true)

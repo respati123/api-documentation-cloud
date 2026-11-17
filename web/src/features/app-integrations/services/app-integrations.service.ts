@@ -13,7 +13,13 @@ const linkSchema = z.object({ id: z.string(), projectId: z.string(), name: z.str
 const appsSchema = z.object({
   canManage: z.boolean(),
   apps: z.array(
-    z.object({ app: z.enum(['dbdesign', 'stitchkit']), enabled: z.boolean(), baseUrl: z.nullable(z.string()), links: z.array(linkSchema) }),
+    z.object({
+      app: z.enum(['dbdesign', 'stitchkit']),
+      enabled: z.boolean(),
+      canUse: z.boolean(),
+      baseUrl: z.nullable(z.string()),
+      links: z.array(linkSchema),
+    }),
   ),
 })
 const projectsSchema = z.object({ projects: z.array(z.object({ id: z.string(), name: z.string() })) })

@@ -35,5 +35,9 @@
     "cancel": "Batal"
   },
   "linked": "Project terhubung.",
-  "unlinked": "Project diputus."
+  "unlinked": "Project diputus.",
+  "noAccess": {
+    "title": "Tidak punya akses ke aplikasi ini",
+    "detail": "Role kamu di workspace ini tidak diizinkan memakai aplikasi ini. Minta owner jika perlu akses."
+  }
 }

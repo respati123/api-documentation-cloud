@@ -10,6 +10,7 @@ function makeVm(overrides: Partial<DesignAppViewModel> = {}): DesignAppViewModel
     errorMessage: null,
     retry: vi.fn(),
     enabled: true,
+    canUse: true,
     baseUrl: 'https://dbdesign.test',
     links: [{ id: 'l1', projectId: 'd1', name: 'Toko', url: 'https://dbdesign.test/project/d1' }],
     canManage: false,
@@ -42,6 +43,11 @@ describe('DesignAppView', () => {
   test('an app that is not set up on the server says so', () => {
     render(<DesignAppView app="dbdesign" vm={makeVm({ enabled: false })} />)
     expect(screen.getByTestId('design-dbdesign-not-configured')).toBeInTheDocument()
+  })
+
+  test('a member whose role is not allowed in this app sees that instead', () => {
+    render(<DesignAppView app="dbdesign" vm={makeVm({ canUse: false })} />)
+    expect(screen.getByTestId('design-dbdesign-no-access')).toBeInTheDocument()
   })
 
   test('a member sees linked projects and can open them, but cannot link or unlink', () => {

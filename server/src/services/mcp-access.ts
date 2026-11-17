@@ -1,8 +1,9 @@
 import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
-import { APP_TOOL_ROLES, isMcpRole, isReadTool, PLANNING_TOOLS, toolsForRoles, type McpPrincipal, type McpTool } from '@/models/mcp'
+import { isMcpRole, isReadTool, PLANNING_TOOLS, toolsForRoles, type McpPrincipal, type McpTool } from '@/models/mcp'
 import type { AppName } from '@/repositories/app-links.repository'
 import type { AppsClient } from '@/services/apps-client'
+import { appRolesOf, workspaceAppAllowed } from '@/services/app-access'
 import { appActorOf } from '@/services/app-integrations'
 import type { TaskStatus } from '@/models/project'
 import { findMcpKeyAuth, markGuideRead, touchMcpKey } from '@/repositories/mcp-keys.repository'
@@ -265,25 +266,21 @@ export async function linkMcpDataModel(db: SQL, apps: AppsClient, principal: Mcp
   return linkStoryDataModel(db, apps, await appActorOf(db, principal.userId), id, storyId, input, via(principal, id))
 }
 
-// The apps whose tools tools/list shows: a project role that reaches the app in some workspace, or owning a workspace.
+// The apps whose tools tools/list shows: every app the account may use anywhere (see app-access).
 // Each call checks the named workspace again.
 export async function appsForPrincipal(db: SQL, principal: McpPrincipal): Promise<AppName[]> {
-  const ownsWorkspace = (await listUserWorkspaces(db, principal.userId)).some((workspace) => workspace.role === 'owner')
-  return (Object.keys(APP_TOOL_ROLES) as AppName[]).filter(
-    (app) => ownsWorkspace || principal.roles.some((role) => (APP_TOOL_ROLES[app] as readonly string[]).includes(role)),
-  )
+  const access = await appRolesOf(db, principal.userId)
+  return (['dbdesign', 'stitchkit'] as AppName[]).filter((app) => access[app] !== 'none')
 }
 
-// App tools need a workspace where the member is not a viewer and holds a project role that reaches the app.
-// The owner may use both apps, so a workspace owner without a project role is not locked out.
-export async function requireAppWorkspace(db: SQL, principal: McpPrincipal, app: AppName, workspaceId: unknown): Promise<string> {
+// App tools need a workspace where the member is not a viewer and the discipline allows the app. A change needs the
+// write rule (Stitchkit: UI/UX only); a read only needs the member to be in the workspace.
+export async function requireAppWorkspace(db: SQL, principal: McpPrincipal, app: AppName, workspaceId: unknown, write: boolean): Promise<string> {
   if (typeof workspaceId !== 'string') throw new AppError('WORKSPACE_NOT_FOUND')
   const membership = await findRole(db, workspaceId, principal.userId)
   if (!membership) throw new AppError('WORKSPACE_NOT_FOUND')
-  if (membership === 'viewer') throw new AppError('MCP_PERMISSION_DENIED')
-  if (membership === 'owner') return workspaceId
-  const roles = await listUserDisciplines(db, workspaceId, principal.userId)
-  if (!roles.some((role) => (APP_TOOL_ROLES[app] as readonly string[]).includes(role))) throw new AppError('MCP_PERMISSION_DENIED')
+  const disciplines = await listUserDisciplines(db, workspaceId, principal.userId)
+  if (!workspaceAppAllowed(app, membership, disciplines, write)) throw new AppError('MCP_PERMISSION_DENIED')
   return workspaceId
 }
 

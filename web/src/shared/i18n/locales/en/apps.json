@@ -35,5 +35,9 @@
     "cancel": "Cancel"
   },
   "linked": "Project linked.",
-  "unlinked": "Project unlinked."
+  "unlinked": "Project unlinked.",
+  "noAccess": {
+    "title": "No access to this app",
+    "detail": "Your role in this workspace is not allowed to use this app. Ask the owner if you need access."
+  }
 }

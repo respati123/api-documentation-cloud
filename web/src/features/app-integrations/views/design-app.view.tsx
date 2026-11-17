@@ -28,6 +28,8 @@ export function DesignAppView({ app, vm }: DesignAppViewProps) {
         testId={`design-${app}-error`}
       />
     )
+  if (vm.enabled && !vm.canUse)
+    return <EmptyState title={t(APPS_TEXT.noAccess.title)} detail={t(APPS_TEXT.noAccess.detail)} testId={`design-${app}-no-access`} />
   if (!vm.enabled)
     return (
       <EmptyState

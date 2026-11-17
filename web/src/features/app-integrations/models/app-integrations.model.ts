@@ -10,6 +10,7 @@ export interface AppLink {
 export interface WorkspaceApp {
   app: AppName
   enabled: boolean
+  canUse: boolean
   baseUrl: string | null
   links: AppLink[]
 }
