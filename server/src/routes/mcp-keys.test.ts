@@ -152,7 +152,7 @@ describe.skipIf(!databaseEnabled)('member MCP keys', () => {
     const stranger = await http.signUp('foreign-stranger')
     const foreignId = await http.createWorkspace(stranger, 'Foreign space')
 
-    const result = toolResult(await http.mcp(await secretFor(member), 'tools/call', { name: 'projects_list', arguments: { workspaceId: foreignId } }))
+    const result = toolResult(await http.mcp(await secretFor(member), 'tools/call', { name: 'tasks_list_assigned', arguments: { workspaceId: foreignId } }))
 
     expect(result).toMatchObject({ isError: true, value: { code: 'WORKSPACE_NOT_FOUND' } })
   })

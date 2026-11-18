@@ -25,7 +25,7 @@ import { searchCollectionRequests } from '@/services/collection-search'
 import { listNotificationsPage } from '@/services/notifications'
 import { countUnreadNotifications, listUnreadNotifications, markAllNotificationsRead, markNotificationRead } from '@/repositories/notifications.repository'
 import { findHeadSnapshot } from '@/repositories/stories.repository'
-import { addPlanningComment, listPlanningComments, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, getPlanningDocument, getPlanningItem, listPlanningDocuments, listPlanningItems, listPlanningTasks, type PlanningVia, type TargetKind } from '@/services/planning'
+import { addPlanningComment, listPlanningComments, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, getPlanningDocument, listPlanningDocuments, listPlanningItems, listPlanningTasks, type PlanningVia, type TargetKind } from '@/services/planning'
 
 const statuses: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'in_review', 'done']
 
@@ -92,11 +92,6 @@ async function projectIdsOf(db: SQL, workspaceId: string): Promise<string[]> {
 export async function listMcpWorkspaces(db: SQL, principal: McpPrincipal) {
   requireTool(principal, 'workspaces_list')
   return listUserWorkspaces(db, principal.userId)
-}
-
-export async function listMcpProjects(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
-  const id = await requireWorkspace(db, principal, 'projects_list', workspaceId)
-  return (await listProjects(db, id)).map(({ taskCount: _taskCount, ...project }) => project)
 }
 
 export async function listMcpAssignedTasks(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
@@ -172,12 +167,6 @@ async function requireParticipatingStory(db: SQL, workspaceId: string, userId: s
   return storyId
 }
 
-export async function readMcpParticipatingStory(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown) {
-  const id = await requireWorkspace(db, principal, 'stories_read_participating', workspaceId)
-  const story = await requireParticipatingStory(db, id, principal.userId, storyId)
-  return getPlanningItem(db, id, story, principal.userId)
-}
-
 export async function commentMcpParticipatingStory(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, input: CommentInput) {
   const id = await requireWorkspace(db, principal, 'stories_comment_participating', workspaceId)
   const story = await requireParticipatingStory(db, id, principal.userId, storyId)
@@ -210,12 +199,6 @@ export async function listMcpPlanning(db: SQL, principal: McpPrincipal, workspac
   const id = await requireWorkspace(db, principal, 'planning_list', workspaceId)
   const grant = via(principal, id)
   return { documents: await listPlanningDocuments(db, id, principal.userId, grant), items: await listPlanningItems(db, id, principal.userId, grant), tasks: await listPlanningTasks(db, id, principal.userId, grant) }
-}
-
-export async function readMcpDocument(db: SQL, principal: McpPrincipal, workspaceId: unknown, documentId: unknown) {
-  const id = await requireWorkspace(db, principal, 'planning_read_document', workspaceId)
-  if (typeof documentId !== 'string') throw new AppError('PLANNING_INPUT_INVALID')
-  return getPlanningDocument(db, id, documentId, principal.userId, via(principal, id))
 }
 
 // The playbook asks for ten level-2 sections; fewer than six means the template was not followed.

@@ -103,16 +103,13 @@ export const MCP_KEY_STATE_TEXT: Record<McpKeyStatus, string> = {
 
 export const MCP_TOOL_TEXT: Record<string, string> = {
   workspaces_list: 'mcp:tool.workspaces_list',
-  projects_list: 'mcp:tool.projects_list',
   tasks_list_assigned: 'mcp:tool.tasks_list_assigned',
   tasks_get_assigned: 'mcp:tool.tasks_get_assigned',
   tasks_update_assigned_status: 'mcp:tool.tasks_update_assigned_status',
   tasks_comment_assigned: 'mcp:tool.tasks_comment_assigned',
   stories_list_participating: 'mcp:tool.stories_list_participating',
-  stories_read_participating: 'mcp:tool.stories_read_participating',
   stories_comment_participating: 'mcp:tool.stories_comment_participating',
   planning_list: 'mcp:tool.planning_list',
-  planning_read_document: 'mcp:tool.planning_read_document',
   planning_draft_prd: 'mcp:tool.planning_draft_prd',
   planning_draft_item: 'mcp:tool.planning_draft_item',
   planning_draft_task: 'mcp:tool.planning_draft_task',

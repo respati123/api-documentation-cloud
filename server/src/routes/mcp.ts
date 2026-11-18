@@ -2,7 +2,7 @@ import type { SQL } from 'bun'
 import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { isRecord } from '@/lib/validation'
-import { isReadTool, listedTools, type McpPrincipal, type McpTool } from '@/models/mcp'
+import { isReadTool, type McpPrincipal, type McpTool } from '@/models/mcp'
 import { findMcpReplay, releaseMcpReplay, reserveMcpReplay, saveMcpReplay } from '@/repositories/mcp-replays.repository'
 import { bearerToken } from '@/services/auth'
 import { findAppLink, type AppName } from '@/repositories/app-links.repository'
@@ -13,7 +13,7 @@ import { type AudienceTarget, commentTarget, planningAudience } from '@/services
 import { commentMcpIssue, draftMcpIssue, getMcpActiveSprint, guideIsFresh, listMcpBacklog, readMcpGuide, readMcpIssue, setMcpChecklistItemDone, updateMcpSubtaskStatus, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
 import { addMcpSubtask, attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
-import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpProjects, listMcpWorkspaces, readMcpDocument, readMcpParticipatingStory, uploadMcpBrd } from '@/services/mcp-access'
+import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpWorkspaces, uploadMcpBrd } from '@/services/mcp-access'
 import { listMcpDocuments, listMcpProjectItems, listMcpProjectTasks, readMcpReadableDocument } from '@/services/mcp-access'
 import { DOCUMENT_URI_TEMPLATE, listMcpDocumentResources, listMcpTeamMembers, readMcpDiscussion, listMcpNotifications, markMcpNotificationsRead, readMcpDocumentResource, searchMcpApiRequests } from '@/services/mcp-access'
 
@@ -107,20 +107,17 @@ const tools: Record<McpTool, ToolDefinition> = {
   subtask_update_status: inWorkspace('Move my sub-task', { subtaskId: text, status: { type: 'string', enum: ['todo', 'in_progress', 'in_review', 'done'] } }, ['subtaskId', 'status'], 'Change the status of a sub-task assigned to this member. The first sub-task to start moves its Ready story to In Progress.', (db, p, a) => updateMcpSubtaskStatus(db, p, a.workspaceId, a.subtaskId, a.status)),
   checklist_set_done: inWorkspace('Tick a checklist line', { issueId: text, itemId: text, done: { type: 'boolean' } }, ['issueId', 'itemId', 'done'], 'Tick or untick one line of the checklist of an issue assigned to this member.', (db, p, a) => setMcpChecklistItemDone(db, p, a.workspaceId, a.issueId, a.itemId, a.done)),
   workspaces_list: { title: 'List workspaces', description: 'List the workspaces this member belongs to. Every other tool needs one of these ids.', properties: {}, required: [], run: (db, p) => listMcpWorkspaces(db, p) },
-  projects_list: inWorkspace('List projects', {}, [], 'List the projects of a workspace.', (db, p, a) => listMcpProjects(db, p, a.workspaceId)),
   tasks_list_assigned: inWorkspace('List my tasks', {}, [], 'List published tasks in the workspace assigned to this member.', (db, p, a) => listMcpAssignedTasks(db, p, a.workspaceId)),
   tasks_get_assigned: inWorkspace('Read my task', { taskId: text }, ['taskId'], 'Read a task assigned to this member.', (db, p, a) => getMcpAssignedTask(db, p, a.workspaceId, a.taskId)),
   tasks_update_assigned_status: inWorkspace('Move my task', { taskId: text, status: { type: 'string', enum: ['backlog', 'todo', 'in_progress', 'in_review', 'done'] } }, ['taskId', 'status'], 'Change the status of a task assigned to this member.', (db, p, a) => changeMcpAssignedTaskStatus(db, p, a.workspaceId, a.taskId, a.status)),
   tasks_comment_assigned: inWorkspace('Comment on my task', { taskId: text, body: commentBody, parentId, clientRequestId }, ['taskId', 'body'], 'Comment on a published task assigned to this member, or answer a comment on it.', (db, p, a) => commentMcpAssignedTask(db, p, a.workspaceId, a.taskId, { body: a.body, parentId: a.parentId })),
   stories_list_participating: inWorkspace('List my stories', {}, [], 'List published stories where this member is a participant.', (db, p, a) => listMcpParticipatingStories(db, p, a.workspaceId)),
-  stories_read_participating: inWorkspace('Read my story', { storyId: text }, ['storyId'], 'Read a published story where this member is a participant.', (db, p, a) => readMcpParticipatingStory(db, p, a.workspaceId, a.storyId)),
   stories_comment_participating: inWorkspace('Comment on my story', { storyId: text, body: commentBody, parentId, clientRequestId }, ['storyId', 'body'], 'Comment on a published story where this member is a participant, or answer a comment on it.', (db, p, a) => commentMcpParticipatingStory(db, p, a.workspaceId, a.storyId, { body: a.body, parentId: a.parentId })),
   project_items_list: inWorkspace('List epics and stories', {}, [], 'List the epics and stories of the workspace, read-only. Drafts are included only for the PM and the tech lead.', (db, p, a) => listMcpProjectItems(db, p, a.workspaceId)),
   project_tasks_list: inWorkspace('List all tasks', {}, [], 'List the tasks of every member in the workspace, read-only. Use tasks_list_assigned for your own work.', (db, p, a) => listMcpProjectTasks(db, p, a.workspaceId)),
   documents_list: inWorkspace('List documents', {}, [], 'List the BRDs and PRDs this key may read: all of them for the PM and the tech lead, approved ones for backend.', (db, p, a) => listMcpDocuments(db, p, a.workspaceId)),
   documents_read: inWorkspace('Read a document', { documentId: text }, ['documentId'], 'Read a BRD or PRD this key may read, with its version history.', (db, p, a) => readMcpReadableDocument(db, p, a.workspaceId, a.documentId)),
   planning_list: inWorkspace('Planning overview', {}, [], 'List planning documents, epics, stories and draft tasks of the workspace.', (db, p, a) => listMcpPlanning(db, p, a.workspaceId)),
-  planning_read_document: inWorkspace('Read a planning document', { documentId: text }, ['documentId'], 'Read a BRD or PRD and its version history.', (db, p, a) => readMcpDocument(db, p, a.workspaceId, a.documentId)),
   planning_upload_brd: inWorkspace(
     'Upload a BRD',
     { title: text, content: { type: 'string', description: 'The full BRD text, exactly as the person gave it. Markdown or plain text.' }, fileName: { type: 'string', description: 'Original file name, ending in .md or .txt.' }, clientRequestId },
@@ -256,7 +253,7 @@ function textResult(value: unknown, isError = false) {
 }
 
 function toolList(principal: McpPrincipal) {
-  return listedTools(principal.tools)
+  return principal.tools
     .filter((name) => name in tools)
     .map((name) => ({
       name,
