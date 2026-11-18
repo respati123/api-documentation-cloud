@@ -5,6 +5,7 @@ export const PLANNING_TEXT = {
     flow: 'planning:nav.flow',
     overview: 'planning:nav.overview',
     discovery: 'planning:nav.discovery',
+    agileBoard: 'planning:nav.agileBoard',
     documents: 'planning:nav.documents',
     epics: 'planning:nav.epics',
     backlog: 'planning:nav.backlog',
