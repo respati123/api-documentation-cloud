@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { activeMention, bodyParts, insertMention, mentionedIds, mentionSuggestions } from '@/features/projects/utils/mentions'
+import { activeMention, bodyParts, insertMention, mentionedIds, mentionSuggestions, paragraphsOf } from '@/features/projects/utils/mentions'
 
 const members = [
   { id: 'u-arif', email: 'arif@contoh.test' },
@@ -24,6 +24,25 @@ describe('mentions', () => {
   test('only handles still in the text count as mentions', () => {
     expect(mentionedIds('@arif cek ya, rina juga', members)).toEqual(['u-arif'])
     expect(mentionedIds('@arifin bukan arif', members)).toEqual([])
+  })
+
+  test('a blank line splits paragraphs and a mention stays inside its paragraph', () => {
+    const parts = bodyParts('Halo @rina,\nmohon cek.\n\nTerima kasih @arif', members)
+    expect(paragraphsOf(parts)).toEqual([
+      [
+        { text: 'Halo ', mention: false },
+        { text: '@rina', mention: true },
+        { text: ',\nmohon cek.', mention: false },
+      ],
+      [
+        { text: 'Terima kasih ', mention: false },
+        { text: '@arif', mention: true },
+      ],
+    ])
+  })
+
+  test('a single line stays one paragraph', () => {
+    expect(paragraphsOf(bodyParts('satu baris saja', members))).toEqual([[{ text: 'satu baris saja', mention: false }]])
   })
 
   test('the body marks known mentions', () => {

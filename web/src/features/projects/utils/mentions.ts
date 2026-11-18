@@ -39,6 +39,22 @@ export function bodyParts(text: string, members: MentionMember[]): BodyPart[] {
     .map((part) => ({ text: part, mention: part.startsWith('@') && handles.has(part.slice(1).replace(/[.]+$/, '')) }))
 }
 
+// A blank line starts a new paragraph. A mention is never split, so it stays one highlighted part.
+export function paragraphsOf(parts: BodyPart[]): BodyPart[][] {
+  const paragraphs: BodyPart[][] = [[]]
+  for (const part of parts) {
+    if (part.mention) {
+      paragraphs[paragraphs.length - 1].push(part)
+      continue
+    }
+    part.text.split(/\n[ \t]*\n\s*/).forEach((piece, index) => {
+      if (index > 0) paragraphs.push([])
+      if (piece !== '') paragraphs[paragraphs.length - 1].push({ text: piece, mention: false })
+    })
+  }
+  return paragraphs.filter((paragraph) => paragraph.length > 0)
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
