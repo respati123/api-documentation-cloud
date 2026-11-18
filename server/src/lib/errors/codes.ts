@@ -95,6 +95,7 @@ export const errorDefinitions = {
   SPRINT_INPUT_INVALID: { status: 400 },
   SPRINT_ALREADY_ACTIVE: { status: 409 },
   SPRINT_NOT_EDITABLE: { status: 409 },
+  SPRINT_RUNNING: { status: 409 },
   SPRINT_ITEM_NOT_READY: { status: 409 },
   PROJECT_KEY_TAKEN: { status: 409 },
   SPRINT_NOT_AVAILABLE: { status: 409 },

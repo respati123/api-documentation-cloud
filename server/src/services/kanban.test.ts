@@ -70,7 +70,7 @@ describe.skipIf(!databaseEnabled)('kanban mode', () => {
       const scope = await freshProject()
       const sprint = await createSprint(world.db, scope, pm(), { name: 'Running', startsOn: day(0), endsOn: day(7) })
       await startSprint(world.db, scope, pm(), sprint.id)
-      await world.rejectsWith(() => kanban(scope), 'SPRINT_NOT_EDITABLE')
+      await world.rejectsWith(() => kanban(scope), 'SPRINT_RUNNING')
       await closeSprint(world.db, scope, pm(), sprint.id, { carryTo: 'backlog' })
       expect((await kanban(scope)).mode).toBe('kanban')
       expect((await updateProjectSettings(world.db, scope, pm(), { mode: 'scrum' })).mode).toBe('scrum')
