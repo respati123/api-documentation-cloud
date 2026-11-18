@@ -553,6 +553,11 @@
       "label": "Product Goal",
       "save": "Save",
       "cancel": "Cancel"
+    },
+    "mode": {
+      "label": "Way of working",
+      "scrum": "Scrum",
+      "kanban": "Kanban"
     }
   },
   "reports": {
@@ -716,5 +721,22 @@
     "running": "Creating drafts",
     "hint": "Adds draft epics and stories from the headings of this PRD. Only the PM and the tech lead see them until they are published.",
     "done": "Draft epics and stories were added to the backlog."
+  },
+  "kanbanBoard": {
+    "title": "Kanban board",
+    "subtitle": "The open work, one column for each status. A limit on a column is a warning and never stops a card from moving.",
+    "setLimit": "Set the limit of {{status}}",
+    "overLimit": "Over the limit",
+    "empty": "There is no open work. Add items in the backlog.",
+    "error": "The board could not be loaded.",
+    "retry": "Try again",
+    "limitDialog": {
+      "title": "Limit for {{status}}",
+      "detail": "A warning shows when the column holds more cards than this. A card can still be moved in.",
+      "label": "Most cards at once",
+      "save": "Save the limit",
+      "clear": "Remove the limit",
+      "cancel": "Cancel"
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
-import { BACKLOG_TEXT, statusTextKey } from '@/features/projects/constants/backlog-text.constants'
+import { BACKLOG_TEXT, MODE_TEXT, statusTextKey } from '@/features/projects/constants/backlog-text.constants'
 import { type Issue, type IssueType, type StatusCategory, statusCategory } from '@/features/projects/models/issue.model'
 import { issuesService } from '@/features/projects/services/issues.service'
 import { daysLeft, epicCounts, filterByEpic, type ReadyGap, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
@@ -45,6 +45,7 @@ export function useBacklogViewModel(
   productGoal: string,
   enabled: boolean,
   access: BacklogAccess = NO_ACCESS,
+  mode: 'scrum' | 'kanban' = 'scrum',
 ) {
   const { t, i18n } = useTranslation('planning')
   const token = useAuthSessionStore((state) => state.token)
@@ -93,6 +94,13 @@ export function useBacklogViewModel(
     actions,
     canCreate: access.canEdit,
     canPlan: access.canApprove,
+    sprintsEnabled: mode === 'scrum',
+    mode,
+    canSwitchMode: access.canManage,
+    modeOptions: [
+      { value: 'scrum', label: t(MODE_TEXT.scrum) },
+      { value: 'kanban', label: t(MODE_TEXT.kanban) },
+    ],
     canEditGoal: access.canManage,
     rankEnabled: actions.rankEnabled && epicFilter === '',
     epics: {

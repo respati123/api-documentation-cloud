@@ -384,3 +384,25 @@ describe('dropping an item', () => {
     expect(service.rank).not.toHaveBeenCalled()
   })
 })
+
+describe('the way of working', () => {
+  test('is switched through the project settings, and the screen reloads', async () => {
+    service.updateSettings.mockResolvedValue({} as never)
+    const { result } = setup(PM)
+    act(() => result.current.setMode('kanban'))
+    await waitFor(() => expect(service.updateSettings).toHaveBeenCalledWith('t', 'w1', 'p1', { mode: 'kanban' }))
+  })
+
+  test('shows the words of the server when the switch is refused, as with a running sprint', async () => {
+    service.updateSettings.mockRejectedValue(new ApiError('Close the running sprint first.', 409, { code: 'SPRINT_NOT_EDITABLE' }))
+    const { result } = setup(PM)
+    act(() => result.current.setMode('kanban'))
+    await waitFor(() => expect(result.current.rowError).toBe('Close the running sprint first.'))
+  })
+
+  test('only the PM may switch it', () => {
+    const { result } = setup(LEAD)
+    act(() => result.current.setMode('kanban'))
+    expect(service.updateSettings).not.toHaveBeenCalled()
+  })
+})

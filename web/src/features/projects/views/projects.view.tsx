@@ -9,6 +9,7 @@ import { EpicsListView } from '@/features/projects/views/epics-list.view'
 import { FlowView } from '@/features/projects/views/flow.view'
 import { IssueDetailView } from '@/features/projects/views/issue-detail.view'
 import { ItemDetailView } from '@/features/projects/views/item-detail.view'
+import { KanbanBoardView } from '@/features/projects/views/kanban-board.view'
 import { PlanningDialogsView } from '@/features/projects/views/planning-dialogs.view'
 import { Notice } from '@/features/projects/views/planning-marks.view'
 import { ProjectSectionNav } from '@/features/projects/views/project-section-nav.view'
@@ -69,7 +70,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
           {planning.section === 'flow' && (
             <FlowView
               flow={planning.flow}
-              sprint={AGILE_PROJECT_ENABLED ? vm.sprintSummary : undefined}
+              sprint={AGILE_PROJECT_ENABLED && vm.mode === 'scrum' ? vm.sprintSummary : undefined}
               onGo={planning.go}
               onManageTeam={onManageTeam}
             />
@@ -108,7 +109,9 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
           {planning.section === 'backlog' && <BacklogView vm={vm.backlog} onOpenIssue={vm.issueDetail.open} />}
           {planning.section === 'board' &&
             vm.selectedProject &&
-            (AGILE_PROJECT_ENABLED ? (
+            (AGILE_PROJECT_ENABLED && vm.mode === 'kanban' ? (
+              <KanbanBoardView vm={vm.kanbanBoard} onOpenIssue={vm.issueDetail.open} />
+            ) : AGILE_PROJECT_ENABLED ? (
               <SprintBoardView vm={vm.sprintBoard} onOpenBacklog={() => planning.go('backlog')} onOpenIssue={vm.issueDetail.open} />
             ) : (
               <TaskBoardView vm={vm} />

@@ -29,6 +29,24 @@ export interface BoardCard {
   canMove: boolean
 }
 
+export function boardCardOf(card: Issue, say: Text, canMove: boolean): BoardCard {
+  return {
+    id: card.id,
+    key: card.key,
+    title: card.title,
+    typeLabel: say(BACKLOG_TEXT.type[card.type]),
+    statusValue: card.status ?? 'todo',
+    statusLabel: say(statusTextKey(card.status ?? 'todo')),
+    statusOptions: (card.type === 'story' ? STORY_STATUSES : WORK_STATUSES).map((value) => ({
+      value,
+      label: say(statusTextKey(value)),
+    })),
+    assignee: card.assigneeEmail?.split('@')[0] ?? say(BACKLOG_TEXT.unassigned),
+    points: card.points,
+    canMove,
+  }
+}
+
 // The board of the active sprint. The sprint and its items come from the backlog data, which the Backlog tab shares.
 // The sub-tasks of the whole project are paged in and kept for the items in the sprint.
 export function useSprintBoardViewModel(workspaceId: string, projectId: string | undefined, enabled: boolean, canEdit: boolean) {
@@ -68,21 +86,7 @@ export function useSprintBoardViewModel(workspaceId: string, projectId: string |
 
   const items = sprint?.issues ?? []
   const filter = { search, mine }
-  const toCard = (card: Issue): BoardCard => ({
-    id: card.id,
-    key: card.key,
-    title: card.title,
-    typeLabel: say(BACKLOG_TEXT.type[card.type]),
-    statusValue: card.status ?? 'todo',
-    statusLabel: say(statusTextKey(card.status ?? 'todo')),
-    statusOptions: (card.type === 'story' ? STORY_STATUSES : WORK_STATUSES).map((value) => ({
-      value,
-      label: say(statusTextKey(value)),
-    })),
-    assignee: card.assigneeEmail?.split('@')[0] ?? say(BACKLOG_TEXT.unassigned),
-    points: card.points,
-    canMove: canEdit,
-  })
+  const toCard = (card: Issue) => boardCardOf(card, say, canEdit)
   const toLane = (lane: Lane) => {
     const progress = laneProgress(lane)
     return {

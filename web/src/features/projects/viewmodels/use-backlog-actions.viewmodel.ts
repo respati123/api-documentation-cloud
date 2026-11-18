@@ -199,6 +199,10 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
       if ((direction === 'up' && index < 1) || (direction === 'down' && index >= ids.length - 1)) return
       row.mutate(() => issuesService.rank(token, workspaceId, project, ids[index], placement))
     },
+    setMode: (mode: string) => {
+      if (!access.canManage || (mode !== 'scrum' && mode !== 'kanban')) return
+      row.mutate(() => issuesService.updateSettings(token, workspaceId, project, { mode }))
+    },
     // An item dropped on a list: ranked in its own list, or moved to another list and ranked there. A sprint accepts it
     // only through the same gate as the menu, so a refusal asks the PM for a reason.
     drop: (input: { issueId: string; title: string; from: string; to: string } & Placement) => {

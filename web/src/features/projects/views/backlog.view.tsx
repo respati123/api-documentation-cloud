@@ -3,7 +3,7 @@ import { isSortable, useSortable } from '@dnd-kit/react/sortable'
 import { ArrowDown, ArrowUp, GripVertical, MoreHorizontal, Pencil, Play, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BACKLOG_TEXT } from '@/features/projects/constants/backlog-text.constants'
+import { BACKLOG_TEXT, MODE_TEXT } from '@/features/projects/constants/backlog-text.constants'
 import { dropPlacement } from '@/features/projects/utils/backlog'
 import type { BacklogRow, useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
 import { BACKLOG_GROUP } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
@@ -69,7 +69,18 @@ export function BacklogView({ vm, onOpenIssue }: { vm: BacklogProps; onOpenIssue
           <p className="max-w-[62ch] text-[13px] text-muted-foreground">{t(BACKLOG_TEXT.subtitle)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {vm.canPlan && (
+          {vm.canSwitchMode && (
+            <SelectField
+              size="sm"
+              className="w-32"
+              label={t(MODE_TEXT.label)}
+              testId="backlog-mode"
+              value={vm.mode}
+              onValueChange={actions.setMode}
+              options={vm.modeOptions}
+            />
+          )}
+          {vm.canPlan && vm.sprintsEnabled && (
             <Button size="sm" variant="outline" data-testid="backlog-new-sprint" onClick={actions.sprintDialog.onOpenCreate}>
               <Plus data-icon="inline-start" />
               {t(BACKLOG_TEXT.actions.newSprint)}

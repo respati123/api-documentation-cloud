@@ -221,3 +221,28 @@ export const DRAFT_BACKLOG_TEXT = {
   hint: 'planning:draftBacklog.hint',
   done: 'planning:draftBacklog.done',
 } as const
+
+// Locale keys for the Kanban board. The words live in planning.json, under "kanbanBoard".
+export const KANBAN_BOARD_TEXT = {
+  title: 'planning:kanbanBoard.title',
+  subtitle: 'planning:kanbanBoard.subtitle',
+  setLimit: 'planning:kanbanBoard.setLimit',
+  overLimit: 'planning:kanbanBoard.overLimit',
+  empty: 'planning:kanbanBoard.empty',
+  error: 'planning:kanbanBoard.error',
+  retry: 'planning:kanbanBoard.retry',
+  limitDialog: {
+    title: 'planning:kanbanBoard.limitDialog.title',
+    detail: 'planning:kanbanBoard.limitDialog.detail',
+    label: 'planning:kanbanBoard.limitDialog.label',
+    save: 'planning:kanbanBoard.limitDialog.save',
+    clear: 'planning:kanbanBoard.limitDialog.clear',
+    cancel: 'planning:kanbanBoard.limitDialog.cancel',
+  },
+} as const
+
+export const MODE_TEXT = {
+  label: 'planning:backlog.mode.label',
+  scrum: 'planning:backlog.mode.scrum',
+  kanban: 'planning:backlog.mode.kanban',
+} as const

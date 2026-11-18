@@ -11,6 +11,7 @@ import { projectKeys } from '@/features/projects/viewmodels/project-keys'
 import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
 import { useDraftBacklogViewModel } from '@/features/projects/viewmodels/use-draft-backlog.viewmodel'
 import { useIssueDetailViewModel } from '@/features/projects/viewmodels/use-issue-detail.viewmodel'
+import { useKanbanBoardViewModel } from '@/features/projects/viewmodels/use-kanban-board.viewmodel'
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { useReportsViewModel } from '@/features/projects/viewmodels/use-reports.viewmodel'
@@ -135,12 +136,14 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     memberList,
   )
 
+  const mode = selectedProject?.mode ?? 'scrum'
   const backlog = useBacklogViewModel(
     workspaceId,
     selectedProject?.id,
     selectedProject?.productGoal ?? '',
     enabled && AGILE_PROJECT_ENABLED && planning.section === 'backlog',
     { canEdit, canApprove: planning.access.canApprove, canManage: planning.access.canManage },
+    mode,
   )
 
   const issueDetail = useIssueDetailViewModel(workspaceId, selectedProject?.id, {
@@ -152,14 +155,20 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
   const sprintBoard = useSprintBoardViewModel(
     workspaceId,
     selectedProject?.id,
-    enabled && AGILE_PROJECT_ENABLED && planning.section === 'board',
+    enabled && AGILE_PROJECT_ENABLED && mode === 'scrum' && planning.section === 'board',
     canEdit,
+  )
+  const kanbanBoard = useKanbanBoardViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && mode === 'kanban' && planning.section === 'board',
+    { canEdit, canApprove: planning.access.canApprove },
   )
 
   const sprintSummary = useSprintSummaryViewModel(
     workspaceId,
     selectedProject?.id,
-    enabled && AGILE_PROJECT_ENABLED && planning.section === 'flow',
+    enabled && AGILE_PROJECT_ENABLED && mode === 'scrum' && planning.section === 'flow',
   )
   const draftBacklog = useDraftBacklogViewModel(workspaceId, selectedProject?.id, AGILE_PROJECT_ENABLED && planning.access.canManage, () =>
     planning.go('backlog'),
@@ -168,7 +177,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
   const reports = useReportsViewModel(
     workspaceId,
     selectedProject?.id,
-    selectedProject?.mode ?? 'scrum',
+    mode,
     enabled && AGILE_PROJECT_ENABLED && planning.section === 'reports',
   )
 
@@ -184,6 +193,8 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     planning,
     backlog,
     sprintBoard,
+    kanbanBoard,
+    mode,
     issueDetail,
     sprintSummary,
     draftBacklog,

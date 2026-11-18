@@ -553,6 +553,11 @@
       "label": "Product Goal",
       "save": "Simpan",
       "cancel": "Batal"
+    },
+    "mode": {
+      "label": "Cara kerja",
+      "scrum": "Scrum",
+      "kanban": "Kanban"
     }
   },
   "reports": {
@@ -716,5 +721,22 @@
     "running": "Membuat draf",
     "hint": "Menambah draf epic dan story dari judul PRD ini. Hanya PM dan tech lead yang melihatnya sampai dipublikasikan.",
     "done": "Draf epic dan story sudah ditambahkan ke backlog."
+  },
+  "kanbanBoard": {
+    "title": "Papan Kanban",
+    "subtitle": "Pekerjaan yang masih terbuka, satu kolom untuk tiap status. Batas pada kolom hanya peringatan dan tidak menghalangi kartu pindah.",
+    "setLimit": "Atur batas {{status}}",
+    "overLimit": "Melebihi batas",
+    "empty": "Tidak ada pekerjaan terbuka. Tambahkan item di backlog.",
+    "error": "Papan tidak dapat dimuat.",
+    "retry": "Coba lagi",
+    "limitDialog": {
+      "title": "Batas untuk {{status}}",
+      "detail": "Peringatan muncul bila kolom berisi lebih banyak kartu dari ini. Kartu tetap bisa dipindahkan masuk.",
+      "label": "Jumlah kartu paling banyak",
+      "save": "Simpan batas",
+      "clear": "Hapus batas",
+      "cancel": "Batal"
+    }
   }
 }

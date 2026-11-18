@@ -148,7 +148,7 @@ export function SprintBoardView({
                   {column.cards.length === 0 ? (
                     <p className="text-xs text-muted-foreground/70">{t(SPRINT_BOARD_TEXT.noCards)}</p>
                   ) : (
-                    column.cards.map((card) => <Card key={card.id} card={card} onMove={vm.move} onOpen={onOpenIssue} />)
+                    column.cards.map((card) => <BoardCardView key={card.id} card={card} onMove={vm.move} onOpen={onOpenIssue} />)
                   )}
                 </div>
               ))}
@@ -160,7 +160,15 @@ export function SprintBoardView({
   )
 }
 
-function Card({ card, onMove, onOpen }: { card: BoardCard; onMove: (id: string, status: string) => void; onOpen?: (id: string) => void }) {
+export function BoardCardView({
+  card,
+  onMove,
+  onOpen,
+}: {
+  card: BoardCard
+  onMove: (id: string, status: string) => void
+  onOpen?: (id: string) => void
+}) {
   const { t } = useTranslation('planning')
   return (
     <article

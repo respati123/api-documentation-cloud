@@ -37,6 +37,7 @@ function actionsStub(over: Record<string, unknown> = {}) {
     sprintTargets: [{ id: 's2', name: 'Sprint 2' }],
     canStartSprint: true,
     setPoints: vi.fn(),
+    setMode: vi.fn(),
     publish: vi.fn(),
     move: vi.fn(),
     addToSprint: vi.fn(),
@@ -99,6 +100,13 @@ function props(over: Partial<BacklogProps> = {}): BacklogProps {
     actions: actionsStub(),
     canCreate: false,
     canPlan: false,
+    sprintsEnabled: true,
+    mode: 'scrum',
+    canSwitchMode: false,
+    modeOptions: [
+      { value: 'scrum', label: 'Scrum' },
+      { value: 'kanban', label: 'Kanban' },
+    ],
     canEditGoal: false,
     rankEnabled: false,
     epics: {
@@ -304,5 +312,14 @@ describe('BacklogView', () => {
     rerender(<BacklogView vm={props({ rankEnabled: true })} />)
     expect(screen.getByTestId('backlog-drag-c')).toBeInTheDocument()
     expect(screen.getByTestId('backlog-drag-a')).toBeInTheDocument()
+  })
+
+  test('the PM sees the way of working, and a Kanban project has no new-sprint button', () => {
+    const { rerender } = render(<BacklogView vm={props({ canPlan: true })} />)
+    expect(screen.queryByTestId('backlog-mode')).toBeNull()
+    expect(screen.getByTestId('backlog-new-sprint')).toBeInTheDocument()
+    rerender(<BacklogView vm={props({ canPlan: true, canSwitchMode: true, mode: 'kanban', sprintsEnabled: false })} />)
+    expect(screen.getByTestId('backlog-mode')).toBeInTheDocument()
+    expect(screen.queryByTestId('backlog-new-sprint')).toBeNull()
   })
 })
