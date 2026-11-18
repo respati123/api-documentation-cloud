@@ -352,16 +352,16 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     const key = await keyFor(designer, 'ui_ux', 'claude-code laptop')
     await http.mcp(key, 'tools/call', { name: 'planning_guide', arguments: {} })
     expect(toolResult(await http.mcp(key, 'tools/call', { name: 'story_attach_design', arguments: { workspaceId, storyId, title: 'Dialog', url: 'https://design.test/dialog' } })).isError).toBe(false)
-    expect(toolResult(await http.mcp(key, 'tools/call', { name: 'tasks_update_assigned_status', arguments: { workspaceId, taskId: designTask.id, status: 'in_progress' } })).isError).toBe(false)
-    expect(toolResult(await http.mcp(key, 'tools/call', { name: 'subtask_add', arguments: { workspaceId, taskId: designTask.id, title: 'Empty state' } })).isError).toBe(false)
+    expect(toolResult(await http.mcp(key, 'tools/call', { name: 'subtask_update_status', arguments: { workspaceId, subtaskId: designTask.id, status: 'in_progress' } })).isError).toBe(false)
+    expect(toolResult(await http.mcp(key, 'tools/call', { name: 'checklist_add', arguments: { workspaceId, issueId: designTask.id, title: 'Empty state' } })).isError).toBe(false)
     await call('POST', `/stories/${storyId}/approve-design`)
 
     const events = ((await call('GET', '/events')).json.data as { events: Array<{ action: string; targetId: string; apiKeyName: string | null }> }).events
     const find = (action: string, targetId: string) => events.find((entry) => entry.action === action && entry.targetId === targetId)
 
     expect(find('design_attached', storyId)?.apiKeyName).toBe('claude-code laptop')
-    expect(find('status:in_progress', designTask.id)?.apiKeyName).toBe('claude-code laptop')
-    expect(find('subtask_added', designTask.id)?.apiKeyName).toBe('claude-code laptop')
+    expect(find('issue.updated', designTask.id)?.apiKeyName).toBe('claude-code laptop')
+    expect(find('issue.checklist_added', designTask.id)?.apiKeyName).toBe('claude-code laptop')
     expect(find('design_approved', storyId)).toMatchObject({ apiKeyName: null })
   })
 })

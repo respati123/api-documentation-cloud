@@ -10,7 +10,3 @@ export async function isItemParticipant(db: SQL, workspaceId: string, itemId: st
   return row !== undefined
 }
 
-export async function isStoryParticipant(db: SQL, workspaceId: string, storyId: string, userId: string): Promise<boolean> {
-  const [row] = await db`SELECT 1 FROM issues i JOIN projects p ON p.id = i.project_id JOIN planning_participants pp ON pp.item_id = i.id WHERE i.id = ${storyId} AND p.workspace_id = ${workspaceId} AND i.type = 'story' AND i.published_at IS NOT NULL AND pp.user_id = ${userId} LIMIT 1`
-  return row !== undefined
-}

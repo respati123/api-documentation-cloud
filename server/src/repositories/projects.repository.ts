@@ -140,11 +140,6 @@ export async function setSubtaskDone(db: SQL, taskId: string, subtaskId: string,
   return row
 }
 
-export async function findAssignedTask(db: SQL, taskId: string, projectIds: string[], assigneeId: string): Promise<TaskRow | undefined> {
-  const [row] = await db`SELECT ${db.unsafe(plainTaskColumns)} FROM issues i JOIN memberships m ON m.user_id = ${assigneeId} LEFT JOIN users u ON u.id = i.assignee_id WHERE i.id = ${taskId} AND ${db.unsafe(WORK)} AND i.published_at IS NOT NULL AND i.project_id = ANY(ARRAY(SELECT jsonb_array_elements_text((${projectIdList(projectIds)}::text)::jsonb))) AND i.assignee_id = ${assigneeId} AND m.workspace_id = (SELECT workspace_id FROM projects WHERE id = i.project_id)`
-  return row
-}
-
 export async function listAssignedTasks(db: SQL, projectIds: string[], assigneeId: string): Promise<TaskRow[]> {
   return db`SELECT ${db.unsafe(plainTaskColumns)} FROM issues i JOIN memberships m ON m.user_id = ${assigneeId} LEFT JOIN users u ON u.id = i.assignee_id WHERE ${db.unsafe(WORK)} AND i.published_at IS NOT NULL AND i.project_id = ANY(ARRAY(SELECT jsonb_array_elements_text((${projectIdList(projectIds)}::text)::jsonb))) AND i.assignee_id = ${assigneeId} AND m.workspace_id = (SELECT workspace_id FROM projects WHERE id = i.project_id) ORDER BY i.status, coalesce(i.rank, 0), i.created_at LIMIT 200`
 }
