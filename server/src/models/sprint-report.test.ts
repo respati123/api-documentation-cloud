@@ -45,10 +45,10 @@ describe('burndown', () => {
     expect(result.days.map((day) => day.remaining)).toEqual([8, 3, 8, 8, null])
   })
 
-  test('an item carried over to the next sprint leaves this one', () => {
-    const events = [...committed, scope('b', 'carried_over', '2026-07-05', 3, true)]
-    const result = burndown({ ...base, scope: events, status: [], closedAt: at('2026-07-05', '18:00:00'), today: at('2026-07-09') })
-    expect(result.days.map((day) => day.remaining)).toEqual([8, 8, 8, 8, 5])
+  test('work carried over when the sprint closes still counts as left, so the chart agrees with the report', () => {
+    const events = [...committed, scope('a', 'carried_over', '2026-07-05', 5, true), scope('b', 'carried_over', '2026-07-05', 3, true)]
+    const result = burndown({ ...base, scope: events, status: [status('a', 'done', '2026-07-04')], closedAt: at('2026-07-05', '18:00:00'), today: at('2026-07-09') })
+    expect(result.days.map((day) => day.remaining)).toEqual([8, 8, 8, 3, 3])
   })
 
   test('a closed sprint stops at the day it was closed', () => {

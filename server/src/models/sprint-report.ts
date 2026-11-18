@@ -62,7 +62,8 @@ function remainingAt(input: BurndownInput, before: number): number {
   for (const event of scope) {
     const item = items.get(event.issueId) ?? { member: false, points: 0 }
     if (event.action === 'committed' || event.action === 'added') item.member = true
-    if (event.action === 'removed' || event.action === 'carried_over') item.member = false
+    // Carrying an item over happens as the sprint closes. It was not finished here, so it stays in what was left.
+    if (event.action === 'removed') item.member = false
     if (event.action !== 'removed' && event.action !== 'carried_over') item.points = event.pointsAfter ?? 0
     items.set(event.issueId, item)
   }
