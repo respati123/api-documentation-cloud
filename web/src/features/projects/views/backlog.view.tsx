@@ -1,12 +1,11 @@
-import { DragDropProvider, useDroppable } from '@dnd-kit/react'
-import { isSortable, useSortable } from '@dnd-kit/react/sortable'
+import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react'
 import { ArrowDown, ArrowUp, GripVertical, MoreHorizontal, Pencil, Play, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BACKLOG_TEXT, MODE_TEXT } from '@/features/projects/constants/backlog-text.constants'
-import { dropPlacement } from '@/features/projects/utils/backlog'
 import type { BacklogRow, useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
 import { BACKLOG_GROUP } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
+import { DROP_ROW_PREFIX } from '@/features/projects/viewmodels/use-backlog-drag'
 import { BacklogDialogsView } from '@/features/projects/views/backlog-dialogs.view'
 import { CodeChip, Panel, PanelEmpty, StatusIcon, type StatusTone } from '@/features/projects/views/planning-marks.view'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
@@ -54,13 +53,6 @@ export function BacklogView({ vm, onOpenIssue }: { vm: BacklogProps; onOpenIssue
     )
   }
   const { actions } = vm
-  // The ids of every list as shown, so a drop knows its neighbours, and the titles for the reason dialog.
-  const lists: Record<string, string[]> = {
-    [BACKLOG_GROUP]: vm.backlog.rows.map((row) => row.id),
-    ...Object.fromEntries(vm.sprints.map((sprint) => [sprint.id, sprint.rows.map((row) => row.id)])),
-  }
-  const titles = new Map([...vm.backlog.rows, ...vm.sprints.flatMap((sprint) => sprint.rows)].map((row) => [row.id, row.title]))
-
   return (
     <div className="grid gap-4" data-testid="backlog-view">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -101,24 +93,7 @@ export function BacklogView({ vm, onOpenIssue }: { vm: BacklogProps; onOpenIssue
         </Alert>
       )}
 
-      <DragDropProvider
-        onDragEnd={(event) => {
-          if (event.canceled) return
-          const { source } = event.operation
-          if (!isSortable(source)) return
-          const { index, initialIndex, group, initialGroup } = source
-          if (typeof group !== 'string' || typeof initialGroup !== 'string') return
-          if (group === initialGroup && index === initialIndex) return
-          const issueId = String(source.id)
-          vm.actions.drop({
-            issueId,
-            title: titles.get(issueId) ?? '',
-            from: initialGroup,
-            to: group,
-            ...dropPlacement(lists, group, issueId, index),
-          })
-        }}
-      >
+      <DragDropProvider onDragEnd={vm.drag.onDragEnd}>
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
           <div className="grid gap-4">
             {vm.sprints.map((sprint) => (
@@ -351,24 +326,25 @@ function BacklogItem({
   const { actions } = vm
   const targets = actions.sprintTargets.filter((target) => target.id !== sprintId)
   const hasMenu = vm.canPlan && (sprintId !== null || targets.length > 0)
-  const { ref, handleRef, isDragging } = useSortable({
-    id: row.id,
-    index,
-    group: sprintId ?? BACKLOG_GROUP,
-    type: 'item',
-    accept: 'item',
-    disabled: !vm.rankEnabled,
-  })
+  const held = useDraggable({ id: row.id, type: 'item', disabled: !vm.rankEnabled })
+  const place = useDroppable({ id: `${DROP_ROW_PREFIX}${row.id}`, type: 'row', accept: 'item', disabled: !vm.rankEnabled })
   return (
     <li
-      ref={ref}
+      ref={(element) => {
+        held.ref(element)
+        place.ref(element)
+      }}
       data-testid={`backlog-row-${row.id}`}
-      className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 bg-card px-[18px] py-2.5', isDragging && 'opacity-60')}
+      className={cn(
+        'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 bg-card px-[18px] py-2.5',
+        held.isDragging && 'opacity-60',
+        place.isDropTarget && !held.isDragging && 'bg-accent/40',
+      )}
     >
       <div className="flex items-center gap-2">
         {vm.rankEnabled && (
           <Button
-            ref={handleRef}
+            ref={held.handleRef}
             size="icon-xs"
             variant="ghost"
             className="cursor-grab"

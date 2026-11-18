@@ -336,6 +336,17 @@ describe('dropping an item', () => {
     expect(service.removeSprintItem).not.toHaveBeenCalled()
   })
 
+  test('tells the caller when the server has answered, whether it accepted or refused', async () => {
+    service.rank.mockResolvedValueOnce({} as never)
+    service.rank.mockRejectedValueOnce(new ApiError('No.', 409, { code: 'X' }))
+    const onSettled = vi.fn()
+    const { result } = setup()
+    act(() => result.current.drop(drop({ onSettled })))
+    await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(1))
+    act(() => result.current.drop(drop({ onSettled })))
+    await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(2))
+  })
+
   test('into the backlog it leaves its sprint, then is ranked', async () => {
     service.removeSprintItem.mockResolvedValue(undefined as never)
     service.rank.mockResolvedValue({} as never)

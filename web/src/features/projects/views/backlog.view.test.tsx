@@ -98,6 +98,7 @@ function props(over: Partial<BacklogProps> = {}): BacklogProps {
     onRetry: vi.fn(),
     productGoal: 'Halve checkout time',
     actions: actionsStub(),
+    drag: { onDragEnd: vi.fn() },
     canCreate: false,
     canPlan: false,
     sprintsEnabled: true,

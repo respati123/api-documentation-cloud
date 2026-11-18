@@ -6,8 +6,9 @@ import { type Issue, type IssueType, type StatusCategory, statusCategory } from 
 import { issuesService } from '@/features/projects/services/issues.service'
 import { daysLeft, epicCounts, filterByEpic, type ReadyGap, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
 import { issueKeys } from '@/features/projects/viewmodels/issue-keys'
-import { type BacklogAccess, useBacklogActionsViewModel } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
+import { BACKLOG_GROUP, type BacklogAccess, useBacklogActionsViewModel } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
 import { useBacklogData } from '@/features/projects/viewmodels/use-backlog-data'
+import { useBacklogDrag } from '@/features/projects/viewmodels/use-backlog-drag'
 import { usePageList } from '@/shared/hooks/use-page-list'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
@@ -86,12 +87,28 @@ export function useBacklogViewModel(
   const today = new Date()
   const failure = backlog.error ?? epics.error
 
+  // The rows of every list by id, and the order each list has on the server. A drag reorders the lists on screen first.
+  const shownIn = (issues: Issue[]) => filterByEpic(issues, epicFilter)
+  const rowById = new Map(
+    [...sprintList.flatMap((sprint) => shownIn(sprint.issues)), ...shownLoose].map((issue) => [issue.id, toRow(issue)]),
+  )
+  const drag = useBacklogDrag(
+    {
+      [BACKLOG_GROUP]: shownLoose.map((issue) => issue.id),
+      ...Object.fromEntries(sprintList.map((sprint) => [sprint.id, shownIn(sprint.issues).map((issue) => issue.id)])),
+    },
+    (drop) => actions.drop({ ...drop, title: rowById.get(drop.issueId)?.title ?? '' }),
+    actions.rankEnabled && epicFilter === '',
+  )
+  const rowsOf = (group: string) => (drag.lists[group] ?? []).flatMap((id) => rowById.get(id) ?? [])
+
   return {
     status: backlog.isPending && active ? ('loading' as const) : failure ? ('error' as const) : ('ready' as const),
     error: failure ? readErrorMessage(failure, t(BACKLOG_TEXT.error)) : null,
     onRetry: () => void backlog.refetch(),
     productGoal,
     actions,
+    drag: { onDragEnd: drag.onDragEnd },
     canCreate: access.canEdit,
     canPlan: access.canApprove,
     sprintsEnabled: mode === 'scrum',
@@ -120,7 +137,6 @@ export function useBacklogViewModel(
       onSelect: (id: string) => setEpicFilter((current) => (current === id ? '' : id)),
     },
     sprints: sprintList.map((sprint) => {
-      const items = filterByEpic(sprint.issues, epicFilter)
       const totals = sprintTotals(sprint.issues)
       return {
         id: sprint.id,
@@ -138,12 +154,12 @@ export function useBacklogViewModel(
         daysLeft: sprint.status === 'active' ? t(BACKLOG_TEXT.sprint.daysLeft, { count: daysLeft(sprint.endsOn, today) }) : null,
         totals: t(BACKLOG_TEXT.sprint.totals, { items: totals.items, points: totals.points }),
         progress: totals.items > 0 ? t(BACKLOG_TEXT.sprint.doneTotals, { done: totals.done, donePoints: totals.donePoints }) : null,
-        rows: items.map(toRow),
+        rows: rowsOf(sprint.id),
         emptyLabel: t(BACKLOG_TEXT.sprint.empty),
       }
     }),
     backlog: {
-      rows: shownLoose.map(toRow),
+      rows: rowsOf(BACKLOG_GROUP),
       count: t(BACKLOG_TEXT.section.count, { count: shownLoose.length }),
       emptyLabel: t(epicFilter === '' ? BACKLOG_TEXT.section.empty : BACKLOG_TEXT.section.emptyFiltered),
       hasMore: Boolean(backlog.hasNextPage),

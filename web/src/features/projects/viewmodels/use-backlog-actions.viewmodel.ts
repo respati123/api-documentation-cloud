@@ -205,18 +205,21 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
     },
     // An item dropped on a list: ranked in its own list, or moved to another list and ranked there. A sprint accepts it
     // only through the same gate as the menu, so a refusal asks the PM for a reason.
-    drop: (input: { issueId: string; title: string; from: string; to: string } & Placement) => {
+    drop: (input: { issueId: string; title: string; from: string; to: string; onSettled?: () => void } & Placement) => {
       if (!access.canApprove) return
       const placement = { afterId: input.afterId, beforeId: input.beforeId }
       if (input.from === input.to) {
-        row.mutate(() => rankAt(input.issueId, placement))
+        row.mutate(() => rankAt(input.issueId, placement), { onSettled: input.onSettled })
       } else if (input.to === BACKLOG_GROUP) {
-        row.mutate(async () => {
-          await issuesService.removeSprintItem(token, workspaceId, project, input.from, input.issueId)
-          await rankAt(input.issueId, placement)
-        })
+        row.mutate(
+          async () => {
+            await issuesService.removeSprintItem(token, workspaceId, project, input.from, input.issueId)
+            await rankAt(input.issueId, placement)
+          },
+          { onSettled: input.onSettled },
+        )
       } else {
-        addToSprint.mutate({ issueId: input.issueId, sprintId: input.to, title: input.title, placement })
+        addToSprint.mutate({ issueId: input.issueId, sprintId: input.to, title: input.title, placement }, { onSettled: input.onSettled })
       }
     },
     addToSprint: (issueId: string, sprintId: string, issueTitle: string) => addToSprint.mutate({ issueId, sprintId, title: issueTitle }),
