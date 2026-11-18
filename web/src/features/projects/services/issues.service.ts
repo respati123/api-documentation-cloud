@@ -74,6 +74,15 @@ export const issuesService = {
     return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
   },
 
+  // The sub-tasks of the whole project, a page at a time. The board keeps those of the items in the sprint.
+  subtasks: async (token: string, workspaceId: string, projectId: string, cursor?: string | null) => {
+    const page = await apiPage(
+      `/api/workspaces/${workspaceId}${at(projectId, `/issues?type=subtask&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)}`,
+      { token },
+    )
+    return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
+  },
+
   issue: async (token: string, workspaceId: string, projectId: string, ref: string) =>
     z.parse(issueOf, await workspaceCall(workspaceId, at(projectId, `/issues/${encodeURIComponent(ref)}`), { token })).issue,
   create: async (token: string, workspaceId: string, projectId: string, input: NewIssueInput) =>

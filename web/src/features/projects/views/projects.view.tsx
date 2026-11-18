@@ -12,10 +12,12 @@ import { PlanningDialogsView } from '@/features/projects/views/planning-dialogs.
 import { Notice } from '@/features/projects/views/planning-marks.view'
 import { ProjectSectionNav } from '@/features/projects/views/project-section-nav.view'
 import { ReportsView } from '@/features/projects/views/reports.view'
+import { SprintBoardView } from '@/features/projects/views/sprint-board.view'
 import { TaskBoardView } from '@/features/projects/views/task-board.view'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Button } from '@/shared/components/primitives/button'
 import { Skeleton } from '@/shared/components/primitives/skeleton'
+import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 
 export type ProjectsViewProps = ReturnType<typeof useProjectsViewModel> & { onManageTeam: () => void }
 
@@ -96,7 +98,13 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
               />
             ))}
           {planning.section === 'backlog' && <BacklogView vm={vm.backlog} />}
-          {planning.section === 'board' && vm.selectedProject && <TaskBoardView vm={vm} />}
+          {planning.section === 'board' &&
+            vm.selectedProject &&
+            (AGILE_PROJECT_ENABLED ? (
+              <SprintBoardView vm={vm.sprintBoard} onOpenBacklog={() => planning.go('backlog')} />
+            ) : (
+              <TaskBoardView vm={vm} />
+            ))}
           {planning.section === 'reports' && <ReportsView vm={vm.reports} />}
         </>
       )}

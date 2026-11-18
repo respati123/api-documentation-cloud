@@ -624,5 +624,28 @@
     },
     "error": "The reports could not be loaded.",
     "retry": "Try again"
+  },
+  "sprintBoard": {
+    "title": "Sprint board",
+    "subtitle": "The items of the active sprint, one lane for each. Sub-tasks move across the columns as work goes on.",
+    "search": "Search the board",
+    "mine": "My work",
+    "groupLabel": "Group the lanes by",
+    "groupItem": "Item",
+    "groupEpic": "Epic",
+    "columns": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "done": "Done"
+    },
+    "laneProgress": "{{done}} of {{total}} done",
+    "noCards": "Nothing here",
+    "statusLabel": "Status of {{key}}",
+    "noSprintTitle": "No active sprint",
+    "noSprintDetail": "Start a sprint in the backlog and its items show up here.",
+    "openBacklog": "Go to the backlog",
+    "noMatch": "No card matches these filters.",
+    "retry": "Try again",
+    "error": "The board could not be loaded."
   }
 }

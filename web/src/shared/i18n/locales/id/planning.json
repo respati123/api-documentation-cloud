@@ -624,5 +624,28 @@
     },
     "error": "Laporan tidak bisa dimuat.",
     "retry": "Coba lagi"
+  },
+  "sprintBoard": {
+    "title": "Papan sprint",
+    "subtitle": "Item sprint yang sedang berjalan, satu lajur untuk tiap item. Sub-task berpindah antar kolom seiring pekerjaan.",
+    "search": "Cari di papan",
+    "mine": "Pekerjaan saya",
+    "groupLabel": "Kelompokkan lajur menurut",
+    "groupItem": "Item",
+    "groupEpic": "Epic",
+    "columns": {
+      "todo": "To do",
+      "in_progress": "Dikerjakan",
+      "done": "Selesai"
+    },
+    "laneProgress": "{{done}} dari {{total}} selesai",
+    "noCards": "Kosong",
+    "statusLabel": "Status {{key}}",
+    "noSprintTitle": "Belum ada sprint aktif",
+    "noSprintDetail": "Mulai sprint di backlog, maka item-nya muncul di sini.",
+    "openBacklog": "Buka backlog",
+    "noMatch": "Tidak ada kartu yang cocok dengan filter ini.",
+    "retry": "Coba lagi",
+    "error": "Papan tidak dapat dimuat."
   }
 }

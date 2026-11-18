@@ -12,6 +12,7 @@ import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { useReportsViewModel } from '@/features/projects/viewmodels/use-reports.viewmodel'
+import { useSprintBoardViewModel } from '@/features/projects/viewmodels/use-sprint-board.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
 import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
@@ -139,6 +140,13 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     { canEdit, canApprove: planning.access.canApprove, canManage: planning.access.canManage },
   )
 
+  const sprintBoard = useSprintBoardViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && planning.section === 'board',
+    canEdit,
+  )
+
   const reports = useReportsViewModel(
     workspaceId,
     selectedProject?.id,
@@ -157,6 +165,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     selectedProject,
     planning,
     backlog,
+    sprintBoard,
     reports,
     taskComments,
     canSeeTaskComments,

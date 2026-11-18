@@ -124,3 +124,28 @@ export const BACKLOG_TEXT = {
 // The key of the word for a status. A status this page has no word for shows as To do rather than as a raw key.
 export const statusTextKey = (status: string): string =>
   status in BACKLOG_TEXT.status ? BACKLOG_TEXT.status[status as keyof typeof BACKLOG_TEXT.status] : BACKLOG_TEXT.status.todo
+
+// Locale keys for the sprint board. The words live in planning.json, under "sprintBoard".
+export const SPRINT_BOARD_TEXT = {
+  title: 'planning:sprintBoard.title',
+  subtitle: 'planning:sprintBoard.subtitle',
+  search: 'planning:sprintBoard.search',
+  mine: 'planning:sprintBoard.mine',
+  groupLabel: 'planning:sprintBoard.groupLabel',
+  groupItem: 'planning:sprintBoard.groupItem',
+  groupEpic: 'planning:sprintBoard.groupEpic',
+  columns: {
+    todo: 'planning:sprintBoard.columns.todo',
+    in_progress: 'planning:sprintBoard.columns.in_progress',
+    done: 'planning:sprintBoard.columns.done',
+  },
+  laneProgress: 'planning:sprintBoard.laneProgress',
+  noCards: 'planning:sprintBoard.noCards',
+  statusLabel: 'planning:sprintBoard.statusLabel',
+  noSprintTitle: 'planning:sprintBoard.noSprintTitle',
+  noSprintDetail: 'planning:sprintBoard.noSprintDetail',
+  openBacklog: 'planning:sprintBoard.openBacklog',
+  noMatch: 'planning:sprintBoard.noMatch',
+  retry: 'planning:sprintBoard.retry',
+  error: 'planning:sprintBoard.error',
+} as const
