@@ -378,12 +378,13 @@ function BacklogItem({
           <span>{row.assignee}</span>
           {row.isDraft && <Badge variant="outline">{t(BACKLOG_TEXT.unpublished)}</Badge>}
           {row.outdated && <Badge variant="warning">{t(BACKLOG_TEXT.outdated)}</Badge>}
-          {row.gaps.map((gap) => (
-            <Badge key={gap.id} variant="warning">
-              {gap.label}
-            </Badge>
-          ))}
-          {row.ready && <Badge variant="success">{t(BACKLOG_TEXT.ready)}</Badge>}
+          {sprintId === null &&
+            row.gaps.map((gap) => (
+              <Badge key={gap.id} variant="warning">
+                {gap.label}
+              </Badge>
+            ))}
+          {sprintId === null && row.ready && <Badge variant="success">{t(BACKLOG_TEXT.ready)}</Badge>}
         </div>
       </div>
       <div className="flex items-center gap-1">
