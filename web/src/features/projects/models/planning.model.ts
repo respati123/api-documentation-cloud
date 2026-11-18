@@ -41,6 +41,14 @@ export const documentVersionSchema = z.object({
   createdAt: z.string(),
 })
 
+// The planning routes answer with the statuses of the issue model: an epic that nothing has started is todo, and a story
+// can be in_design or in_qa. These screens know the older six, so each is read as the one it replaced.
+const LEGACY_ITEM_STATUS: Record<string, string> = { todo: 'ready', in_design: 'refinement', in_qa: 'review' }
+const itemStatusSchema = z.pipe(
+  z.transform((value: unknown) => (typeof value === 'string' ? (LEGACY_ITEM_STATUS[value] ?? value) : value)),
+  planningStatusSchema,
+)
+
 export const planningItemSchema = z.object({
   id: z.string(),
   kind: z.enum(['epic', 'story']),
@@ -48,7 +56,7 @@ export const planningItemSchema = z.object({
   title: z.string(),
   description: z.string(),
   acceptanceCriteria: z.string(),
-  status: planningStatusSchema,
+  status: itemStatusSchema,
   publishedAt: z.nullable(z.string()),
   sourceDocumentId: z.nullable(z.string()),
   sourceVersion: z.nullable(z.number()),
