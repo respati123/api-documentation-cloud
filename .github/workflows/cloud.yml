@@ -164,6 +164,7 @@ jobs:
           load: true
           build-args: |
             APP_VERSION=${{ steps.ver.outputs.app }}
+            VITE_AGILE_PROJECT=true
           tags: |
             ${{ env.IMAGE }}:${{ github.ref_name }}
             ${{ env.IMAGE }}:sha-${{ github.sha }}
