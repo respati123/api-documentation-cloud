@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
+import { isCalendarDate } from '@/lib/calendar-date'
+import { findPlanningDocument } from '@/repositories/planning-documents.repository'
 import { AppError } from '@/lib/errors/app-error'
 import { type CursorKeys, cursorValues, encodeCursor, pageOf } from '@/lib/pagination'
 import {
@@ -96,6 +98,7 @@ export async function createIssue(db: SQL, scope: IssueScope, actor: Actor, inpu
 // create it. A bulk creation calls this for every issue in one transaction, so it keeps all of them or none.
 export async function insertNewIssue(tx: SQL, scope: IssueScope, actor: Actor, input: CreateIssueInput): Promise<string> {
   const fields = await validatedFields(tx, scope, input)
+  const source = await sourceOf(tx, scope, input)
   const issueId = randomUUID()
   const rank = isBacklogItem(input.type) ? ((await lastRank(tx, scope.projectId)) ?? 0) + RANK_STEP : null
   await insertIssue(tx, {
@@ -114,8 +117,8 @@ export async function insertNewIssue(tx: SQL, scope: IssueScope, actor: Actor, i
     role: input.type === 'subtask' ? fields.role : null,
     assigneeId: fields.assigneeId,
     dueDate: fields.dueDate,
-    sourceDocumentId: input.sourceDocumentId ?? null,
-    sourceVersion: input.sourceVersion ?? null,
+    sourceDocumentId: source.documentId,
+    sourceVersion: source.version,
     sourceSection: input.sourceSection ?? null,
     // Epics and stories wait for an approver to publish them. Agents only draft.
     published: !isAgent(actor) && (input.type === 'task' || input.type === 'bug' || input.type === 'subtask'),
@@ -123,6 +126,16 @@ export async function insertNewIssue(tx: SQL, scope: IssueScope, actor: Actor, i
   })
   await logEvent(tx, scope, actor, issueId, 'issue.created', { type: input.type })
   return issueId
+}
+
+// The document an issue comes from has to be one of this workspace, at a version it has. Without a version it is the current one.
+async function sourceOf(db: SQL, scope: IssueScope, input: CreateIssueInput): Promise<{ documentId: string | null; version: number | null }> {
+  if (!input.sourceDocumentId) return { documentId: null, version: input.sourceVersion ?? null }
+  const document = await findPlanningDocument(db, scope.workspaceId, input.sourceDocumentId)
+  if (!document) throw invalid()
+  const version = input.sourceVersion ?? document.currentVersion
+  if (version < 1 || version > document.currentVersion) throw invalid()
+  return { documentId: document.id, version }
 }
 
 export async function getIssue(db: SQL, scope: IssueScope, actor: Actor, ref: string): Promise<IssueRow> {
@@ -322,6 +335,6 @@ function priorityOf(value: unknown): IssuePriority {
 
 function dueDateOf(value: string | null): string | null {
   if (value === null) return null
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) throw invalid()
+  if (!isCalendarDate(value)) throw invalid()
   return value
 }

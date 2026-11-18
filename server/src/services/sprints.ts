@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
+import { calendarDayNumber } from '@/lib/calendar-date'
 import { AppError } from '@/lib/errors/app-error'
 import { isBacklogItem, type IssueRow, statusCategory } from '@/models/issue'
 import { findIssue } from '@/repositories/issues.repository'
@@ -225,9 +226,7 @@ function validatedSprint(input: SprintInput) {
 }
 
 function daysBetween(from: unknown, to: unknown): number | null {
-  const pattern = /^\d{4}-\d{2}-\d{2}$/
-  if (typeof from !== 'string' || typeof to !== 'string' || !pattern.test(from) || !pattern.test(to)) return null
-  const start = Date.parse(from)
-  const end = Date.parse(to)
-  return Number.isNaN(start) || Number.isNaN(end) ? null : Math.round((end - start) / 86_400_000)
+  const start = calendarDayNumber(from)
+  const end = calendarDayNumber(to)
+  return start === null || end === null ? null : end - start
 }

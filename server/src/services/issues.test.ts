@@ -135,6 +135,27 @@ describe.skipIf(!databaseEnabled)('issues service', () => {
       }
     })
 
+    test('a source document must belong to the workspace, and the version must exist', async () => {
+      const mine = randomUUID()
+      await db`INSERT INTO planning_documents (id, workspace_id, project_id, kind, title, status, current_version, created_by) VALUES (${mine}, ${workspaceId}, ${projectId}, 'prd', 'Mine', 'approved', 2, ${ownerId})`
+      for (const version of [1, 2]) await db`INSERT INTO planning_document_versions (document_id, version, content, created_by) VALUES (${mine}, ${version}, '# PRD', ${ownerId})`
+      const stranger = (await seedUser(db)).id
+      const foreignWorkspace = (await seedWorkspace(db, stranger)).workspaceId
+      const foreignProject = randomUUID()
+      await db`INSERT INTO projects (id, workspace_id, name, created_by, key) VALUES (${foreignProject}, ${foreignWorkspace}, 'Theirs', ${stranger}, 'THRS')`
+      const foreign = randomUUID()
+      await db`INSERT INTO planning_documents (id, workspace_id, project_id, kind, title, status, current_version, created_by) VALUES (${foreign}, ${foreignWorkspace}, ${foreignProject}, 'prd', 'Theirs', 'approved', 9, ${stranger})`
+      await db`INSERT INTO planning_document_versions (document_id, version, content, created_by) VALUES (${foreign}, 9, '# PRD', ${stranger})`
+      const make = (input: Record<string, unknown>) => createIssue(db, scope(), as('pm'), { type: 'task', title: 'Sourced', ...input } as never)
+
+      await rejectsWith(() => make({ sourceDocumentId: foreign, sourceVersion: 1 }), 'ISSUE_INPUT_INVALID')
+      await rejectsWith(() => make({ sourceDocumentId: randomUUID() }), 'ISSUE_INPUT_INVALID')
+      await rejectsWith(() => make({ sourceDocumentId: mine, sourceVersion: 3 }), 'ISSUE_INPUT_INVALID')
+      expect((await make({ sourceDocumentId: mine, sourceVersion: 2 })).sourceVersion).toBe(2)
+      expect((await make({ sourceDocumentId: mine })).sourceVersion).toBe(2)
+      expect((await make({})).sourceDocumentId).toBeNull()
+    })
+
     test('bad input is refused', async () => {
       const invalid = (input: Record<string, unknown>) =>
         rejectsWith(() => createIssue(db, scope(), as('pm'), { type: 'task', title: 'Ok', ...input } as never), 'ISSUE_INPUT_INVALID')
@@ -143,6 +164,7 @@ describe.skipIf(!databaseEnabled)('issues service', () => {
       await invalid({ points: 4 })
       await invalid({ priority: 'asap' })
       await invalid({ dueDate: 'tomorrow' })
+      await invalid({ dueDate: '2026-02-30' })
       await invalid({ assigneeId: people.outsider })
       await invalid({ parentId: randomUUID() })
       await rejectsWith(() => createIssue(db, scope(), as('pm'), { type: 'epic', title: 'E', points: 3 }), 'ISSUE_INPUT_INVALID')

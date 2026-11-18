@@ -76,6 +76,8 @@ describe.skipIf(!databaseEnabled)('sprints service', () => {
       await bad({ endsOn: days(-1) })
       await bad({ endsOn: days(29) })
       await bad({ startsOn: 'soon' })
+      await bad({ startsOn: '2026-02-30', endsOn: '2026-03-10' })
+      await bad({ startsOn: '2026-03-01', endsOn: '2026-04-31' })
       await createSprint(world.db, scope, world.as('pm'), sprintInput({ endsOn: days(28) }))
     })
 
