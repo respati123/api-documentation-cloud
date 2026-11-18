@@ -138,4 +138,11 @@ export const MCP_TOOL_TEXT: Record<string, string> = {
   notifications_mark_read: 'mcp:tool.notifications_mark_read',
   team_members_list: 'mcp:tool.team_members_list',
   discussion_read: 'mcp:tool.discussion_read',
+  backlog_list: 'mcp:tool.backlog_list',
+  sprint_get_active: 'mcp:tool.sprint_get_active',
+  issue_read: 'mcp:tool.issue_read',
+  issue_draft: 'mcp:tool.issue_draft',
+  issue_comment: 'mcp:tool.issue_comment',
+  subtask_update_status: 'mcp:tool.subtask_update_status',
+  checklist_set_done: 'mcp:tool.checklist_set_done',
 }

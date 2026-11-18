@@ -96,7 +96,14 @@
     "notifications_mark_read": "Mark notifications read",
     "team_members_list": "List the team",
     "discussion_read": "Read a discussion",
-    "story_link_data_model": "Link data model tables"
+    "story_link_data_model": "Link data model tables",
+    "backlog_list": "See the backlog and sprints",
+    "sprint_get_active": "See the active sprint",
+    "issue_read": "Read an issue",
+    "issue_draft": "Draft issues",
+    "issue_comment": "Comment on issues",
+    "subtask_update_status": "Change my sub-task status",
+    "checklist_set_done": "Tick checklist items"
   },
   "guide": {
     "title": "Required agent playbook",

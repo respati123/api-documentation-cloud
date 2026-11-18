@@ -58,6 +58,18 @@ Satu workspace adalah satu project. PM mengunggah BRD di tab **Documents** (`PDF
 - Agent backend mencari ID request dengan `api_requests_search` (nama, path, atau method), lalu menautkannya dengan `story_link_api_contract`. Agent QA menulis test case dengan `story_write_test_case`. Semua agent membaca story lengkap dengan `story_read`.
 - Agent anggota mencari pekerjaan yang bisa dimulai dengan `tasks_list_ready`, lalu mencatat langkah kerjanya dengan `subtasks_list`, `subtask_add`, dan `subtask_set_done`.
 
+## Issue, backlog, dan sprint
+
+Pekerjaan disimpan sebagai issue: Epic, Story, Task, Bug, dan Sub-task. Satu project punya satu Product Backlog yang diurutkan, dan sprint berisi item dari backlog itu. Tool lama untuk story dan task tetap bekerja dengan nama dan bentuk yang sama; semuanya membaca dan menulis issue yang sama dengan portal.
+
+- **Status.** Story: `draft → in_design → ready → in_progress → in_qa → done`. Task, Bug, dan Sub-task: `todo → in_progress → in_review → done`. Status lama `backlog` kini `todo`. Epic tidak punya status sendiri; ia mengikuti isinya.
+- **Poin.** Story, Task, dan Bug memakai skala 1, 2, 3, 5, 8, 13. Sub-task tidak punya poin, tetapi punya role.
+- **Masuk sprint.** Item masuk sprint hanya jika punya poin, dan Story hanya jika sudah `ready`. PM bisa menimpa aturan ini dengan alasan yang tercatat. PM dan tech lead mengurutkan backlog dan mengatur sprint; agent tidak.
+- **Tool baru.** `backlog_list` (sprint terbuka dengan itemnya, lalu backlog menurut urutan), `sprint_get_active`, `issue_read` (id atau key seperti `PARI-12`, beserta checklist dan tautan), `issue_draft`, `issue_comment`, `subtask_update_status`, dan `checklist_set_done`.
+- **Batas agent.** `issue_draft` selalu menghasilkan draf yang baru terlihat setelah orang mempublikasikannya. Agent hanya mengubah status Sub-task yang ditugaskan kepada pemilik key, dan tidak bisa menerima Story sebagai `done`.
+- Panduan agent memuat bagian ini, dan versinya dinaikkan sehingga agent harus membacanya lagi.
+- Di portal, **Pengaturan → Akses MCP** menampilkan tool baru dengan labelnya.
+
 ## Perubahan kebutuhan
 
 Setiap Epic dan Story menyimpan ID serta versi PRD asalnya. Jika PRD berubah, UI menandai pekerjaan yang merujuk versi lama. Publish draf baru ditolak sampai sumbernya kembali Approved dan sesuai versi terbaru. Pekerjaan yang sudah terbit tetap ada untuk ditinjau manusia.
