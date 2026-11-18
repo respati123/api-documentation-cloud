@@ -58,6 +58,26 @@ describe.skipIf(!databaseEnabled)('dropping the legacy planning tables (migratio
     expect(await missing()).toEqual({ 'planning items': 0, tasks: 0, 'checklist lines': 0, dependencies: 0 })
   })
 
+  test('the drop refuses to run while something the data move should have copied is missing, and leaves every table in place', async () => {
+    const stillThere = async () => (await exists('tasks_legacy')) && (await exists('task_subtasks_legacy')) && (await exists('planning_items_legacy')) && (await exists('task_dependencies'))
+
+    await db`DELETE FROM issue_checklist_items WHERE id = 'c1'`
+    await expect(scratch.applySql(DROP)).rejects.toThrow()
+    expect(await stillThere()).toBe(true)
+    await db`INSERT INTO issue_checklist_items (id, issue_id, title, done, position) VALUES ('c1', 't1', 'line', false, 1)`
+
+    await db`DELETE FROM issue_links`
+    await expect(scratch.applySql(DROP)).rejects.toThrow()
+    expect(await stillThere()).toBe(true)
+    await db`INSERT INTO issue_links (id, from_id, to_id, kind, created_by) VALUES ('k1', 't1', 't2', 'blocks', 'u1')`
+
+    const [{ id }] = await db`SELECT id FROM issues WHERE id = 'e1'`
+    await db`INSERT INTO planning_items_legacy (id, workspace_id, kind, parent_id, title, description, acceptance_criteria, status, published_at, source_document_id, source_version, source_section, created_by) SELECT 'ghost', workspace_id, kind, NULL, 'Ghost', '', '', status, published_at, source_document_id, source_version, source_section, created_by FROM planning_items_legacy WHERE id = ${id}`
+    await expect(scratch.applySql(DROP)).rejects.toThrow()
+    expect(await stillThere()).toBe(true)
+    await db`DELETE FROM planning_items_legacy WHERE id = 'ghost'`
+  })
+
   const GONE = ['planning_items_legacy', 'tasks_legacy', 'task_subtasks_legacy', 'task_dependencies']
 
   test('the legacy tables are there after the data move, and gone after the drop', async () => {
@@ -75,8 +95,8 @@ describe.skipIf(!databaseEnabled)('dropping the legacy planning tables (migratio
     }
   })
 
-  test('running the drop again does no harm', async () => {
-    await scratch.applySql(DROP)
+  test('a second run stops at the guard, as the tables are gone, and the runner never makes one', async () => {
+    await expect(scratch.applySql(DROP)).rejects.toThrow()
     for (const name of GONE) expect(await exists(name)).toBe(false)
   })
 })
