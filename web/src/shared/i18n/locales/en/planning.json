@@ -498,7 +498,8 @@
       "removeFromSprint": "Remove from sprint",
       "points": "Points",
       "rowMenu": "More actions",
-      "rankHint": "Clear the epic filter to move items in the order of the backlog."
+      "rankHint": "Clear the epic filter to move items in the order of the backlog.",
+      "drag": "Drag to reorder or to move to another list"
     },
     "issueDialog": {
       "title": "New issue",

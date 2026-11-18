@@ -498,7 +498,8 @@
       "removeFromSprint": "Keluarkan dari sprint",
       "points": "Poin",
       "rowMenu": "Aksi lainnya",
-      "rankHint": "Hapus saringan epic untuk memindahkan item sesuai urutan backlog."
+      "rankHint": "Hapus saringan epic untuk memindahkan item sesuai urutan backlog.",
+      "drag": "Seret untuk mengurutkan atau pindah ke daftar lain"
     },
     "issueDialog": {
       "title": "Issue baru",

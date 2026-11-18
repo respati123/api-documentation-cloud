@@ -61,3 +61,15 @@ export function epicCounts(
   }
   return { byEpic, withoutEpic }
 }
+
+// Where a dropped item lands in a list: between the item above and the item below its new index. The item itself is left out
+// of the list first, so the same index means the same place whether it came from this list or another.
+export function dropPlacement(
+  lists: Record<string, string[]>,
+  group: string,
+  issueId: string,
+  index: number,
+): { afterId: string | null; beforeId: string | null } {
+  const others = (lists[group] ?? []).filter((id) => id !== issueId)
+  return { afterId: others[index - 1] ?? null, beforeId: others[index] ?? null }
+}

@@ -29,12 +29,20 @@ export interface BacklogActionsInput {
 }
 
 type Text = (key: string, options?: Record<string, unknown>) => string
+interface Placement {
+  afterId: string | null
+  beforeId: string | null
+}
 interface PendingOverride {
   issueId: string
   sprintId: string
   title: string
   missing: string[]
+  placement?: Placement
 }
+
+// The group of the loose backlog items, beside the sprint ids, when an item is dragged between lists.
+export const BACKLOG_GROUP = 'backlog'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
@@ -120,20 +128,30 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
     },
   })
 
+  // With neither neighbour there is nothing to rank against, so the item keeps the rank it has.
+  const rankAt = async (issueId: string, placement: Placement) => {
+    if (placement.afterId === null && placement.beforeId === null) return
+    await issuesService.rank(token, workspaceId, project, issueId, placement)
+  }
+
   // --- the gate: the PM adds an item that is not ready, with a reason
   const [pending, setPending] = useState<PendingOverride | null>(null)
   const [reason, setReason] = useState('')
   const override = useMutation({
-    mutationFn: () =>
-      issuesService.addSprintItem(token, workspaceId, project, pending?.sprintId ?? '', pending?.issueId ?? '', reason.trim()),
+    mutationFn: async () => {
+      await issuesService.addSprintItem(token, workspaceId, project, pending?.sprintId ?? '', pending?.issueId ?? '', reason.trim())
+      if (pending?.placement) await rankAt(pending.issueId, pending.placement)
+    },
     onSuccess: async () => {
       setPending(null)
       await refresh()
     },
   })
   const addToSprint = useMutation({
-    mutationFn: (input: { issueId: string; sprintId: string; title: string }) =>
-      issuesService.addSprintItem(token, workspaceId, project, input.sprintId, input.issueId),
+    mutationFn: async (input: { issueId: string; sprintId: string; title: string; placement?: Placement }) => {
+      await issuesService.addSprintItem(token, workspaceId, project, input.sprintId, input.issueId)
+      if (input.placement) await rankAt(input.issueId, input.placement)
+    },
     onMutate: () => setRowError(null),
     onSuccess: refresh,
     onError: (error, input) => {
@@ -180,6 +198,22 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
           : { afterId: ids[index + 1], beforeId: ids[index + 2] ?? null }
       if ((direction === 'up' && index < 1) || (direction === 'down' && index >= ids.length - 1)) return
       row.mutate(() => issuesService.rank(token, workspaceId, project, ids[index], placement))
+    },
+    // An item dropped on a list: ranked in its own list, or moved to another list and ranked there. A sprint accepts it
+    // only through the same gate as the menu, so a refusal asks the PM for a reason.
+    drop: (input: { issueId: string; title: string; from: string; to: string } & Placement) => {
+      if (!access.canApprove) return
+      const placement = { afterId: input.afterId, beforeId: input.beforeId }
+      if (input.from === input.to) {
+        row.mutate(() => rankAt(input.issueId, placement))
+      } else if (input.to === BACKLOG_GROUP) {
+        row.mutate(async () => {
+          await issuesService.removeSprintItem(token, workspaceId, project, input.from, input.issueId)
+          await rankAt(input.issueId, placement)
+        })
+      } else {
+        addToSprint.mutate({ issueId: input.issueId, sprintId: input.to, title: input.title, placement })
+      }
     },
     addToSprint: (issueId: string, sprintId: string, issueTitle: string) => addToSprint.mutate({ issueId, sprintId, title: issueTitle }),
     removeFromSprint: (sprintId: string, issueId: string) =>

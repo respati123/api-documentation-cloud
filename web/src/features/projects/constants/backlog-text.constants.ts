@@ -56,6 +56,7 @@ export const BACKLOG_TEXT = {
     startSprint: 'planning:backlog.actions.startSprint',
     closeSprint: 'planning:backlog.actions.closeSprint',
     publish: 'planning:backlog.actions.publish',
+    drag: 'planning:backlog.actions.drag',
     moveUp: 'planning:backlog.actions.moveUp',
     moveDown: 'planning:backlog.actions.moveDown',
     addToSprint: 'planning:backlog.actions.addToSprint',

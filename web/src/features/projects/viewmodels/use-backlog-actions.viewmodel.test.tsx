@@ -315,3 +315,72 @@ describe('the Product Goal', () => {
     await waitFor(() => expect(result.current.goalDialog.open).toBe(false))
   })
 })
+
+describe('dropping an item', () => {
+  const placed = { afterId: 'x', beforeId: 'y' }
+  const drop = (over: Record<string, unknown> = {}) => ({
+    issueId: 'i1',
+    title: 'Pay with a card',
+    from: 's1',
+    to: 's1',
+    ...placed,
+    ...over,
+  })
+
+  test('inside its own list it is only ranked', async () => {
+    service.rank.mockResolvedValue({} as never)
+    const { result } = setup()
+    act(() => result.current.drop(drop()))
+    await waitFor(() => expect(service.rank).toHaveBeenCalledWith('t', 'w1', 'p1', 'i1', placed))
+    expect(service.addSprintItem).not.toHaveBeenCalled()
+    expect(service.removeSprintItem).not.toHaveBeenCalled()
+  })
+
+  test('into the backlog it leaves its sprint, then is ranked', async () => {
+    service.removeSprintItem.mockResolvedValue(undefined as never)
+    service.rank.mockResolvedValue({} as never)
+    const { result } = setup()
+    act(() => result.current.drop(drop({ from: 's1', to: 'backlog' })))
+    await waitFor(() => expect(service.rank).toHaveBeenCalledWith('t', 'w1', 'p1', 'i1', placed))
+    expect(service.removeSprintItem).toHaveBeenCalledWith('t', 'w1', 'p1', 's1', 'i1')
+  })
+
+  test('into a sprint it is added, then ranked', async () => {
+    service.addSprintItem.mockResolvedValue(undefined as never)
+    service.rank.mockResolvedValue({} as never)
+    const { result } = setup()
+    act(() => result.current.drop(drop({ from: 'backlog', to: 's2' })))
+    await waitFor(() => expect(service.rank).toHaveBeenCalledWith('t', 'w1', 'p1', 'i1', placed))
+    expect(service.addSprintItem).toHaveBeenCalledWith('t', 'w1', 'p1', 's2', 'i1')
+  })
+
+  test('into an empty sprint it is added and not ranked, as there is nothing to rank it against', async () => {
+    service.addSprintItem.mockResolvedValue(undefined as never)
+    const { result } = setup()
+    act(() => result.current.drop(drop({ from: 'backlog', to: 's2', afterId: null, beforeId: null })))
+    await waitFor(() => expect(service.addSprintItem).toHaveBeenCalled())
+    expect(service.rank).not.toHaveBeenCalled()
+  })
+
+  test('when the gate refuses the PM, the reason is asked for and the item is ranked after it is added', async () => {
+    service.addSprintItem.mockRejectedValueOnce(
+      new ApiError('Not ready.', 409, { code: 'SPRINT_ITEM_NOT_READY', details: { missing: ['points'] } }),
+    )
+    service.addSprintItem.mockResolvedValueOnce(undefined as never)
+    service.rank.mockResolvedValue({} as never)
+    const { result } = setup(PM)
+    act(() => result.current.drop(drop({ from: 'backlog', to: 's2' })))
+    await waitFor(() => expect(result.current.overrideDialog.open).toBe(true))
+    expect(service.rank).not.toHaveBeenCalled()
+    act(() => result.current.overrideDialog.setReason('Urgent'))
+    act(() => result.current.overrideDialog.onSubmit())
+    await waitFor(() => expect(service.rank).toHaveBeenCalledWith('t', 'w1', 'p1', 'i1', placed))
+    expect(service.addSprintItem).toHaveBeenLastCalledWith('t', 'w1', 'p1', 's2', 'i1', 'Urgent')
+  })
+
+  test('someone who may not plan changes nothing', () => {
+    const { result } = setup(MEMBER)
+    act(() => result.current.drop(drop()))
+    expect(service.rank).not.toHaveBeenCalled()
+  })
+})

@@ -295,4 +295,14 @@ describe('BacklogView', () => {
     rerender(<BacklogView vm={props()} />)
     expect(screen.queryByTestId('backlog-open-c')).toBeNull()
   })
+
+  test('every list takes drops, and a drag handle shows only when the person may order the backlog', () => {
+    const { rerender } = render(<BacklogView vm={props()} />)
+    expect(screen.getByTestId('backlog-list-s1')).toBeInTheDocument()
+    expect(screen.getByTestId('backlog-list-backlog')).toBeInTheDocument()
+    expect(screen.queryByTestId('backlog-drag-c')).toBeNull()
+    rerender(<BacklogView vm={props({ rankEnabled: true })} />)
+    expect(screen.getByTestId('backlog-drag-c')).toBeInTheDocument()
+    expect(screen.getByTestId('backlog-drag-a')).toBeInTheDocument()
+  })
 })

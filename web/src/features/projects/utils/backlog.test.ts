@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { daysLeft, epicCounts, filterByEpic, NO_EPIC, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
+import { daysLeft, dropPlacement, epicCounts, filterByEpic, NO_EPIC, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
 
 describe('readyGaps', () => {
   test('a story needs to be Ready and have points, a task only needs points', () => {
@@ -52,5 +52,29 @@ describe('epic filter', () => {
 
   test('counts per epic, with epics that hold nothing at zero', () => {
     expect(epicCounts([{ id: 'e1' }, { id: 'e2' }, { id: 'e3' }], issues)).toEqual({ byEpic: { e1: 2, e2: 1, e3: 0 }, withoutEpic: 1 })
+  })
+})
+
+describe('dropPlacement', () => {
+  const lists = { s1: ['a', 'b', 'c'], backlog: ['x', 'y'], empty: [] as string[] }
+
+  test('in the same list the item takes the neighbours at its new place, without itself', () => {
+    expect(dropPlacement(lists, 's1', 'a', 2)).toEqual({ afterId: 'c', beforeId: null })
+    expect(dropPlacement(lists, 's1', 'a', 1)).toEqual({ afterId: 'b', beforeId: 'c' })
+    expect(dropPlacement(lists, 's1', 'c', 0)).toEqual({ afterId: null, beforeId: 'a' })
+    expect(dropPlacement(lists, 's1', 'a', 0)).toEqual({ afterId: null, beforeId: 'b' })
+  })
+
+  test('in another list it goes between the items at that index', () => {
+    expect(dropPlacement(lists, 'backlog', 'a', 1)).toEqual({ afterId: 'x', beforeId: 'y' })
+    expect(dropPlacement(lists, 'backlog', 'a', 2)).toEqual({ afterId: 'y', beforeId: null })
+  })
+
+  test('into an empty list there is nothing to place it against', () => {
+    expect(dropPlacement(lists, 'empty', 'a', 0)).toEqual({ afterId: null, beforeId: null })
+  })
+
+  test('an unknown list has no neighbours', () => {
+    expect(dropPlacement(lists, 'nowhere', 'a', 3)).toEqual({ afterId: null, beforeId: null })
   })
 })
