@@ -9,6 +9,7 @@ import { projectsService } from '@/features/projects/services/projects.service'
 import { isOverdue } from '@/features/projects/utils/planning'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
 import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
+import { useIssueDetailViewModel } from '@/features/projects/viewmodels/use-issue-detail.viewmodel'
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { useReportsViewModel } from '@/features/projects/viewmodels/use-reports.viewmodel'
@@ -140,6 +141,12 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     { canEdit, canApprove: planning.access.canApprove, canManage: planning.access.canManage },
   )
 
+  const issueDetail = useIssueDetailViewModel(workspaceId, selectedProject?.id, {
+    canEdit,
+    canApprove: planning.access.canApprove,
+    canManage: planning.access.canManage,
+  })
+
   const sprintBoard = useSprintBoardViewModel(
     workspaceId,
     selectedProject?.id,
@@ -166,6 +173,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     planning,
     backlog,
     sprintBoard,
+    issueDetail,
     reports,
     taskComments,
     canSeeTaskComments,

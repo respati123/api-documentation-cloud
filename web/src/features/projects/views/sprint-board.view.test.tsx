@@ -130,4 +130,13 @@ describe('SprintBoardView', () => {
     render(<SprintBoardView vm={props({ moveError: 'A sub-task is not done.' })} onOpenBacklog={vi.fn()} />)
     expect(screen.getByTestId('sprint-board-move-error')).toHaveTextContent('A sub-task is not done.')
   })
+
+  test('the title of a card opens the issue when the screen can show it', () => {
+    const onOpenIssue = vi.fn()
+    const { rerender } = render(<SprintBoardView vm={props()} onOpenBacklog={vi.fn()} onOpenIssue={onOpenIssue} />)
+    fireEvent.click(screen.getByTestId('sprint-board-open-a'))
+    expect(onOpenIssue).toHaveBeenCalledWith('a')
+    rerender(<SprintBoardView vm={props()} onOpenBacklog={vi.fn()} />)
+    expect(screen.queryByTestId('sprint-board-open-a')).toBeNull()
+  })
 })

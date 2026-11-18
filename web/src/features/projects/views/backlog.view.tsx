@@ -26,7 +26,7 @@ export type BacklogProps = ReturnType<typeof useBacklogViewModel>
 const CATEGORY_TONE: Record<BacklogRow['category'], StatusTone> = { todo: 'todo', in_progress: 'progress', done: 'done' }
 
 // The Backlog tab: the open sprints with their items, the loose items below, and the epics on the side.
-export function BacklogView({ vm }: { vm: BacklogProps }) {
+export function BacklogView({ vm, onOpenIssue }: { vm: BacklogProps; onOpenIssue?: (id: string) => void }) {
   const { t } = useTranslation('planning')
 
   if (vm.status === 'loading') {
@@ -128,7 +128,7 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
               {sprint.rows.length === 0 ? (
                 <PanelEmpty>{sprint.emptyLabel}</PanelEmpty>
               ) : (
-                <RowList rows={sprint.rows} vm={vm} sprintId={sprint.id} />
+                <RowList rows={sprint.rows} vm={vm} sprintId={sprint.id} onOpen={onOpenIssue} />
               )}
             </Panel>
           ))}
@@ -141,7 +141,7 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
             {vm.backlog.rows.length === 0 ? (
               <PanelEmpty>{vm.backlog.emptyLabel}</PanelEmpty>
             ) : (
-              <RowList rows={vm.backlog.rows} vm={vm} sprintId={null} />
+              <RowList rows={vm.backlog.rows} vm={vm} sprintId={null} onOpen={onOpenIssue} />
             )}
             <div className="px-[18px] pb-3">
               <LoadMoreButton
@@ -254,12 +254,22 @@ function EpicFilter({
   )
 }
 
-function RowList({ rows, vm, sprintId }: { rows: BacklogRow[]; vm: BacklogProps; sprintId: string | null }) {
+function RowList({
+  rows,
+  vm,
+  sprintId,
+  onOpen,
+}: {
+  rows: BacklogRow[]
+  vm: BacklogProps
+  sprintId: string | null
+  onOpen?: (id: string) => void
+}) {
   const ids = rows.map((row) => row.id)
   return (
     <ul className="divide-y divide-border">
       {rows.map((row, index) => (
-        <BacklogItem key={row.id} row={row} index={index} ids={ids} vm={vm} sprintId={sprintId} />
+        <BacklogItem key={row.id} row={row} index={index} ids={ids} vm={vm} sprintId={sprintId} onOpen={onOpen} />
       ))}
     </ul>
   )
@@ -271,12 +281,14 @@ function BacklogItem({
   ids,
   vm,
   sprintId,
+  onOpen,
 }: {
   row: BacklogRow
   index: number
   ids: string[]
   vm: BacklogProps
   sprintId: string | null
+  onOpen?: (id: string) => void
 }) {
   const { t } = useTranslation('planning')
   const { actions } = vm
@@ -289,7 +301,19 @@ function BacklogItem({
         <CodeChip>{row.key}</CodeChip>
       </div>
       <div className="grid min-w-0 gap-1">
-        <span className="truncate text-sm font-medium">{row.title}</span>
+        {onOpen ? (
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto justify-start p-0 text-sm font-medium text-foreground"
+            data-testid={`backlog-open-${row.id}`}
+            onClick={() => onOpen(row.id)}
+          >
+            <span className="truncate">{row.title}</span>
+          </Button>
+        ) : (
+          <span className="truncate text-sm font-medium">{row.title}</span>
+        )}
         <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted-foreground">
           <Badge variant="outline">{row.typeLabel}</Badge>
           {row.statusLabel && <Badge variant="secondary">{row.statusLabel}</Badge>}

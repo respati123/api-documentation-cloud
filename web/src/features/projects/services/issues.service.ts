@@ -83,6 +83,15 @@ export const issuesService = {
     return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
   },
 
+  // What sits under an issue: the items of an epic, or the sub-tasks of an item.
+  children: async (token: string, workspaceId: string, projectId: string, parentId: string, cursor?: string | null) => {
+    const page = await apiPage(
+      `/api/workspaces/${workspaceId}${at(projectId, `/issues?epic=${encodeURIComponent(parentId)}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)}`,
+      { token },
+    )
+    return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
+  },
+
   issue: async (token: string, workspaceId: string, projectId: string, ref: string) =>
     z.parse(issueOf, await workspaceCall(workspaceId, at(projectId, `/issues/${encodeURIComponent(ref)}`), { token })).issue,
   create: async (token: string, workspaceId: string, projectId: string, input: NewIssueInput) =>

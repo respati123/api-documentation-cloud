@@ -647,5 +647,54 @@
     "noMatch": "Tidak ada kartu yang cocok dengan filter ini.",
     "retry": "Coba lagi",
     "error": "Papan tidak dapat dimuat."
+  },
+  "issueDetail": {
+    "description": "Deskripsi",
+    "noDescription": "Belum ada deskripsi.",
+    "acceptance": "Kriteria penerimaan",
+    "noAcceptance": "Belum ada kriteria penerimaan.",
+    "properties": "Detail",
+    "status": "Status",
+    "statusComputed": "Mengikuti item di bawahnya",
+    "points": "Poin",
+    "priority": "Prioritas",
+    "assignee": "Penanggung jawab",
+    "parent": "Induk",
+    "noParent": "Tidak ada",
+    "sprint": "Sprint",
+    "inSprint": "Di sprint yang berjalan",
+    "notInSprint": "Tidak di sprint",
+    "subtasks": "Sub-task",
+    "items": "Item",
+    "noChildren": "Belum ada isi di bawah issue ini.",
+    "checklist": "Checklist",
+    "checklistDone": "{{done}} dari {{total}} selesai",
+    "noChecklist": "Belum ada item checklist.",
+    "checklistAdd": "Tambah item checklist",
+    "checklistAddButton": "Tambah",
+    "checklistDelete": "Hapus {{title}}",
+    "checklistTick": "Tandai {{title}} selesai",
+    "links": "Tautan",
+    "noLinks": "Tidak ada tautan.",
+    "link": {
+      "out": {
+        "blocks": "Menghalangi",
+        "relates": "Terkait dengan",
+        "found_in": "Ditemukan di"
+      },
+      "in": {
+        "blocks": "Dihalangi oleh",
+        "relates": "Terkait dengan",
+        "found_in": "Bug ditemukan di sini"
+      }
+    },
+    "outdated": "PRD berubah setelah ini ditulis. Periksa apakah masih sesuai.",
+    "outdatedSprint": "PRD berubah saat item ini ada di sprint yang berjalan. Tinjau sebelum pekerjaan dilanjutkan.",
+    "markReviewed": "Tandai sudah ditinjau",
+    "close": "Tutup",
+    "loading": "Memuat issue",
+    "error": "Issue tidak dapat dimuat.",
+    "retry": "Coba lagi",
+    "moreChildren": "Tampilkan lebih banyak"
   }
 }

@@ -7,6 +7,7 @@ import { DocumentDetailView } from '@/features/projects/views/document-detail.vi
 import { DocumentsListView } from '@/features/projects/views/documents-list.view'
 import { EpicsListView } from '@/features/projects/views/epics-list.view'
 import { FlowView } from '@/features/projects/views/flow.view'
+import { IssueDetailView } from '@/features/projects/views/issue-detail.view'
 import { ItemDetailView } from '@/features/projects/views/item-detail.view'
 import { PlanningDialogsView } from '@/features/projects/views/planning-dialogs.view'
 import { Notice } from '@/features/projects/views/planning-marks.view'
@@ -97,11 +98,11 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
                 onNewStory={(epicId) => planning.dialogs.item.onOpen(epicId)}
               />
             ))}
-          {planning.section === 'backlog' && <BacklogView vm={vm.backlog} />}
+          {planning.section === 'backlog' && <BacklogView vm={vm.backlog} onOpenIssue={vm.issueDetail.open} />}
           {planning.section === 'board' &&
             vm.selectedProject &&
             (AGILE_PROJECT_ENABLED ? (
-              <SprintBoardView vm={vm.sprintBoard} onOpenBacklog={() => planning.go('backlog')} />
+              <SprintBoardView vm={vm.sprintBoard} onOpenBacklog={() => planning.go('backlog')} onOpenIssue={vm.issueDetail.open} />
             ) : (
               <TaskBoardView vm={vm} />
             ))}
@@ -109,6 +110,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
         </>
       )}
 
+      {AGILE_PROJECT_ENABLED && <IssueDetailView vm={vm.issueDetail} />}
       <PlanningDialogsView dialogs={planning.dialogs} />
     </div>
   )

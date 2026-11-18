@@ -647,5 +647,54 @@
     "noMatch": "No card matches these filters.",
     "retry": "Try again",
     "error": "The board could not be loaded."
+  },
+  "issueDetail": {
+    "description": "Description",
+    "noDescription": "No description yet.",
+    "acceptance": "Acceptance criteria",
+    "noAcceptance": "No acceptance criteria yet.",
+    "properties": "Details",
+    "status": "Status",
+    "statusComputed": "Follows its items",
+    "points": "Points",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "parent": "Parent",
+    "noParent": "None",
+    "sprint": "Sprint",
+    "inSprint": "In the running sprint",
+    "notInSprint": "Not in a sprint",
+    "subtasks": "Sub-tasks",
+    "items": "Items",
+    "noChildren": "Nothing under this issue yet.",
+    "checklist": "Checklist",
+    "checklistDone": "{{done}} of {{total}} done",
+    "noChecklist": "No checklist items yet.",
+    "checklistAdd": "Add a checklist item",
+    "checklistAddButton": "Add",
+    "checklistDelete": "Delete {{title}}",
+    "checklistTick": "Mark {{title}} as done",
+    "links": "Links",
+    "noLinks": "No links.",
+    "link": {
+      "out": {
+        "blocks": "Blocks",
+        "relates": "Relates to",
+        "found_in": "Found in"
+      },
+      "in": {
+        "blocks": "Blocked by",
+        "relates": "Relates to",
+        "found_in": "Bug found here"
+      }
+    },
+    "outdated": "The PRD changed after this was written. Check that it still fits.",
+    "outdatedSprint": "The PRD changed while this item is in the running sprint. Review it before work goes on.",
+    "markReviewed": "Mark as reviewed",
+    "close": "Close",
+    "loading": "Loading the issue",
+    "error": "The issue could not be loaded.",
+    "retry": "Try again",
+    "moreChildren": "Show more"
   }
 }

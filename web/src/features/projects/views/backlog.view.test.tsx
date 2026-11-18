@@ -286,4 +286,13 @@ describe('BacklogView', () => {
     fireEvent.click(screen.getByTestId('backlog-down-c1'))
     expect(vm.actions.move).toHaveBeenCalledWith(['c1', 'c2'], 0, 'down')
   })
+
+  test('the title opens the issue when the screen can show it, and is plain text otherwise', () => {
+    const onOpen = vi.fn()
+    const { rerender } = render(<BacklogView vm={props()} onOpenIssue={onOpen} />)
+    fireEvent.click(screen.getByTestId('backlog-open-c'))
+    expect(onOpen).toHaveBeenCalledWith('c')
+    rerender(<BacklogView vm={props()} />)
+    expect(screen.queryByTestId('backlog-open-c')).toBeNull()
+  })
 })

@@ -15,7 +15,15 @@ import { cn } from '@/shared/utils/cn'
 export type SprintBoardProps = ReturnType<typeof useSprintBoardViewModel>
 
 // The board of the active sprint: three columns by status category, and one lane for each item or epic.
-export function SprintBoardView({ vm, onOpenBacklog }: { vm: SprintBoardProps; onOpenBacklog: () => void }) {
+export function SprintBoardView({
+  vm,
+  onOpenBacklog,
+  onOpenIssue,
+}: {
+  vm: SprintBoardProps
+  onOpenBacklog: () => void
+  onOpenIssue?: (id: string) => void
+}) {
   const { t } = useTranslation('planning')
 
   if (vm.status === 'loading') {
@@ -140,7 +148,7 @@ export function SprintBoardView({ vm, onOpenBacklog }: { vm: SprintBoardProps; o
                   {column.cards.length === 0 ? (
                     <p className="text-xs text-muted-foreground/70">{t(SPRINT_BOARD_TEXT.noCards)}</p>
                   ) : (
-                    column.cards.map((card) => <Card key={card.id} card={card} onMove={vm.move} />)
+                    column.cards.map((card) => <Card key={card.id} card={card} onMove={vm.move} onOpen={onOpenIssue} />)
                   )}
                 </div>
               ))}
@@ -152,7 +160,7 @@ export function SprintBoardView({ vm, onOpenBacklog }: { vm: SprintBoardProps; o
   )
 }
 
-function Card({ card, onMove }: { card: BoardCard; onMove: (id: string, status: string) => void }) {
+function Card({ card, onMove, onOpen }: { card: BoardCard; onMove: (id: string, status: string) => void; onOpen?: (id: string) => void }) {
   const { t } = useTranslation('planning')
   return (
     <article
@@ -164,7 +172,19 @@ function Card({ card, onMove }: { card: BoardCard; onMove: (id: string, status: 
         <span>{card.typeLabel}</span>
         {card.points !== null && <Badge variant="accent">{card.points}</Badge>}
       </div>
-      <p className="text-sm font-medium">{card.title}</p>
+      {onOpen ? (
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto justify-start p-0 text-left text-sm font-medium whitespace-normal text-foreground"
+          data-testid={`sprint-board-open-${card.id}`}
+          onClick={() => onOpen(card.id)}
+        >
+          {card.title}
+        </Button>
+      ) : (
+        <p className="text-sm font-medium">{card.title}</p>
+      )}
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-xs text-muted-foreground">{card.assignee}</span>
         {card.canMove ? (
