@@ -109,6 +109,23 @@ describe.skipIf(!databaseEnabled)('draft backlog from a PRD', () => {
     expect(await count(scope.projectId)).toBe(0)
   })
 
+  test('the same story title under two epics makes a story under each, and a second run still adds nothing', async () => {
+    const scope = await freshProject()
+    const doc = await document()
+    const outline = {
+      epics: [
+        { title: 'Web', sourceSection: 'Payment', stories: [{ title: 'Login' }] },
+        { title: 'Mobile', stories: [{ title: 'Login' }] },
+      ],
+    }
+    const created = await draftBacklogFromPrd(world.db, scope, world.as('pm'), doc, outline)
+    expect(created.map((issue) => [issue.type, issue.title])).toEqual([['epic', 'Web'], ['story', 'Login'], ['epic', 'Mobile'], ['story', 'Login']])
+    const parents = created.filter((issue) => issue.type === 'story').map((issue) => issue.parentId)
+    expect(new Set(parents).size).toBe(2)
+    expect(await draftBacklogFromPrd(world.db, scope, world.as('pm'), doc, outline)).toEqual([])
+    expect(await count(scope.projectId)).toBe(4)
+  })
+
   test('doing it twice adds nothing, and a new story lands under the epic that already exists', async () => {
     const scope = await freshProject()
     const doc = await document()

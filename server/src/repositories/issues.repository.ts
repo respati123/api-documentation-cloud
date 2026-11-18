@@ -252,8 +252,8 @@ export async function listIssuesByNumber(
 }
 
 // The epics and stories already made from a document, so a second run does not make them again.
-export async function listSourceEntries(db: SQL, projectId: string, documentId: string): Promise<Array<{ id: string; type: IssueType; title: string; sourceSection: string | null }>> {
-  return db`SELECT id, type, title, source_section AS "sourceSection" FROM issues WHERE project_id = ${projectId} AND source_document_id = ${documentId} AND type IN ('epic', 'story')`
+export async function listSourceEntries(db: SQL, projectId: string, documentId: string): Promise<Array<{ id: string; type: IssueType; parentId: string | null; title: string; sourceSection: string | null }>> {
+  return db`SELECT id, type, parent_id AS "parentId", title, source_section AS "sourceSection" FROM issues WHERE project_id = ${projectId} AND source_document_id = ${documentId} AND type IN ('epic', 'story')`
 }
 
 export async function setSourceReviewed(db: SQL, projectId: string, id: string, version: number): Promise<void> {

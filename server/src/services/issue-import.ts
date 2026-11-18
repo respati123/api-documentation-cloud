@@ -50,8 +50,9 @@ export async function draftBacklogFromPrd(
   }
 
   const ids = await db.begin(async (tx) => {
-    const key = (type: string, title: string, section: string | null | undefined) => `${type}|${section?.trim() || title.trim()}`
-    const known = new Map((await listSourceEntries(tx, scope.projectId, document.id)).map((entry) => [key(entry.type, entry.title, entry.sourceSection), entry.id]))
+    // A story is told apart by its epic too, so the same title under two epics makes two stories.
+    const key = (type: string, title: string, section: string | null | undefined, parentId: string | null = null) => `${type}|${parentId ?? ''}|${section?.trim() || title.trim()}`
+    const known = new Map((await listSourceEntries(tx, scope.projectId, document.id)).map((entry) => [key(entry.type, entry.title, entry.sourceSection, entry.parentId), entry.id]))
     const made: string[] = []
     const source = { sourceDocumentId: document.id, sourceVersion: document.currentVersion }
 
@@ -64,7 +65,7 @@ export async function draftBacklogFromPrd(
         made.push(epicId)
       }
       for (const story of epic.stories ?? []) {
-        const storyKey = key('story', story.title, story.sourceSection)
+        const storyKey = key('story', story.title, story.sourceSection, epicId)
         if (known.has(storyKey)) continue
         const storyId = await insertNewIssue(tx, scope, actor, {
           type: 'story',
