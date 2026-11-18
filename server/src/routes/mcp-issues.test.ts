@@ -195,4 +195,80 @@ describe.skipIf(!databaseEnabled)('MCP issue tools', () => {
     const listed = await call(pmKey, 'backlog_list')
     expect(JSON.stringify(listed.value)).toContain('Lands in the first project')
   })
+
+  describe('issues_list', () => {
+    const made = async (type: string, title: string, extra: Body = {}) => data(await api('POST', '/issues', owner, { type, title, ...(type === 'task' ? { points: 1 } : {}), ...extra })).issue
+    const ids = (result: { value: Body }) => (result.value.issues as Body[]).map((issue) => issue.id)
+
+    test('assigned lists what is assigned to the key owner, and nothing else', async () => {
+      const mine = await made('task', 'Assigned to the dev', { assigneeId: dev.user.id })
+      const theirs = await made('task', 'Assigned to the PM', { assigneeId: pm.user.id })
+      const dev1 = ids(await call(devKey, 'issues_list', { involvement: 'assigned' }))
+      expect(dev1).toContain(mine.id)
+      expect(dev1).not.toContain(theirs.id)
+      expect(ids(await call(pmKey, 'issues_list', { involvement: 'assigned' }))).toContain(theirs.id)
+    })
+
+    test('a draft epic is seen by the PM only, and everyone sees it once it is published', async () => {
+      const epic = await made('epic', 'A draft epic')
+      expect(ids(await call(pmKey, 'issues_list', { type: 'epic' }))).toContain(epic.id)
+      expect(ids(await call(devKey, 'issues_list', { type: 'epic' }))).not.toContain(epic.id)
+      await api('POST', `/issues/${epic.id}/publish`, owner)
+      expect(ids(await call(devKey, 'issues_list', { type: 'epic' }))).toContain(epic.id)
+    })
+
+    test('the type and the parent narrow the list, and the viewer may read it', async () => {
+      const epic = await made('epic', 'Parent epic')
+      await api('POST', `/issues/${epic.id}/publish`, owner)
+      const child = await made('task', 'Child task', { parentId: epic.id })
+      const other = await made('task', 'Loose task')
+      const listed = ids(await call(viewerKey, 'issues_list', { type: 'task', parentId: epic.id }))
+      expect(listed).toEqual([child.id])
+      expect(listed).not.toContain(other.id)
+    })
+
+    test('a page holds the limit, and the cursor leads to the rest in order', async () => {
+      const first = await made('bug', 'Paged one', { points: 1 })
+      const second = await made('bug', 'Paged two', { points: 1 })
+      const third = await made('bug', 'Paged three', { points: 1 })
+      const page1 = await call(pmKey, 'issues_list', { type: 'bug', limit: 2 })
+      expect(page1.isError).toBe(false)
+      expect(page1.value.issues).toHaveLength(2)
+      expect(page1.value.nextCursor).not.toBeNull()
+      const page2 = await call(pmKey, 'issues_list', { type: 'bug', limit: 2, cursor: page1.value.nextCursor })
+      const all = [...ids(page1), ...ids(page2)]
+      for (const row of [first, second, third]) expect(all).toContain(row.id)
+      expect(new Set(all).size).toBe(all.length)
+    })
+
+    test('participating lists the published stories the key owner takes part in', async () => {
+      const story = await made('story', 'A story with a participant')
+      await api('POST', `/issues/${story.id}/publish`, owner)
+      await db`INSERT INTO planning_participants (item_id, user_id) VALUES (${story.id}, ${dev.user.id})`
+      expect(ids(await call(devKey, 'issues_list', { involvement: 'participating' }))).toEqual([story.id])
+      expect(ids(await call(pmKey, 'issues_list', { involvement: 'participating' }))).not.toContain(story.id)
+    })
+
+    test('ready lists what can start, holds back work whose blocker is not done, and marks the lock', async () => {
+      const blocker = await made('task', 'Blocker', { assigneeId: pm.user.id })
+      const waiting = await made('task', 'Waits for the blocker', { assigneeId: dev.user.id })
+      const free = await made('task', 'Free to start', { assigneeId: dev.user.id })
+      await api('POST', `/issues/${blocker.id}/links`, owner, { toId: waiting.id, kind: 'blocks' })
+
+      const before = await call(devKey, 'issues_list', { ready: true })
+      expect(ids(before)).toContain(free.id)
+      expect(ids(before)).not.toContain(waiting.id)
+      expect((before.value.issues as Body[]).find((issue) => issue.id === free.id)).toMatchObject({ locked: false })
+
+      await api('PATCH', `/issues/${blocker.id}`, owner, { status: 'done' })
+      expect(ids(await call(devKey, 'issues_list', { ready: true }))).toContain(waiting.id)
+    })
+
+    test('arguments that make no sense are refused', async () => {
+      for (const args of [{ type: 'nope' }, { involvement: 'everyone' }, { limit: 0 }, { limit: 101 }, { ready: 'yes' }, { cursor: 12 }]) {
+        const refused = await call(pmKey, 'issues_list', args)
+        expect(refused.isError, JSON.stringify(args)).toBe(true)
+      }
+    })
+  })
 })

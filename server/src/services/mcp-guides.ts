@@ -2,7 +2,7 @@ import type { McpKeyRole } from '@/models/mcp'
 
 // The playbook every agent must read through planning_guide before it writes project data.
 // Bump GUIDE_VERSION whenever a guide changes, so agents that read an older version have to read it again.
-export const GUIDE_VERSION = '2026-11-18.2'
+export const GUIDE_VERSION = '2026-11-18.3'
 
 const shared = `## Rules for every agent
 
@@ -22,7 +22,7 @@ const shared = `## Rules for every agent
 - A story moves through draft, in_design, ready, in_progress, in_qa, and done. It becomes ready only with acceptance criteria and an approved design. A task, bug, or sub-task moves through todo, in_progress, in_review, and done. The old status backlog is todo now. An epic has no status of its own: it follows its stories.
 - Read the whole picture with backlog_list (the open sprints with their items, then the backlog in rank order) and sprint_get_active. Read one issue, with its checklist and links, with issue_read. Use the id or the key such as PARI-12.
 - A story, task, or bug enters a sprint only when it has points, and a story only when it is ready. The PM and the tech lead plan sprints and order the backlog. You never do.
-- A task that tasks_list_ready shows with locked true waits for its story. Its design is not approved yet. Do not start it, and read story_read to see what is missing.
+- A task that issues_list shows with locked true (use ready true to list the work you can start) waits for its story. Its design is not approved yet. Do not start it, and read story_read to see what is missing.
 - Draft any issue with issue_draft. It stays a draft until a person publishes it. Move a sub-task assigned to you with subtask_update_status, and tick the lines of a checklist with checklist_set_done. You cannot accept a story as done.
 
 ## Discussions
@@ -152,7 +152,7 @@ When you finish an epic, tell the person which stories are ready and which wait 
 
 const projectView = `## What you can read
 
-- project_items_list shows every published epic and story, and project_tasks_list shows every member's published tasks. Use them to see how your work fits the rest. Drafts are not shown.
+- issues_list with type epic or story shows every published epic and story, and with type task, bug, or subtask shows every member's published work. Use it to see how your work fits the rest. Drafts are not shown.
 - These views are read-only. Change only your own tasks, and comment only on stories you take part in and tasks assigned to you.`
 
 const techLead = `# Playbook for the tech lead agent
@@ -180,7 +180,7 @@ ${shared}
 
 ## Your work
 
-- Find work you can start with tasks_list_ready, then read the story with story_read: the user story, the flow, and the acceptance criteria.
+- Find work you can start with issues_list and ready true, then read the story with story_read: the user story, the flow, and the acceptance criteria.
 - Attach each design with story_attach_design: a clear title, an http or https link, and a short note (screens, devices).
 - A person approves the design in the web app. Approval opens the backend, frontend, mobile, and QA tasks.
 - When the workspace links a Stitchkit project under Design, build the screens there with the stitchkit_ tools (each needs workspaceId), then attach each screen with story_attach_design using the screen link.
@@ -194,7 +194,7 @@ ${shared}
 
 ## Your work
 
-- Find work with tasks_list_ready. Read the story, its approved design, and its acceptance criteria with story_read.
+- Find work with issues_list and ready true. Read the story, its approved design, and its acceptance criteria with story_read.
 - Read the BRD and the approved PRD behind the story with documents_list and documents_read, so the API covers the business rules and limits they state.
 - Keep the API contract in the workspace API docs. Find each request's id with api_requests_search (by name, path, or method), then link it to the story with story_link_api_contract.
 - When the workspace links a DBDesign project under Design, design the tables there with the dbdesign_ tools (each needs workspaceId), then add the tables the story reads or writes with story_link_data_model.
@@ -209,7 +209,7 @@ ${shared}
 
 ## Your work
 
-- Find work with tasks_list_ready. Read the story with story_read: the approved design, the API contracts, and the acceptance criteria.
+- Find work with issues_list and ready true. Read the story with story_read: the approved design, the API contracts, and the acceptance criteria.
 - Build to the approved design and the linked contracts. Show the server's error messages as they come.
 - Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 
@@ -223,7 +223,7 @@ ${shared}
 
 - Read the story with story_read. Write one test case per acceptance criterion with story_write_test_case: a title, the precondition, numbered steps, and the expected results.
 - Cover the main flow and each failure flow in the story.
-- Run end-to-end tests only after the backend and frontend tasks are done. project_tasks_list shows whether they are.
+- Run end-to-end tests only after the backend and frontend tasks are done. issues_list with type task or subtask shows whether they are.
 - Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 
 ${projectView}`
@@ -235,7 +235,7 @@ ${shared}
 ## Your work
 
 - The workspace owner has not given you a project role yet, so you have the member tools only.
-- Read your assigned tasks with tasks_list_assigned and the stories you take part in with stories_list_participating, then story_read for the details.
+- Read your assigned work with issues_list and involvement assigned, and the stories you take part in with involvement participating, then story_read for the details.
 - Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 - To draft, attach designs, link contracts, or write test cases, ask the workspace owner for a project role.
 

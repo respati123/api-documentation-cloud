@@ -118,7 +118,7 @@ describe.skipIf(!databaseEnabled)('member MCP keys', () => {
 
     const names = await toolNames(await secretFor(member))
 
-    expect(names).toContain('tasks_list_assigned')
+    expect(names).toContain('issues_list')
     expect(names).not.toContain('story_link_api_contract')
     expect(names).not.toContain('planning_list')
   })
@@ -152,7 +152,7 @@ describe.skipIf(!databaseEnabled)('member MCP keys', () => {
     const stranger = await http.signUp('foreign-stranger')
     const foreignId = await http.createWorkspace(stranger, 'Foreign space')
 
-    const result = toolResult(await http.mcp(await secretFor(member), 'tools/call', { name: 'tasks_list_assigned', arguments: { workspaceId: foreignId } }))
+    const result = toolResult(await http.mcp(await secretFor(member), 'tools/call', { name: 'issues_list', arguments: { workspaceId: foreignId } }))
 
     expect(result).toMatchObject({ isError: true, value: { code: 'WORKSPACE_NOT_FOUND' } })
   })
@@ -184,7 +184,7 @@ describe.skipIf(!databaseEnabled)('member MCP keys', () => {
 
     expect(toolResult(await call('planning_draft_prd', { title: 'PRD', content: PRD_CONTENT, sourceDocumentId: brdId }))).toMatchObject({ isError: true, value: { code: 'MCP_PERMISSION_DENIED' } })
     expect(toolResult(await call('planning_upload_brd', { title: 'BRD 2', content: 'Text' }))).toMatchObject({ isError: true, value: { code: 'MCP_PERMISSION_DENIED' } })
-    expect(toolResult(await call('project_items_list', {})).isError).toBe(false)
+    expect(toolResult(await call('issues_list', {})).isError).toBe(false)
   })
 
   test('a PM uploads a BRD from markdown text after reading the guide', async () => {

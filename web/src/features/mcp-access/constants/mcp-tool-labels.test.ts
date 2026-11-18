@@ -23,6 +23,7 @@ describe('MCP tool labels', () => {
       'subtask_update_status',
       'checklist_set_done',
       'checklist_add',
+      'issues_list',
     ]) {
       expect(MCP_TOOL_TEXT[tool]).toBe(`mcp:tool.${tool}`)
     }

@@ -62,8 +62,6 @@
   },
   "tool": {
     "workspaces_list": "Daftar workspace",
-    "tasks_list_assigned": "Lihat task saya",
-    "stories_list_participating": "Lihat story yang saya ikuti",
     "planning_list": "Lihat perencanaan",
     "planning_draft_prd": "Tulis draf PRD",
     "planning_draft_item": "Tulis draf epic dan story",
@@ -73,12 +71,9 @@
     "story_attach_design": "Lampirkan desain",
     "story_link_api_contract": "Tautkan kontrak API",
     "story_write_test_case": "Tulis test case",
-    "tasks_list_ready": "Lihat task yang siap dikerjakan",
     "planning_guide": "Baca panduan wajib",
     "story_write_details": "Lengkapi detail story",
     "planning_upload_brd": "Unggah BRD",
-    "project_items_list": "Lihat epic dan story",
-    "project_tasks_list": "Lihat semua task",
     "documents_list": "Lihat daftar BRD dan PRD",
     "documents_read": "Baca BRD dan PRD",
     "api_requests_search": "Cari request API",
@@ -94,7 +89,8 @@
     "issue_comment": "Beri komentar pada issue",
     "subtask_update_status": "Ubah status sub-task saya",
     "checklist_set_done": "Centang item checklist",
-    "checklist_add": "Tambah baris checklist"
+    "checklist_add": "Tambah baris checklist",
+    "issues_list": "Daftar issue"
   },
   "guide": {
     "title": "Panduan wajib agent",

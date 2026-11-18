@@ -10,11 +10,11 @@ import { appRolesOf } from '@/services/app-access'
 import { appActorOf, APPS } from '@/services/app-integrations'
 import { broadcastPlanningChange, type PlanningScope } from '@/services/events'
 import { type AudienceTarget, commentTarget, planningAudience } from '@/services/planning-audience'
-import { addMcpChecklistItem, commentMcpIssue, draftMcpIssue, getMcpActiveSprint, guideIsFresh, listMcpBacklog, readMcpGuide, readMcpIssue, setMcpChecklistItemDone, updateMcpSubtaskStatus, writeMcpStoryDetails } from '@/services/mcp-access'
+import { addMcpChecklistItem, listMcpIssues, commentMcpIssue, draftMcpIssue, getMcpActiveSprint, guideIsFresh, listMcpBacklog, readMcpGuide, readMcpIssue, setMcpChecklistItemDone, updateMcpSubtaskStatus, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
-import { attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, readMcpStory, writeMcpTestCase } from '@/services/mcp-access'
-import { authenticateMcpKey, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpWorkspaces, uploadMcpBrd } from '@/services/mcp-access'
-import { listMcpDocuments, listMcpProjectItems, listMcpProjectTasks, readMcpReadableDocument } from '@/services/mcp-access'
+import { attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, readMcpStory, writeMcpTestCase } from '@/services/mcp-access'
+import { authenticateMcpKey, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, listMcpPlanning, listMcpWorkspaces, uploadMcpBrd } from '@/services/mcp-access'
+import { listMcpDocuments, readMcpReadableDocument } from '@/services/mcp-access'
 import { DOCUMENT_URI_TEMPLATE, listMcpDocumentResources, listMcpTeamMembers, readMcpDiscussion, listMcpNotifications, markMcpNotificationsRead, readMcpDocumentResource, searchMcpApiRequests } from '@/services/mcp-access'
 
 export const MCP_CALLS_PER_MINUTE = 240
@@ -79,6 +79,20 @@ const tools: Record<McpTool, ToolDefinition> = {
   backlog_list: inWorkspace('Read the backlog', { limit: { type: 'integer', minimum: 1, maximum: 100 }, cursor: { type: 'string', description: 'The nextCursor of the previous answer, to read the next page of loose items.' } }, [], 'Read the backlog of the project: the planned and active sprints with their items, then the items that belong to no sprint, in rank order. Drafts are shown only to the PM and the tech lead.', (db, p, a) => listMcpBacklog(db, p, a.workspaceId, { limit: a.limit, cursor: a.cursor })),
   sprint_get_active: inWorkspace('Read the active sprint', {}, [], 'Read the sprint that is running now, with its goal, dates, and items. The sprint is null when none is running.', (db, p, a) => getMcpActiveSprint(db, p, a.workspaceId)),
   issue_read: inWorkspace('Read an issue', { issueId: { type: 'string', description: 'The id of the issue, or its key such as PARI-12.' } }, ['issueId'], 'Read one epic, story, task, bug, or sub-task with its checklist and links.', (db, p, a) => readMcpIssue(db, p, a.workspaceId, a.issueId)),
+  issues_list: inWorkspace(
+    'List issues',
+    {
+      type: { type: 'string', enum: ['epic', 'story', 'task', 'bug', 'subtask'] },
+      involvement: { type: 'string', enum: ['assigned', 'participating'], description: 'assigned keeps what is assigned to you. participating keeps the stories you take part in.' },
+      parentId: { type: 'string', description: 'The id of an epic, for its items, or of a story, task, or bug, for its sub-tasks.' },
+      ready: { type: 'boolean', description: 'True lists the work assigned to you that can start: not done, and every blocker done. Work that waits for the design approval of its story is listed with locked true.' },
+      limit: { type: 'integer', minimum: 1, maximum: 100 },
+      cursor: { type: 'string', description: 'The nextCursor of the previous answer, to read the next page.' },
+    },
+    [],
+    'List the issues of the project in the order of their numbers, a page at a time. Drafts show to the PM and the tech lead only. Read one issue with issue_read.',
+    (db, p, a) => listMcpIssues(db, p, a.workspaceId, a),
+  ),
   issue_draft: inWorkspace(
     'Draft an issue',
     {
@@ -102,10 +116,6 @@ const tools: Record<McpTool, ToolDefinition> = {
   checklist_set_done: inWorkspace('Tick a checklist line', { issueId: text, itemId: text, done: { type: 'boolean' } }, ['issueId', 'itemId', 'done'], 'Tick or untick one line of the checklist of an issue assigned to this member.', (db, p, a) => setMcpChecklistItemDone(db, p, a.workspaceId, a.issueId, a.itemId, a.done)),
   checklist_add: inWorkspace('Add a checklist line', { issueId: text, title: text, clientRequestId }, ['issueId', 'title'], 'Add one line to the checklist of an issue assigned to this member. Read the checklist with issue_read, and tick a line with checklist_set_done.', (db, p, a) => addMcpChecklistItem(db, p, a.workspaceId, a.issueId, a.title)),
   workspaces_list: { title: 'List workspaces', description: 'List the workspaces this member belongs to. Every other tool needs one of these ids.', properties: {}, required: [], run: (db, p) => listMcpWorkspaces(db, p) },
-  tasks_list_assigned: inWorkspace('List my tasks', {}, [], 'List published tasks in the workspace assigned to this member.', (db, p, a) => listMcpAssignedTasks(db, p, a.workspaceId)),
-  stories_list_participating: inWorkspace('List my stories', {}, [], 'List published stories where this member is a participant.', (db, p, a) => listMcpParticipatingStories(db, p, a.workspaceId)),
-  project_items_list: inWorkspace('List epics and stories', {}, [], 'List the epics and stories of the workspace, read-only. Drafts are included only for the PM and the tech lead.', (db, p, a) => listMcpProjectItems(db, p, a.workspaceId)),
-  project_tasks_list: inWorkspace('List all tasks', {}, [], 'List the tasks of every member in the workspace, read-only. Use tasks_list_assigned for your own work.', (db, p, a) => listMcpProjectTasks(db, p, a.workspaceId)),
   documents_list: inWorkspace('List documents', {}, [], 'List the BRDs and PRDs this key may read: all of them for the PM and the tech lead, approved ones for backend.', (db, p, a) => listMcpDocuments(db, p, a.workspaceId)),
   documents_read: inWorkspace('Read a document', { documentId: text }, ['documentId'], 'Read a BRD or PRD this key may read, with its version history.', (db, p, a) => readMcpReadableDocument(db, p, a.workspaceId, a.documentId)),
   planning_list: inWorkspace('Planning overview', {}, [], 'List planning documents, epics, stories and draft tasks of the workspace.', (db, p, a) => listMcpPlanning(db, p, a.workspaceId)),
@@ -188,7 +198,6 @@ const tools: Record<McpTool, ToolDefinition> = {
     'Add a test case to a story. The text is what QA hands to Playwright.',
     (db, p, a) => writeMcpTestCase(db, p, a.workspaceId, a.storyId, { title: a.title, precondition: a.precondition, steps: a.steps, expected: a.expected }),
   ),
-  tasks_list_ready: inWorkspace('List tasks I can start', {}, [], 'List tasks assigned to this member that can start now: not done, not waiting for a design approval, and with every dependency done.', (db, p, a) => listMcpReadyTasks(db, p, a.workspaceId)),
   api_requests_search: inWorkspace(
     'Search API requests',
     { query: { type: 'string', description: 'Text found in the request name, url, or folder. Leave out to list the first 50.' }, method: { type: 'string', description: 'Only requests of this HTTP method, for example GET or POST.' } },

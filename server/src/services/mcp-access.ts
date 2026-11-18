@@ -9,16 +9,16 @@ import { findMcpKeyAuth, markGuideRead, touchMcpKey } from '@/repositories/mcp-k
 import { listUserDisciplines } from '@/repositories/planning-audience.repository'
 import { GUIDE_VERSION, guideFor } from '@/services/mcp-guides'
 import { findRole, listUserWorkspaces, listWorkspaceTeam } from '@/repositories/memberships.repository'
-import { listAssignedTasks, listProjects, listTasks, listUserRolesByWorkspace } from '@/repositories/projects.repository'
+import { listProjects, listTasks, listUserRolesByWorkspace } from '@/repositories/projects.repository'
 import { addStoryTestCase, attachStoryDesign, getStoryDetails, linkStoryContract, linkStoryDataModel, updateStoryDetails } from '@/services/stories'
-import { listParticipatingStories } from '@/repositories/planning.repository'
 import { mcpKeyHash } from '@/services/mcp-keys'
 import { decodeCursor } from '@/lib/pagination'
+import { ISSUE_TYPES, type IssueType } from '@/models/issue'
 import { parseInput } from '@/lib/parse-input'
 import { createIssueBody } from '@/models/issue-input'
 import { addChecklistItem, listChecklist, listLinks, setChecklistItemDone } from '@/services/issue-details'
 import { readBacklog } from '@/services/issue-backlog'
-import { createIssue, getIssue, updateIssue } from '@/services/issues'
+import { createIssue, getIssue, listIssuePage, updateIssue } from '@/services/issues'
 import { searchCollectionRequests } from '@/services/collection-search'
 import { listNotificationsPage } from '@/services/notifications'
 import { countUnreadNotifications, listUnreadNotifications, markAllNotificationsRead, markNotificationRead } from '@/repositories/notifications.repository'
@@ -82,18 +82,9 @@ function via(principal: McpPrincipal, workspaceId: string): PlanningVia {
   return { apiKeyId: principal.keyId, planning: toolsForRoles(roles).some((tool) => PLANNING_TOOLS.includes(tool)), roles }
 }
 
-async function projectIdsOf(db: SQL, workspaceId: string): Promise<string[]> {
-  return (await listProjects(db, workspaceId)).map((project) => project.id)
-}
-
 export async function listMcpWorkspaces(db: SQL, principal: McpPrincipal) {
   requireTool(principal, 'workspaces_list')
   return listUserWorkspaces(db, principal.userId)
-}
-
-export async function listMcpAssignedTasks(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
-  const id = await requireWorkspace(db, principal, 'tasks_list_assigned', workspaceId)
-  return listAssignedTasks(db, await projectIdsOf(db, id), principal.userId)
 }
 
 type CommentInput = { body: unknown; parentId?: unknown }
@@ -129,22 +120,7 @@ export async function readMcpDiscussion(db: SQL, principal: McpPrincipal, worksp
   return rows.filter((row) => !row.parentId).map((row) => ({ ...view(row), replies: rows.filter((reply) => reply.parentId === row.id).map(view) }))
 }
 
-export async function listMcpParticipatingStories(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
-  const id = await requireWorkspace(db, principal, 'stories_list_participating', workspaceId)
-  return listParticipatingStories(db, id, principal.userId)
-}
-
 // Read-only views for every member: published work, and the documents the key's role may read.
-export async function listMcpProjectItems(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
-  const id = await requireWorkspace(db, principal, 'project_items_list', workspaceId)
-  return listPlanningItems(db, id, principal.userId, via(principal, id))
-}
-
-export async function listMcpProjectTasks(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
-  const id = await requireWorkspace(db, principal, 'project_tasks_list', workspaceId)
-  return listPlanningTasks(db, id, principal.userId, via(principal, id))
-}
-
 export async function listMcpDocuments(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
   const id = await requireWorkspace(db, principal, 'documents_list', workspaceId)
   return listPlanningDocuments(db, id, principal.userId, via(principal, id))
@@ -247,14 +223,6 @@ export async function writeMcpTestCase(db: SQL, principal: McpPrincipal, workspa
 }
 
 // Assigned tasks the member can start now: not done, not locked by a story design, and with every dependency done.
-export async function listMcpReadyTasks(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
-  const id = await requireWorkspace(db, principal, 'tasks_list_ready', workspaceId)
-  const tasks = (await Promise.all((await projectIdsOf(db, id)).map((projectId) => listTasks(db, projectId)))).flat()
-  const done = new Set(tasks.filter((task) => task.status === 'done').map((task) => task.id))
-  // A task locked by its story is listed too, marked locked. Its role waits for the design to be approved.
-  return tasks.filter((task) => task.assigneeId === principal.userId && task.status !== 'done' && task.dependsOn.every((dependency) => done.has(dependency)))
-}
-
 export async function writeMcpStoryDetails(
   db: SQL,
   principal: McpPrincipal,
@@ -381,6 +349,44 @@ export async function updateMcpSubtaskStatus(db: SQL, principal: McpPrincipal, w
   const subtask = await getIssue(db, scope, asAgent(principal), issueRef(subtaskId))
   if (subtask.type !== 'subtask' || typeof status !== 'string') throw new AppError('ISSUE_INPUT_INVALID')
   return updateIssue(db, scope, asAgent(principal), subtask.id, { status })
+}
+
+const INVOLVEMENTS = ['assigned', 'participating'] as const
+const DEFAULT_ISSUE_LIMIT = 50
+
+// The issues of the project, by number. `involvement` keeps what is assigned to the key owner, or the stories the owner takes
+// part in. `ready` lists the work assigned to the owner that can start: not done, and every blocker done. Work that waits
+// for the design approval of its story is listed too, marked locked. Drafts show to the PM and the tech lead only.
+export async function listMcpIssues(db: SQL, principal: McpPrincipal, workspaceId: unknown, args: Record<string, unknown>) {
+  const id = await requireWorkspace(db, principal, 'issues_list', workspaceId)
+  const type = args.type === undefined ? undefined : (ISSUE_TYPES as readonly unknown[]).includes(args.type) ? (args.type as IssueType) : badIssueList()
+  const involvement = args.involvement === undefined ? undefined : (INVOLVEMENTS as readonly unknown[]).includes(args.involvement) ? (args.involvement as (typeof INVOLVEMENTS)[number]) : badIssueList()
+  const limit = args.limit === undefined ? DEFAULT_ISSUE_LIMIT : Number.isInteger(args.limit) && (args.limit as number) >= 1 && (args.limit as number) <= 100 ? (args.limit as number) : badIssueList()
+  if (args.ready !== undefined && typeof args.ready !== 'boolean') badIssueList()
+  if (args.parentId !== undefined && typeof args.parentId !== 'string') badIssueList()
+  if (args.cursor !== undefined && typeof args.cursor !== 'string') badIssueList()
+  const scope = await issueScope(db, id)
+  const actor = asAgent(principal)
+
+  if (args.ready === true) {
+    const work = await listTasks(db, scope.projectId)
+    const done = new Set(work.filter((task) => task.status === 'done').map((task) => task.id))
+    const startable = work.filter((task) => task.assigneeId === principal.userId && task.status !== 'done' && task.dependsOn.every((blocker) => done.has(blocker)))
+    const issues = await Promise.all(startable.map(async (task) => ({ ...(await getIssue(db, scope, actor, task.id)), locked: task.locked })))
+    return { issues: issues.filter((issue) => (type === undefined || issue.type === type) && (args.parentId === undefined || issue.parentId === args.parentId)), nextCursor: null }
+  }
+  const page = await listIssuePage(
+    db,
+    scope,
+    actor,
+    { type, parentId: args.parentId as string | undefined, assigneeId: involvement === 'assigned' ? principal.userId : undefined, participantId: involvement === 'participating' ? principal.userId : undefined },
+    { limit, cursor: decodeCursor((args.cursor as string | undefined) ?? null) },
+  )
+  return { issues: page.items, nextCursor: page.nextCursor }
+}
+
+const badIssueList = (): never => {
+  throw new AppError('ISSUE_INPUT_INVALID')
 }
 
 export async function addMcpChecklistItem(db: SQL, principal: McpPrincipal, workspaceId: unknown, issueId: unknown, title: unknown) {

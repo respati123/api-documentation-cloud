@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { defaultToolsFor, MCP_KEY_ROLES, MCP_TOOLS, type McpTool, PLANNING_TOOLS, toolsForRoles } from '@/models/mcp'
 
-const memberTools: McpTool[] = ['workspaces_list', 'tasks_list_assigned', 'stories_list_participating', 'story_read', 'tasks_list_ready', 'planning_guide', 'project_items_list', 'project_tasks_list', 'api_requests_search', 'notifications_list', 'notifications_mark_read', 'team_members_list', 'discussion_read', 'backlog_list', 'sprint_get_active', 'issue_read', 'issue_comment', 'subtask_update_status', 'checklist_set_done', 'checklist_add', 'issue_draft']
+const memberTools: McpTool[] = ['workspaces_list', 'story_read', 'planning_guide', 'api_requests_search', 'notifications_list', 'notifications_mark_read', 'team_members_list', 'discussion_read', 'backlog_list', 'sprint_get_active', 'issue_read', 'issue_comment', 'subtask_update_status', 'checklist_set_done', 'checklist_add', 'issue_draft', 'issues_list']
 
 describe('default MCP tools per key role', () => {
   test('pm gets every tool', () => {
