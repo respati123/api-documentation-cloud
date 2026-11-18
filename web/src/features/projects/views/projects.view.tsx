@@ -2,18 +2,24 @@ import { FlaskConical } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { useProjectsViewModel } from '@/features/projects/viewmodels/use-projects.viewmodel'
+import { BacklogView } from '@/features/projects/views/backlog.view'
 import { DocumentDetailView } from '@/features/projects/views/document-detail.view'
 import { DocumentsListView } from '@/features/projects/views/documents-list.view'
 import { EpicsListView } from '@/features/projects/views/epics-list.view'
 import { FlowView } from '@/features/projects/views/flow.view'
+import { IssueDetailView } from '@/features/projects/views/issue-detail.view'
 import { ItemDetailView } from '@/features/projects/views/item-detail.view'
+import { KanbanBoardView } from '@/features/projects/views/kanban-board.view'
 import { PlanningDialogsView } from '@/features/projects/views/planning-dialogs.view'
 import { Notice } from '@/features/projects/views/planning-marks.view'
 import { ProjectSectionNav } from '@/features/projects/views/project-section-nav.view'
+import { ReportsView } from '@/features/projects/views/reports.view'
+import { SprintBoardView } from '@/features/projects/views/sprint-board.view'
 import { TaskBoardView } from '@/features/projects/views/task-board.view'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Button } from '@/shared/components/primitives/button'
 import { Skeleton } from '@/shared/components/primitives/skeleton'
+import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 
 export type ProjectsViewProps = ReturnType<typeof useProjectsViewModel> & { onManageTeam: () => void }
 
@@ -61,10 +67,17 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
         </div>
       ) : (
         <>
-          {planning.section === 'flow' && <FlowView flow={planning.flow} onGo={planning.go} onManageTeam={onManageTeam} />}
+          {planning.section === 'flow' && (
+            <FlowView
+              flow={planning.flow}
+              sprint={AGILE_PROJECT_ENABLED && vm.mode === 'scrum' ? vm.sprintSummary : undefined}
+              onGo={planning.go}
+              onManageTeam={onManageTeam}
+            />
+          )}
           {planning.section === 'documents' &&
             (planning.detail === 'document' ? (
-              <DocumentDetailView planning={planning} />
+              <DocumentDetailView planning={planning} draftBacklog={vm.draftBacklog} />
             ) : (
               <DocumentsListView
                 documents={planning.documents}
@@ -93,10 +106,21 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
                 onNewStory={(epicId) => planning.dialogs.item.onOpen(epicId)}
               />
             ))}
-          {planning.section === 'board' && vm.selectedProject && <TaskBoardView vm={vm} />}
+          {planning.section === 'backlog' && <BacklogView vm={vm.backlog} onOpenIssue={vm.issueDetail.open} />}
+          {planning.section === 'board' &&
+            vm.selectedProject &&
+            (AGILE_PROJECT_ENABLED && vm.mode === 'kanban' ? (
+              <KanbanBoardView vm={vm.kanbanBoard} onOpenIssue={vm.issueDetail.open} />
+            ) : AGILE_PROJECT_ENABLED ? (
+              <SprintBoardView vm={vm.sprintBoard} onOpenBacklog={() => planning.go('backlog')} onOpenIssue={vm.issueDetail.open} />
+            ) : (
+              <TaskBoardView vm={vm} />
+            ))}
+          {planning.section === 'reports' && <ReportsView vm={vm.reports} />}
         </>
       )}
 
+      {AGILE_PROJECT_ENABLED && <IssueDetailView vm={vm.issueDetail} extras={vm.issueStory} />}
       <PlanningDialogsView dialogs={planning.dialogs} />
     </div>
   )

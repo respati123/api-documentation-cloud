@@ -36,8 +36,9 @@ describe.skipIf(!databaseEnabled)('app links repository', () => {
     const storyId = randomUUID()
     // A story always sits under an epic.
     const epicId = randomUUID()
-    await db`INSERT INTO planning_items (id, workspace_id, kind, title, created_by) VALUES (${epicId}, ${workspaceId}, 'epic', 'Belanja', ${userId})`
-    await db`INSERT INTO planning_items (id, workspace_id, kind, parent_id, title, created_by) VALUES (${storyId}, ${workspaceId}, 'story', ${epicId}, 'Checkout', ${userId})`
+    await db`INSERT INTO projects (id, workspace_id, name, created_by, key) VALUES (${workspaceId}, ${workspaceId}, 'Belanja', ${userId}, 'BLJ') ON CONFLICT (id) DO NOTHING`
+    await db`INSERT INTO issues (id, project_id, number, type, title, created_by) VALUES (${epicId}, ${workspaceId}, 1, 'epic', 'Belanja', ${userId})`
+    await db`INSERT INTO issues (id, project_id, number, type, parent_id, title, status, created_by) VALUES (${storyId}, ${workspaceId}, 2, 'story', ${epicId}, 'Checkout', 'draft', ${userId})`
     const row = { id: randomUUID(), storyId, appProjectId: 'p-1', projectName: 'Toko', tableId: 't-1', tableName: 'orders', createdBy: userId, apiKeyId: null }
     expect(await insertDataModel(db, row)).toBe(true)
     expect(await insertDataModel(db, { ...row, id: randomUUID() })).toBe(false)

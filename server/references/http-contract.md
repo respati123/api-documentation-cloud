@@ -61,6 +61,40 @@ Status codes: `200` read or changed resource, `201` created, `204` no body. Muta
 
 Responses that carry a secret (token, ticket, invite link) also set `Cache-Control: no-store`. The list lives in `src/middleware/response-headers.ts`.
 
+## Project issues, backlog, and sprints
+
+These routes sit under `/api/workspaces/:workspaceId/projects/:projectId`. Every route authorizes in the service, from the member's role in that project. A request body is checked with a zod schema (`src/models/issue-input.ts`) and an unknown field is refused. Lists take `limit` (1 to 100) and an opaque `cursor`, and answer the next cursor in `meta.nextCursor`.
+
+| Method and path | Who | Answer |
+|---|---|---|
+| `GET /issues?type=&sprint=&epic=` | member (drafts: PM, tech lead, and the author) | `200` `{ issues }`, paged by number. `sprint` is a sprint id or `none` |
+| `POST /issues` | by type: PM and tech lead for epic, story, task. Any member for bug. Tech lead or a matching role for sub-task | `201` `{ issue }` |
+| `GET /issues/:idOrKey` | member | `200` `{ issue }`. A key such as `PARI-12`, or a key the project had before, also opens it |
+| `PATCH /issues/:idOrKey` | by field, see the issue service | `200` `{ issue }` |
+| `POST /issues/:idOrKey/rank` | PM, tech lead | `200` `{ issue }`. Body `{ afterId?, beforeId? }` |
+| `POST /issues/:idOrKey/publish` | PM, tech lead | `200` `{ issue }` |
+| `POST /issues/:idOrKey/source-reviewed` | PM | `200` `{ issue }`. The issue stops being flagged until its PRD changes again |
+| `POST /documents/:documentId/draft-backlog` | PM | `201` `{ issues }` (`200` with an empty list when everything exists already). Draft epics and stories from an approved PRD, from its headings or from a body `{ epics }`. All or none |
+| `GET, POST /issues/:idOrKey/checklist` | read: member. Write: who works on the issue | `200` `{ items }`, `201` `{ item }` |
+| `PATCH, DELETE /issues/:idOrKey/checklist/:itemId` | who works on the issue | `200` `{ item }`, `204` |
+| `GET, POST /issues/:idOrKey/links` | read: member. Write: who works on the issue | `200` `{ links }`, `201` `{ links }` |
+| `DELETE /issues/:idOrKey/links/:linkId` | who works on the issue | `204` |
+| `GET /backlog` | member | `200` `{ sprints, backlog: { items, nextCursor } }`. The planned and active sprints with their items, then the loose items by rank, paged |
+| `GET, POST /sprints` | read: member. Write: PM, tech lead | `200` `{ sprints }`, `201` `{ sprint }` |
+| `PATCH /sprints/:sprintId` | PM, tech lead | `200` `{ sprint }` |
+| `POST /sprints/:sprintId/items` | PM, tech lead | `201` `{ sprints }`. Body `{ issueId, overrideReason? }` |
+| `DELETE /sprints/:sprintId/items/:issueId` | PM, tech lead | `204` |
+| `POST /sprints/:sprintId/start`, `/close` | PM, tech lead | `200` `{ sprint }`. Close takes `{ carryTo: sprintId \| 'backlog' }` |
+| `GET /sprints/:sprintId/burndown` | member | `200` `{ sprintId, total, days: [{ date, remaining, ideal }] }`. `remaining` is null for a day that has not come |
+| `GET /sprints/:sprintId/report` | member | `200` the sprint, committed and completed points, and the lists of completed, not completed, added, removed, and re-estimated items |
+| `GET /reports/velocity?limit=` | member | `200` `{ sprints, averageCompleted }`. The last closed sprints, oldest first. `limit` 1 to 24, default 6 |
+| `GET /flow?days=` | member | `200` the Kanban numbers over the last 7 to 90 days: work in progress against its limits, throughput, cycle time, work item age, and the cumulative flow |
+| `GET /wip-limits` | member | `200` `{ limits: [{ status, limit }] }` |
+| `PUT /wip-limits/:status` | PM, tech lead | `200` `{ limits }`. Body `{ limit }`, a whole number from 1 to 100, or null to remove it. A limit is a warning on a column and never blocks a card |
+| `PATCH /` (the project) | PM | `200` `{ project }`. Body `{ key?, mode?, productGoal? }` |
+
+An AI agent key never ranks, publishes, links, or changes sprints, and it moves only a sub-task assigned to its owner. Error codes: `ISSUE_*`, `SPRINT_*`, and `PROJECT_KEY_TAKEN` in `src/lib/errors/codes.ts`.
+
 ## Validation
 
 - Validate every request body, query, and path parameter at the route boundary with a zod schema.

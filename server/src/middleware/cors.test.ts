@@ -23,6 +23,13 @@ describe('corsHeaders', () => {
   })
 })
 
+describe('allowed methods', () => {
+  test('include PUT, which sets a column limit, next to the others', () => {
+    const methods = (preflightResponse('http://localhost:5174', allowed).headers.get('Access-Control-Allow-Methods') ?? '').split(', ')
+    expect(methods).toEqual(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
+  })
+})
+
 describe('preflightResponse', () => {
   test('answers 204 for a listed origin', () => {
     const response = preflightResponse('http://localhost:5174', allowed)

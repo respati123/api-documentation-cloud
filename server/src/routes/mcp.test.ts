@@ -135,7 +135,7 @@ describe.skipIf(!databaseEnabled)('MCP endpoint', () => {
       expect(tools.every((item) => typeof item.title === 'string' && item.title.length > 0)).toBe(true)
     })
 
-    test('duplicate tools are no longer listed, but an agent that still calls them gets an answer', async () => {
+    test('the removed duplicate tools are neither listed nor answered', async () => {
       const { owner, workspaceId, secret } = await team('slim', ['pm'])
       const brdId = await brd(owner, workspaceId)
 
@@ -143,7 +143,11 @@ describe.skipIf(!databaseEnabled)('MCP endpoint', () => {
 
       for (const gone of ['projects_list', 'stories_read_participating', 'planning_read_document']) expect(names).not.toContain(gone)
       expect(names).toEqual(expect.arrayContaining(['documents_list', 'documents_read', 'planning_list', 'story_read']))
-      expect(result(await tool(secret, 'planning_read_document', { workspaceId, documentId: brdId })).value).toMatchObject({ id: brdId })
+      for (const gone of ['projects_list', 'stories_read_participating', 'planning_read_document']) {
+        const refused = await tool(secret, gone, { workspaceId, documentId: brdId })
+        expect(refused.json.error).toMatchObject({ code: -32602 })
+      }
+      expect(result(await tool(secret, 'documents_read', { workspaceId, documentId: brdId })).value).toMatchObject({ id: brdId })
     })
 
     test('a result also comes as structured content, with a list wrapped in items', async () => {

@@ -18,11 +18,12 @@ import { useItemDetailViewModel } from '@/features/projects/viewmodels/use-item-
 import { type CommentTarget, usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { usePlanningDialogsViewModel } from '@/features/projects/viewmodels/use-planning-dialogs.viewmodel'
 import { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
+import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { useRealtimeEvent } from '@/shared/realtime/use-realtime-event'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatRelativeDate } from '@/shared/utils/format'
 
-export const PROJECT_SECTIONS = ['flow', 'documents', 'epics', 'board'] as const
+export const PROJECT_SECTIONS = ['flow', 'documents', 'epics', 'backlog', 'board', 'reports'] as const
 export type ProjectSection = (typeof PROJECT_SECTIONS)[number]
 type Detail = { kind: 'document'; id: string } | { kind: 'item'; id: string } | null
 
@@ -168,7 +169,12 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
     codes,
     storyExtras,
     section,
-    sections: PROJECT_SECTIONS.filter((id) => id !== 'documents' || canReadDocuments).map((id) => ({
+    sections: PROJECT_SECTIONS.filter(
+      (id) =>
+        (id !== 'documents' || canReadDocuments) &&
+        ((id !== 'backlog' && id !== 'reports') || AGILE_PROJECT_ENABLED) &&
+        (id !== 'epics' || !AGILE_PROJECT_ENABLED),
+    ).map((id) => ({
       id,
       count: id === 'documents' ? documents.length : id === 'epics' ? epics.length : null,
     })),

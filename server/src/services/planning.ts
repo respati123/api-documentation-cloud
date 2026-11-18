@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
+import { insertStatusEvent } from '@/repositories/issues.repository'
 import { insertPlanningEvent, listPlanningEventRows } from '@/repositories/planning-events.repository'
 import { AppError } from '@/lib/errors/app-error'
 import { findRole } from '@/repositories/memberships.repository'
@@ -23,7 +24,6 @@ import {
   updatePlanningDocumentStatus,
 } from '@/repositories/planning-documents.repository'
 import {
-  findEpicPublishBlockers,
   findItemDesignApprovedAt,
   findPlanningItem,
   findTaskAssignee,
@@ -43,11 +43,14 @@ import { isWorkRole, storyStage } from '@/models/story'
 export type DocumentKind = 'brd' | 'prd'
 export type DocumentStatus = 'draft' | 'review_pm' | 'review_team' | 'approved' | 'superseded' | 'discarded'
 export type PlanningKind = 'epic' | 'story'
-export type PlanningStatus = 'draft' | 'refinement' | 'ready' | 'in_progress' | 'review' | 'done'
+export type PlanningStatus = 'draft' | 'in_design' | 'ready' | 'in_progress' | 'in_qa' | 'done'
 export type TargetKind = 'document' | 'epic' | 'story' | 'task'
 
 const documentStatuses: DocumentStatus[] = ['draft', 'review_pm', 'review_team', 'approved', 'superseded', 'discarded']
-const itemStatuses: PlanningStatus[] = ['draft', 'refinement', 'ready', 'in_progress', 'review', 'done']
+const itemStatuses: PlanningStatus[] = ['draft', 'in_design', 'ready', 'in_progress', 'in_qa', 'done']
+// A client from before the agile model sends these two names. They mean the same as the new ones.
+const OLD_STATUS_NAMES: Record<string, PlanningStatus> = { refinement: 'in_design', review: 'in_qa' }
+const statusOf = (value: unknown): unknown => (typeof value === 'string' ? (OLD_STATUS_NAMES[value] ?? value) : value)
 
 function validText(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= max
@@ -163,6 +166,7 @@ export async function getPlanningDocumentFile(db: SQL, workspaceId: string, docu
 
 export async function createPlanningDocument(db: SQL, workspaceId: string, actorId: string, input: { kind?: unknown; title?: unknown; content?: unknown; sourceDocumentId?: unknown; fileName?: unknown; mimeType?: unknown; fileBytes?: Uint8Array }, via?: PlanningVia) {
   await requirePlanningPm(db, workspaceId, actorId, via)
+  await ensureWorkspaceProject(db, workspaceId)
   if ((input.kind !== 'brd' && input.kind !== 'prd') || !validText(input.title, 180) || !validText(input.content, 500_000) || (input.fileName !== undefined && !validText(input.fileName, 255)) || (input.mimeType !== undefined && !validText(input.mimeType, 100))) throw new AppError('PLANNING_INPUT_INVALID')
   const kind = input.kind as DocumentKind
   const sourceId = typeof input.sourceDocumentId === 'string' ? input.sourceDocumentId : null
@@ -264,6 +268,7 @@ export async function listPlanningItems(db: SQL, workspaceId: string, userId: st
 
 export async function createPlanningItem(db: SQL, workspaceId: string, actorId: string, input: { kind?: unknown; parentId?: unknown; title?: unknown; description?: unknown; acceptanceCriteria?: unknown; sourceDocumentId?: unknown; sourceSection?: unknown; participantIds?: unknown }, via?: PlanningVia) {
   await requirePlanningPm(db, workspaceId, actorId, via)
+  await ensureWorkspaceProject(db, workspaceId)
   if ((input.kind !== 'epic' && input.kind !== 'story') || !validText(input.title, 180) || (input.description !== undefined && (typeof input.description !== 'string' || input.description.length > 20_000)) || (input.acceptanceCriteria !== undefined && (typeof input.acceptanceCriteria !== 'string' || input.acceptanceCriteria.length > 20_000)) || typeof input.sourceDocumentId !== 'string' || (input.sourceSection !== undefined && (typeof input.sourceSection !== 'string' || input.sourceSection.length > 500)) || (input.participantIds !== undefined && (!Array.isArray(input.participantIds) || input.participantIds.length > 50 || input.participantIds.some((id) => typeof id !== 'string')))) throw new AppError('PLANNING_INPUT_INVALID')
   const document = await documentRow(db, workspaceId, input.sourceDocumentId as string)
   if (document.kind !== 'prd' || document.status !== 'approved' || document.sourceOutdated) throw new AppError('PLANNING_CONFLICT')
@@ -298,7 +303,8 @@ export async function createPlanningItem(db: SQL, workspaceId: string, actorId: 
   return itemRow(db, workspaceId, id)
 }
 
-export async function updatePlanningItem(db: SQL, workspaceId: string, itemId: string, actorId: string, input: { title?: unknown; description?: unknown; acceptanceCriteria?: unknown; status?: unknown; participantIds?: unknown }) {
+export async function updatePlanningItem(db: SQL, workspaceId: string, itemId: string, actorId: string, rawInput: { title?: unknown; description?: unknown; acceptanceCriteria?: unknown; status?: unknown; participantIds?: unknown }) {
+  const input = { ...rawInput, status: statusOf(rawInput.status) }
   const onlyMarksReady = input.status === 'ready' && Object.entries(input).every(([key, value]) => key === 'status' || value === undefined)
   if (onlyMarksReady) await requirePlanningApprover(db, workspaceId, actorId)
   else await requirePlanningPm(db, workspaceId, actorId)
@@ -308,11 +314,13 @@ export async function updatePlanningItem(db: SQL, workspaceId: string, itemId: s
   if (input.acceptanceCriteria !== undefined && (typeof input.acceptanceCriteria !== 'string' || input.acceptanceCriteria.length > 20_000)) throw new AppError('PLANNING_INPUT_INVALID')
   if (input.status !== undefined && (typeof input.status !== 'string' || !itemStatuses.includes(input.status as PlanningStatus))) throw new AppError('PLANNING_INPUT_INVALID')
   if (input.participantIds !== undefined && (!Array.isArray(input.participantIds) || input.participantIds.length > 50 || input.participantIds.some((id) => typeof id !== 'string'))) throw new AppError('PLANNING_INPUT_INVALID')
-  const next: Record<string, string[]> = { draft: ['refinement'], refinement: ['draft', 'ready'], ready: ['refinement', 'in_progress'], in_progress: ['review'], review: ['in_progress', 'done'], done: [] }
-  if (input.status && !next[current.status]?.includes(input.status as string)) throw new AppError('PLANNING_CONFLICT')
-  if (input.status && ['in_progress', 'review', 'done'].includes(input.status as string) && !current.publishedAt) throw new AppError('PLANNING_CONFLICT')
-  if (input.status === 'in_progress' && current.kind === 'story' && !(await findItemDesignApprovedAt(db, itemId))) throw new AppError('PLANNING_CONFLICT')
-  if (input.status === 'ready' && current.kind === 'story' && !String(input.acceptanceCriteria ?? current.acceptanceCriteria).trim()) throw new AppError('PLANNING_CONFLICT')
+  // An epic has no status of its own, so a status sent for it is left alone. Its status follows its stories.
+  const storyStatus = current.kind === 'story' ? input.status : undefined
+  const next: Record<string, string[]> = { draft: ['in_design'], in_design: ['draft', 'ready'], ready: ['in_design', 'in_progress'], in_progress: ['in_qa'], in_qa: ['in_progress', 'done'], done: [] }
+  if (storyStatus && !next[current.status]?.includes(storyStatus as string)) throw new AppError('PLANNING_CONFLICT')
+  if (storyStatus && ['in_progress', 'in_qa', 'done'].includes(storyStatus as string) && !current.publishedAt) throw new AppError('PLANNING_CONFLICT')
+  if (storyStatus === 'in_progress' && !(await findItemDesignApprovedAt(db, itemId))) throw new AppError('PLANNING_CONFLICT')
+  if (storyStatus === 'ready' && !String(input.acceptanceCriteria ?? current.acceptanceCriteria).trim()) throw new AppError('PLANNING_CONFLICT')
   const participants = input.participantIds === undefined ? null : [...new Set(input.participantIds as string[])]
   if (participants) for (const id of participants) if (!(await ensureAssigneeInWorkspace(db, workspaceId, id))) throw new AppError('PLANNING_INPUT_INVALID')
   await db.begin(async (tx) => {
@@ -322,8 +330,9 @@ export async function updatePlanningItem(db: SQL, workspaceId: string, itemId: s
       title: typeof input.title === 'string' ? input.title.trim() : current.title,
       description: typeof input.description === 'string' ? input.description.trim() : current.description,
       acceptanceCriteria: typeof input.acceptanceCriteria === 'string' ? input.acceptanceCriteria.trim() : current.acceptanceCriteria,
-      status: typeof input.status === 'string' ? input.status : current.status,
+      status: typeof storyStatus === 'string' ? storyStatus : current.status,
     })
+    if (typeof storyStatus === 'string' && storyStatus !== current.status) await insertStatusEvent(tx, { id: randomUUID(), issueId: itemId, fromStatus: current.status, toStatus: storyStatus, actorId, apiKeyId: null })
     if (participants) await replacePlanningParticipants(tx, itemId, participants, { clear: true })
     await event(tx, workspaceId, actorId, current.kind, itemId, 'updated', undefined, { statusFrom: current.status, statusTo: input.status ?? current.status, participantsChanged: participants !== null })
   })
@@ -386,12 +395,10 @@ export async function listPlanningTasks(db: SQL, workspaceId: string, userId: st
 export async function publishPlanningEpic(db: SQL, workspaceId: string, epicId: string, actorId: string) {
   await requirePlanningApprover(db, workspaceId, actorId)
   const epic = await itemRow(db, workspaceId, epicId)
-  if (epic.kind !== 'epic' || epic.publishedAt || epic.status !== 'ready') throw new AppError('PLANNING_CONFLICT')
+  if (epic.kind !== 'epic' || epic.publishedAt) throw new AppError('PLANNING_CONFLICT')
   if (!epic.sourceDocumentId) throw new AppError('PLANNING_CONFLICT')
   const source = await documentRow(db, workspaceId, epic.sourceDocumentId)
   if (source.status !== 'approved' || source.currentVersion !== epic.sourceVersion || source.sourceOutdated) throw new AppError('PLANNING_CONFLICT')
-  const blockers = await findEpicPublishBlockers(db, epicId)
-  if (blockers.notReady || blockers.storyCount === 0 || blockers.storyWithoutTask) throw new AppError('PLANNING_CONFLICT')
   await db.begin(async (tx) => {
     await publishEpicRows(tx, epicId)
     await event(tx, workspaceId, actorId, 'epic', epicId, 'published')

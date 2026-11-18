@@ -17,7 +17,7 @@ export async function findDocumentVisibility(db: SQL, workspaceId: string, docum
 }
 
 export async function findItemPublished(db: SQL, workspaceId: string, itemId: string): Promise<boolean> {
-  const [row] = await db`SELECT published_at IS NOT NULL AS published FROM planning_items WHERE id = ${itemId} AND workspace_id = ${workspaceId}`
+  const [row] = await db`SELECT i.published_at IS NOT NULL AS published FROM issues i JOIN projects p ON p.id = i.project_id WHERE i.id = ${itemId} AND p.workspace_id = ${workspaceId}`
   return Boolean(row?.published)
 }
 
@@ -42,7 +42,13 @@ export async function listUserDisciplines(db: SQL, workspaceId: string, userId: 
   return rows.map((row) => row.discipline)
 }
 
+// The roles a member holds in one project. listUserDisciplines above joins every project of the workspace.
+export async function listProjectDisciplines(db: SQL, projectId: string, userId: string): Promise<string[]> {
+  const rows: Array<{ discipline: string }> = await db`SELECT discipline FROM project_members WHERE project_id = ${projectId} AND user_id = ${userId}`
+  return rows.map((row) => row.discipline)
+}
+
 export async function findTaskVisibility(db: SQL, workspaceId: string, taskId: string): Promise<{ published: boolean; assigneeId: string | null } | undefined> {
-  const [row] = await db`SELECT t.published_at IS NOT NULL AS published, t.assignee_id AS "assigneeId" FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = ${taskId} AND p.workspace_id = ${workspaceId}`
+  const [row] = await db`SELECT t.published_at IS NOT NULL AS published, t.assignee_id AS "assigneeId" FROM issues t JOIN projects p ON p.id = t.project_id WHERE t.id = ${taskId} AND p.workspace_id = ${workspaceId} AND t.type IN ('task', 'bug', 'subtask')`
   return row
 }

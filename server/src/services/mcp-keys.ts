@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import type { SQL } from 'bun'
 import { AppError } from '@/lib/errors/app-error'
 import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagination'
-import { isMcpRole, listedTools, MCP_KEY_LIMIT, MCP_KEY_ROLES, MCP_KEY_VALID_DAYS, MCP_TOOLS, defaultToolsFor, toolsForRoles, type McpKeyRow, type McpKeyStatus } from '@/models/mcp'
+import { isMcpRole, MCP_KEY_LIMIT, MCP_KEY_ROLES, MCP_KEY_VALID_DAYS, MCP_TOOLS, defaultToolsFor, toolsForRoles, type McpKeyRow, type McpKeyStatus } from '@/models/mcp'
 import { insertMcpKeyWithinLimit, listAllMcpKeys, listUserMcpKeys, revokeMcpKey, revokeMcpKeyWithoutMembership, revokeUserMcpKey } from '@/repositories/mcp-keys.repository'
 import { listUserRolesByWorkspace } from '@/repositories/projects.repository'
 import { requireAdmin } from '@/services/admin'
@@ -33,7 +33,7 @@ function keyView(key: McpKeyRow) {
 }
 
 export function mcpToolMatrix() {
-  return { tools: listedTools(MCP_TOOLS), roles: Object.fromEntries(MCP_KEY_ROLES.map((role) => [role, listedTools(defaultToolsFor(role))])) }
+  return { tools: [...MCP_TOOLS], roles: Object.fromEntries(MCP_KEY_ROLES.map((role) => [role, defaultToolsFor(role)])) }
 }
 
 export async function listMyMcpKeys(db: SQL, userId: string) {
@@ -72,7 +72,7 @@ export async function revokeMyMcpKey(db: SQL, userId: string, keyId: string): Pr
 // What each of the member's keys may do, per workspace. The same for every key, because access follows the roles.
 export async function getMyMcpAccess(db: SQL, userId: string) {
   const workspaces = await listUserRolesByWorkspace(db, userId)
-  return workspaces.map((workspace) => ({ ...workspace, tools: listedTools(toolsForRoles(workspace.roles)) }))
+  return workspaces.map((workspace) => ({ ...workspace, tools: toolsForRoles(workspace.roles) }))
 }
 
 // The playbook the member's agent follows, for every role the member holds in any workspace.

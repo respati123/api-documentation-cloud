@@ -8,10 +8,10 @@ export type StoryStage = (typeof STORY_STAGES)[number]
 // so existing stories and the publish rules keep working.
 export function storyStage(status: string, designApprovedAt: Date | string | null, designCount: number): StoryStage {
   if (status === 'done') return 'done'
-  if (status === 'review') return 'qa'
+  if (status === 'in_qa' || status === 'review') return 'qa'
   if (status === 'in_progress') return 'in_progress'
   if (designApprovedAt) return 'design_approved'
-  if (status === 'refinement' || status === 'ready' || designCount > 0) return 'design'
+  if (status === 'in_design' || status === 'refinement' || status === 'ready' || designCount > 0) return 'design'
   return 'draft'
 }
 

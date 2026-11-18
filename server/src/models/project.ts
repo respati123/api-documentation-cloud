@@ -8,6 +8,9 @@ export interface ProjectRow {
   workspaceId: string
   name: string
   description: string
+  key: string
+  mode: 'scrum' | 'kanban'
+  productGoal: string
   createdAt: Date
   taskCount: number
 }

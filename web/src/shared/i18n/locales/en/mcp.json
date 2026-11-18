@@ -62,16 +62,13 @@
   },
   "tool": {
     "workspaces_list": "List workspaces",
-    "projects_list": "List projects",
     "tasks_list_assigned": "See my tasks",
     "tasks_get_assigned": "Read my tasks",
     "tasks_update_assigned_status": "Change my task status",
     "tasks_comment_assigned": "Comment on my tasks",
     "stories_list_participating": "See my stories",
-    "stories_read_participating": "Read my stories",
     "stories_comment_participating": "Comment on my stories",
     "planning_list": "See planning",
-    "planning_read_document": "Read BRDs and PRDs",
     "planning_draft_prd": "Draft PRDs",
     "planning_draft_item": "Draft epics and stories",
     "planning_draft_task": "Draft tasks",
@@ -96,7 +93,14 @@
     "notifications_mark_read": "Mark notifications read",
     "team_members_list": "List the team",
     "discussion_read": "Read a discussion",
-    "story_link_data_model": "Link data model tables"
+    "story_link_data_model": "Link data model tables",
+    "backlog_list": "See the backlog and sprints",
+    "sprint_get_active": "See the active sprint",
+    "issue_read": "Read an issue",
+    "issue_draft": "Draft issues",
+    "issue_comment": "Comment on issues",
+    "subtask_update_status": "Change my sub-task status",
+    "checklist_set_done": "Tick checklist items"
   },
   "guide": {
     "title": "Required agent playbook",

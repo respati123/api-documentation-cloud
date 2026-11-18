@@ -166,8 +166,9 @@ describe.skipIf(!databaseEnabled)('DBDesign and Stitchkit integration', () => {
     await link(owner, workspaceId, 'dbdesign', 'd1')
     const epicId = randomUUID()
     const storyId = randomUUID()
-    await db`INSERT INTO planning_items (id, workspace_id, kind, title, created_by) VALUES (${epicId}, ${workspaceId}, 'epic', 'Belanja', ${owner.user.id})`
-    await db`INSERT INTO planning_items (id, workspace_id, kind, parent_id, title, created_by) VALUES (${storyId}, ${workspaceId}, 'story', ${epicId}, 'Checkout', ${owner.user.id})`
+    await db`INSERT INTO projects (id, workspace_id, name, created_by, key) VALUES (${workspaceId}, ${workspaceId}, 'Belanja', ${owner.user.id}, 'BLJ') ON CONFLICT (id) DO NOTHING`
+    await db`INSERT INTO issues (id, project_id, number, type, title, created_by) VALUES (${epicId}, ${workspaceId}, 1, 'epic', 'Belanja', ${owner.user.id})`
+    await db`INSERT INTO issues (id, project_id, number, type, parent_id, title, status, created_by) VALUES (${storyId}, ${workspaceId}, 2, 'story', ${epicId}, 'Checkout', 'draft', ${owner.user.id})`
     const path = `/api/workspaces/${workspaceId}/planning/stories/${storyId}`
 
     const added = await http.call('POST', `${path}/data-models`, { token: owner.token, body: { projectId: 'd1', tableId: 't1' } })

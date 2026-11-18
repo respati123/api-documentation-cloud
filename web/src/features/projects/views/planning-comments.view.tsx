@@ -1,6 +1,7 @@
 import { CornerDownRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
+import { paragraphsOf } from '@/features/projects/utils/mentions'
 import type { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { Avatar, Panel } from '@/features/projects/views/planning-marks.view'
 import { Badge } from '@/shared/components/primitives/badge'
@@ -142,24 +143,29 @@ function CommentMessage({
             {t(PLANNING_TEXT.comments.replyingTo, { name: message.replyTo })}
           </span>
         )}
-        <p
+        <div
           className={cn(
-            'text-sm leading-relaxed whitespace-pre-wrap',
+            'grid max-w-[68ch] gap-2.5 text-sm leading-7 text-pretty',
             message.isDecision && 'rounded-lg border-l-[3px] border-success bg-success/5 px-3 py-2',
           )}
         >
-          {message.parts.map((part, index) =>
-            part.mention ? (
-              // biome-ignore lint/suspicious/noArrayIndexKey: parts of one message keep their order
-              <span key={index} className="rounded bg-accent px-1 font-medium text-accent-foreground">
-                {part.text}
-              </span>
-            ) : (
-              // biome-ignore lint/suspicious/noArrayIndexKey: parts of one message keep their order
-              <span key={index}>{part.text}</span>
-            ),
-          )}
-        </p>
+          {paragraphsOf(message.parts).map((paragraph, paragraphIndex) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: paragraphs of one message keep their order
+            <p key={paragraphIndex} className="whitespace-pre-wrap">
+              {paragraph.map((part, index) =>
+                part.mention ? (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: parts of one paragraph keep their order
+                  <span key={index} className="rounded bg-accent px-1 font-medium text-accent-foreground">
+                    {part.text}
+                  </span>
+                ) : (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: parts of one paragraph keep their order
+                  <span key={index}>{part.text}</span>
+                ),
+              )}
+            </p>
+          ))}
+        </div>
         <div className="-ml-2 flex gap-0.5">
           <Button
             size="xs"

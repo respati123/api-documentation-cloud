@@ -16,7 +16,7 @@ export interface StoryRow {
 }
 
 export async function findStory(db: SQL, workspaceId: string, storyId: string): Promise<StoryRow | undefined> {
-  const [row] = await db`SELECT i.id, i.title, i.workspace_id AS "workspaceId", i.status, i.published_at AS "publishedAt", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.design_approved_at AS "designApprovedAt", u.email AS "designApprovedByEmail" FROM planning_items i LEFT JOIN users u ON u.id = i.design_approved_by WHERE i.id = ${storyId} AND i.workspace_id = ${workspaceId} AND i.kind = 'story'`
+  const [row] = await db`SELECT i.id, i.title, p.workspace_id AS "workspaceId", i.status, i.published_at AS "publishedAt", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.design_approved_at AS "designApprovedAt", u.email AS "designApprovedByEmail" FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN users u ON u.id = i.design_approved_by WHERE i.id = ${storyId} AND p.workspace_id = ${workspaceId} AND i.type = 'story'`
   return row
 }
 
@@ -26,11 +26,11 @@ export async function isStoryParticipantAny(db: SQL, storyId: string, userId: st
 }
 
 export async function updateStoryText(db: SQL, storyId: string, input: { userStoryRole?: string; userStoryAction?: string; userStoryBenefit?: string; flow?: string }): Promise<void> {
-  await db`UPDATE planning_items SET user_story_role = coalesce(${input.userStoryRole ?? null}, user_story_role), user_story_action = coalesce(${input.userStoryAction ?? null}, user_story_action), user_story_benefit = coalesce(${input.userStoryBenefit ?? null}, user_story_benefit), flow = coalesce(${input.flow ?? null}, flow), updated_at = now() WHERE id = ${storyId}`
+  await db`UPDATE issues SET user_story_role = coalesce(${input.userStoryRole ?? null}, user_story_role), user_story_action = coalesce(${input.userStoryAction ?? null}, user_story_action), user_story_benefit = coalesce(${input.userStoryBenefit ?? null}, user_story_benefit), flow = coalesce(${input.flow ?? null}, flow), updated_at = now() WHERE id = ${storyId}`
 }
 
 export async function setDesignApproval(db: SQL, storyId: string, userId: string): Promise<boolean> {
-  const rows = await db`UPDATE planning_items SET design_approved_by = ${userId}, design_approved_at = now(), updated_at = now() WHERE id = ${storyId} AND design_approved_at IS NULL RETURNING id`
+  const rows = await db`UPDATE issues SET design_approved_by = ${userId}, design_approved_at = now(), updated_at = now() WHERE id = ${storyId} AND design_approved_at IS NULL RETURNING id`
   return rows.length > 0
 }
 

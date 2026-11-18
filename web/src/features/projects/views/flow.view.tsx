@@ -1,22 +1,27 @@
 import { useTranslation } from 'react-i18next'
+import { SPRINT_OVERVIEW_TEXT } from '@/features/projects/constants/backlog-text.constants'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import { PROJECTS_TEXT } from '@/features/projects/constants/projects-text.constants'
 import type { ProjectDiscipline } from '@/features/projects/models/project.model'
 import type { PipelineCounts } from '@/features/projects/utils/planning'
 import type { ProjectSection, usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
+import type { useSprintSummaryViewModel } from '@/features/projects/viewmodels/use-sprint-summary.viewmodel'
 import {
   AgentAvatar,
   Avatar,
   CodeChip,
   Panel,
   PanelEmpty,
+  ProgressBar,
   PropertyList,
   PropertyRow,
   RoleTag,
   StatusIcon,
   type StatusTone,
 } from '@/features/projects/views/planning-marks.view'
+import { Badge } from '@/shared/components/primitives/badge'
 import { Button } from '@/shared/components/primitives/button'
+import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 
 type Flow = ReturnType<typeof usePlanningViewModel>['flow']
 
@@ -43,12 +48,25 @@ function stageSummary(counts: PipelineCounts, key: (typeof STAGES)[number]['key'
   return { total: counts.task.total, tone: stageTone(counts.task.done, counts.task.total), values: counts.task }
 }
 
-export function FlowView({ flow, onGo, onManageTeam }: { flow: Flow; onGo: (section: ProjectSection) => void; onManageTeam: () => void }) {
+export type SprintSummary = ReturnType<typeof useSprintSummaryViewModel>
+
+export function FlowView({
+  flow,
+  sprint,
+  onGo,
+  onManageTeam,
+}: {
+  flow: Flow
+  sprint?: SprintSummary
+  onGo: (section: ProjectSection) => void
+  onManageTeam: () => void
+}) {
   const { t } = useTranslation('planning')
   const { t: tp } = useTranslation('projects')
 
   return (
     <div className="grid gap-4" data-testid="projects-flow">
+      {sprint && <SprintCard summary={sprint} onGo={onGo} />}
       <ol
         aria-label={t(PLANNING_TEXT.pipeline.label)}
         className="grid overflow-hidden rounded-xl border border-border bg-card md:grid-cols-5"
@@ -61,7 +79,7 @@ export function FlowView({ flow, onGo, onManageTeam }: { flow: Flow; onGo: (sect
                 variant="ghost"
                 data-testid={`projects-flow-stage-${stage.key}`}
                 className="grid h-auto w-full justify-stretch gap-1.5 rounded-none px-4 py-3.5 text-left whitespace-normal hover:bg-muted/50"
-                onClick={() => onGo(stage.section)}
+                onClick={() => onGo(AGILE_PROJECT_ENABLED && stage.section === 'epics' ? 'backlog' : stage.section)}
               >
                 <span className="flex items-center justify-between text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   {t(PLANNING_TEXT.kind[stage.key])}
@@ -138,5 +156,40 @@ export function FlowView({ flow, onGo, onManageTeam }: { flow: Flow; onGo: (sect
         </div>
       </div>
     </div>
+  )
+}
+
+// The running sprint on the overview. With none running, it points to the backlog where one is planned.
+function SprintCard({ summary, onGo }: { summary: SprintSummary; onGo: (section: ProjectSection) => void }) {
+  const { t } = useTranslation('planning')
+  if (summary.status !== 'ready') return null
+  const sprint = summary.sprint
+  return (
+    <Panel
+      testId="projects-flow-sprint"
+      title={sprint ? `${t(SPRINT_OVERVIEW_TEXT.title)} · ${sprint.name}` : t(SPRINT_OVERVIEW_TEXT.title)}
+      action={
+        <Button size="xs" variant="outline" data-testid="projects-flow-sprint-open" onClick={() => onGo(sprint ? 'board' : 'backlog')}>
+          {t(sprint ? SPRINT_OVERVIEW_TEXT.openBoard : SPRINT_OVERVIEW_TEXT.openBacklog)}
+        </Button>
+      }
+    >
+      {sprint ? (
+        <div className="grid gap-2 px-[18px] py-3.5">
+          <p className="text-sm">{sprint.goal}</p>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Badge variant="warning">{sprint.daysLeft}</Badge>
+            <span>{sprint.points}</span>
+            <span>·</span>
+            <span>{sprint.items}</span>
+          </div>
+          <ProgressBar percent={sprint.percent} />
+        </div>
+      ) : (
+        <PanelEmpty>
+          {t(SPRINT_OVERVIEW_TEXT.none)} {t(SPRINT_OVERVIEW_TEXT.noneDetail)}
+        </PanelEmpty>
+      )}
+    </Panel>
   )
 }

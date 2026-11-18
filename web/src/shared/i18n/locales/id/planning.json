@@ -4,7 +4,11 @@
     "flow": "Alur",
     "documents": "Dokumen",
     "epics": "Epic & Story",
-    "board": "Papan tugas"
+    "board": "Papan tugas",
+    "backlog": "Backlog",
+    "reports": "Laporan",
+    "overview": "Ringkasan",
+    "discovery": "Discovery"
   },
   "kind": {
     "brd": "BRD",
@@ -424,5 +428,315 @@
     "tests": "Test case",
     "locked": "Terkunci",
     "lockedDetail": "Task ini terkunci sampai desain story disetujui."
+  },
+  "backlog": {
+    "title": "Backlog",
+    "subtitle": "Rencanakan sprint dan jaga urutan backlog. Epic menyaring yang tampil.",
+    "productGoal": "Product Goal",
+    "noGoal": "Belum ada Product Goal.",
+    "epicsHeading": "Epic",
+    "epicsLabel": "Saring per epic",
+    "allEpics": "Semua item",
+    "noEpic": "Tanpa epic",
+    "sprint": {
+      "planned": "Direncanakan",
+      "active": "Aktif",
+      "dates": "{{from}} sampai {{to}}",
+      "noGoal": "Belum ada tujuan sprint.",
+      "totals": "{{items}} item, {{points}} poin",
+      "doneTotals": "{{done}} selesai, {{donePoints}} poin selesai",
+      "empty": "Belum ada item di sprint ini.",
+      "daysLeft_one": "Sisa {{count}} hari",
+      "daysLeft_other": "Sisa {{count}} hari"
+    },
+    "section": {
+      "title": "Backlog",
+      "count": "{{count}} item",
+      "empty": "Backlog masih kosong.",
+      "emptyFiltered": "Tidak ada item untuk saringan ini."
+    },
+    "type": {
+      "epic": "Epic",
+      "story": "Story",
+      "task": "Task",
+      "bug": "Bug",
+      "subtask": "Sub-task"
+    },
+    "status": {
+      "draft": "Draf",
+      "in_design": "Dalam desain",
+      "ready": "Siap",
+      "todo": "Belum dikerjakan",
+      "in_progress": "Dikerjakan",
+      "in_qa": "Dalam QA",
+      "in_review": "Direview",
+      "done": "Selesai"
+    },
+    "points": "{{count}} poin",
+    "noPoints": "Belum ada poin",
+    "gap": {
+      "status": "Belum siap",
+      "points": "Perlu poin"
+    },
+    "ready": "Siap masuk sprint",
+    "unpublished": "Draf",
+    "outdated": "PRD berubah",
+    "unassigned": "Belum ditugaskan",
+    "error": "Backlog tidak bisa dimuat.",
+    "retry": "Coba lagi",
+    "actions": {
+      "newIssue": "Issue baru",
+      "newSprint": "Sprint baru",
+      "editGoal": "Ubah Product Goal",
+      "editSprint": "Ubah sprint",
+      "startSprint": "Mulai sprint",
+      "closeSprint": "Tutup sprint",
+      "publish": "Publikasikan",
+      "moveUp": "Naikkan",
+      "moveDown": "Turunkan",
+      "addToSprint": "Masukkan ke sprint",
+      "removeFromSprint": "Keluarkan dari sprint",
+      "points": "Poin",
+      "rowMenu": "Aksi lainnya",
+      "rankHint": "Hapus saringan epic untuk memindahkan item sesuai urutan backlog.",
+      "drag": "Seret untuk mengurutkan atau pindah ke daftar lain"
+    },
+    "issueDialog": {
+      "title": "Issue baru",
+      "detail": "Epic memuat story. Story, task, atau bug bisa berada di bawah epic.",
+      "type": "Tipe",
+      "name": "Judul",
+      "description": "Deskripsi",
+      "epic": "Epic",
+      "points": "Poin",
+      "priority": "Prioritas",
+      "create": "Buat",
+      "cancel": "Batal"
+    },
+    "priority": {
+      "low": "Rendah",
+      "medium": "Sedang",
+      "high": "Tinggi",
+      "urgent": "Mendesak"
+    },
+    "sprintDialog": {
+      "createTitle": "Sprint baru",
+      "editTitle": "Ubah sprint",
+      "detail": "Sprint berlangsung satu hari sampai empat minggu.",
+      "name": "Nama",
+      "goal": "Tujuan sprint",
+      "starts": "Mulai",
+      "ends": "Selesai",
+      "save": "Simpan",
+      "cancel": "Batal"
+    },
+    "closeDialog": {
+      "title": "Tutup {{name}}",
+      "detail": "Pilih ke mana item yang belum selesai dipindahkan.",
+      "carry": "Item yang belum selesai pindah ke",
+      "toBacklog": "Backlog",
+      "confirm": "Tutup sprint",
+      "cancel": "Batal"
+    },
+    "override": {
+      "title": "Tetap masukkan?",
+      "detail": "{{title}} belum siap masuk sprint. Sebagai PM kamu bisa tetap memasukkannya. Tulis alasannya.",
+      "notReady": "Belum berstatus Ready.",
+      "needsPoints": "Belum punya poin.",
+      "reason": "Alasan",
+      "confirm": "Tetap masukkan",
+      "cancel": "Batal"
+    },
+    "goalDialog": {
+      "title": "Product Goal",
+      "detail": "Tujuan yang dikejar seluruh backlog.",
+      "label": "Product Goal",
+      "save": "Simpan",
+      "cancel": "Batal"
+    },
+    "mode": {
+      "label": "Cara kerja",
+      "scrum": "Scrum",
+      "kanban": "Kanban"
+    }
+  },
+  "reports": {
+    "title": "Laporan",
+    "subtitleScrum": "Bagaimana sprint berjalan: yang tersisa, yang selesai di tiap sprint, dan seberapa banyak yang tim selesaikan.",
+    "subtitleKanban": "Bagaimana pekerjaan mengalir: yang sedang dikerjakan, berapa lama, dan seberapa banyak yang selesai.",
+    "sprintLabel": "Sprint",
+    "noSprint": "Belum ada sprint untuk dilaporkan. Mulai sprint di tab Backlog.",
+    "burndown": {
+      "title": "Burndown",
+      "detail": "Poin yang masih terbuka di akhir tiap hari, di samping garis ideal.",
+      "ideal": "Ideal",
+      "remaining": "Tersisa",
+      "aria": "Burndown {{name}}, {{total}} poin dikomitmenkan",
+      "line": "{{date}}: sisa {{remaining}} poin"
+    },
+    "report": {
+      "title": "Laporan sprint",
+      "committed": "Dikomitmenkan",
+      "completed": "Selesai",
+      "points_one": "{{count}} poin",
+      "points_other": "{{count}} poin",
+      "finished": "Selesai",
+      "notFinished": "Belum selesai",
+      "added": "Ditambah setelah mulai",
+      "removed": "Dikeluarkan setelah mulai",
+      "estimates": "Estimasi berubah",
+      "none": "Tidak ada.",
+      "estimate": "{{before}} menjadi {{after}} poin",
+      "noPoints": "Belum ada poin"
+    },
+    "velocity": {
+      "title": "Velocity",
+      "detail": "Poin yang dikomitmenkan dan selesai di sprint-sprint terakhir yang sudah ditutup.",
+      "committed": "Dikomitmenkan",
+      "completed": "Selesai",
+      "average": "Rata-rata selesai: {{value}} poin",
+      "empty": "Belum ada sprint yang ditutup.",
+      "aria": "Velocity sprint-sprint terakhir yang sudah ditutup",
+      "line": "{{name}}: {{committed}} dikomitmenkan, {{completed}} selesai"
+    },
+    "flow": {
+      "title": "Aliran kerja",
+      "period": "Periode",
+      "days_one": "{{count}} hari terakhir",
+      "days_other": "{{count}} hari terakhir",
+      "wip": "Pekerjaan berjalan",
+      "wipDetail": "Item di tiap kolom dibandingkan dengan batasnya.",
+      "limit": "Batas {{count}}",
+      "over": "Melebihi batas",
+      "noLimit": "Tanpa batas",
+      "noWip": "Tidak ada yang sedang dikerjakan.",
+      "throughput": "Throughput",
+      "finished_one": "{{count}} item selesai",
+      "finished_other": "{{count}} item selesai",
+      "cycleTime": "Cycle time",
+      "cycleDays": "{{value}} hari",
+      "average": "Rata-rata",
+      "median": "Median",
+      "p85": "Persentil ke-85",
+      "noCycle": "Belum ada item yang selesai di periode ini.",
+      "age": "Item terbuka tertua",
+      "ageDays": "Terbuka {{value}} hari",
+      "noAge": "Tidak ada yang terbuka.",
+      "cfd": "Cumulative flow",
+      "cfdDetail": "Item di tiap kategori pada akhir tiap hari.",
+      "cfdAria": "Cumulative flow item di project ini",
+      "cfdLine": "{{date}}: {{done}} selesai, {{inProgress}} berjalan, {{todo}} belum dikerjakan",
+      "todo": "Belum dikerjakan",
+      "inProgress": "Berjalan",
+      "done": "Selesai"
+    },
+    "error": "Laporan tidak bisa dimuat.",
+    "retry": "Coba lagi"
+  },
+  "sprintBoard": {
+    "title": "Papan sprint",
+    "subtitle": "Item sprint yang sedang berjalan, satu lajur untuk tiap item. Sub-task berpindah antar kolom seiring pekerjaan.",
+    "search": "Cari di papan",
+    "mine": "Pekerjaan saya",
+    "groupLabel": "Kelompokkan lajur menurut",
+    "groupItem": "Item",
+    "groupEpic": "Epic",
+    "columns": {
+      "todo": "To do",
+      "in_progress": "Dikerjakan",
+      "done": "Selesai"
+    },
+    "laneProgress": "{{done}} dari {{total}} selesai",
+    "noCards": "Kosong",
+    "statusLabel": "Status {{key}}",
+    "noSprintTitle": "Belum ada sprint aktif",
+    "noSprintDetail": "Mulai sprint di backlog, maka item-nya muncul di sini.",
+    "openBacklog": "Buka backlog",
+    "noMatch": "Tidak ada kartu yang cocok dengan filter ini.",
+    "retry": "Coba lagi",
+    "error": "Papan tidak dapat dimuat."
+  },
+  "issueDetail": {
+    "description": "Deskripsi",
+    "noDescription": "Belum ada deskripsi.",
+    "acceptance": "Kriteria penerimaan",
+    "noAcceptance": "Belum ada kriteria penerimaan.",
+    "properties": "Detail",
+    "status": "Status",
+    "statusComputed": "Mengikuti item di bawahnya",
+    "points": "Poin",
+    "priority": "Prioritas",
+    "assignee": "Penanggung jawab",
+    "parent": "Induk",
+    "noParent": "Tidak ada",
+    "sprint": "Sprint",
+    "inSprint": "Di sprint yang berjalan",
+    "notInSprint": "Tidak di sprint",
+    "subtasks": "Sub-task",
+    "items": "Item",
+    "noChildren": "Belum ada isi di bawah issue ini.",
+    "checklist": "Checklist",
+    "checklistDone": "{{done}} dari {{total}} selesai",
+    "noChecklist": "Belum ada item checklist.",
+    "checklistAdd": "Tambah item checklist",
+    "checklistAddButton": "Tambah",
+    "checklistDelete": "Hapus {{title}}",
+    "checklistTick": "Tandai {{title}} selesai",
+    "links": "Tautan",
+    "noLinks": "Tidak ada tautan.",
+    "link": {
+      "out": {
+        "blocks": "Menghalangi",
+        "relates": "Terkait dengan",
+        "found_in": "Ditemukan di"
+      },
+      "in": {
+        "blocks": "Dihalangi oleh",
+        "relates": "Terkait dengan",
+        "found_in": "Bug ditemukan di sini"
+      }
+    },
+    "outdated": "PRD berubah setelah ini ditulis. Periksa apakah masih sesuai.",
+    "outdatedSprint": "PRD berubah saat item ini ada di sprint yang berjalan. Tinjau sebelum pekerjaan dilanjutkan.",
+    "markReviewed": "Tandai sudah ditinjau",
+    "close": "Tutup",
+    "loading": "Memuat issue",
+    "error": "Issue tidak dapat dimuat.",
+    "retry": "Coba lagi",
+    "moreChildren": "Tampilkan lebih banyak"
+  },
+  "sprintOverview": {
+    "title": "Sprint aktif",
+    "detail": "{{items}}",
+    "points": "{{done}} dari {{committed}} poin selesai",
+    "openBoard": "Buka papan",
+    "none": "Tidak ada sprint yang berjalan.",
+    "noneDetail": "Rencanakan satu di backlog.",
+    "openBacklog": "Buka backlog",
+    "error": "Sprint tidak dapat dimuat.",
+    "itemsDone": "{{done}} dari {{total}} item selesai"
+  },
+  "draftBacklog": {
+    "button": "Buat draf backlog",
+    "running": "Membuat draf",
+    "hint": "Menambah draf epic dan story dari judul PRD ini. Hanya PM dan tech lead yang melihatnya sampai dipublikasikan.",
+    "done": "Draf epic dan story sudah ditambahkan ke backlog."
+  },
+  "kanbanBoard": {
+    "title": "Papan Kanban",
+    "subtitle": "Pekerjaan yang masih terbuka, satu kolom untuk tiap status. Batas pada kolom hanya peringatan dan tidak menghalangi kartu pindah.",
+    "setLimit": "Atur batas {{status}}",
+    "overLimit": "Melebihi batas",
+    "empty": "Tidak ada pekerjaan terbuka. Tambahkan item di backlog.",
+    "error": "Papan tidak dapat dimuat.",
+    "retry": "Coba lagi",
+    "limitDialog": {
+      "title": "Batas untuk {{status}}",
+      "detail": "Peringatan muncul bila kolom berisi lebih banyak kartu dari ini. Kartu tetap bisa dipindahkan masuk.",
+      "label": "Jumlah kartu paling banyak",
+      "save": "Simpan batas",
+      "clear": "Hapus batas",
+      "cancel": "Batal"
+    }
   }
 }

@@ -4,7 +4,11 @@
     "flow": "Flow",
     "documents": "Documents",
     "epics": "Epics & stories",
-    "board": "Task board"
+    "board": "Task board",
+    "backlog": "Backlog",
+    "reports": "Reports",
+    "overview": "Overview",
+    "discovery": "Discovery"
   },
   "kind": {
     "brd": "BRD",
@@ -424,5 +428,315 @@
     "tests": "Test cases",
     "locked": "Locked",
     "lockedDetail": "This task stays locked until the story design is approved."
+  },
+  "backlog": {
+    "title": "Backlog",
+    "subtitle": "Plan the sprints and keep the backlog in order. An epic filters what you see.",
+    "productGoal": "Product Goal",
+    "noGoal": "No Product Goal yet.",
+    "epicsHeading": "Epics",
+    "epicsLabel": "Filter by epic",
+    "allEpics": "All items",
+    "noEpic": "No epic",
+    "sprint": {
+      "planned": "Planned",
+      "active": "Active",
+      "dates": "{{from}} to {{to}}",
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left",
+      "noGoal": "No sprint goal yet.",
+      "totals": "{{items}} items, {{points}} points",
+      "doneTotals": "{{done}} done, {{donePoints}} points done",
+      "empty": "No items in this sprint yet."
+    },
+    "section": {
+      "title": "Backlog",
+      "count": "{{count}} items",
+      "empty": "The backlog is empty.",
+      "emptyFiltered": "Nothing here for this filter."
+    },
+    "type": {
+      "epic": "Epic",
+      "story": "Story",
+      "task": "Task",
+      "bug": "Bug",
+      "subtask": "Sub-task"
+    },
+    "status": {
+      "draft": "Draft",
+      "in_design": "In design",
+      "ready": "Ready",
+      "todo": "To do",
+      "in_progress": "In progress",
+      "in_qa": "In QA",
+      "in_review": "In review",
+      "done": "Done"
+    },
+    "points": "{{count}} pts",
+    "noPoints": "No points",
+    "gap": {
+      "status": "Not ready",
+      "points": "Needs points"
+    },
+    "ready": "Ready for a sprint",
+    "unpublished": "Draft",
+    "outdated": "PRD changed",
+    "unassigned": "Unassigned",
+    "error": "The backlog could not be loaded.",
+    "retry": "Try again",
+    "actions": {
+      "newIssue": "New issue",
+      "newSprint": "New sprint",
+      "editGoal": "Edit Product Goal",
+      "editSprint": "Edit sprint",
+      "startSprint": "Start sprint",
+      "closeSprint": "Close sprint",
+      "publish": "Publish",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "addToSprint": "Add to sprint",
+      "removeFromSprint": "Remove from sprint",
+      "points": "Points",
+      "rowMenu": "More actions",
+      "rankHint": "Clear the epic filter to move items in the order of the backlog.",
+      "drag": "Drag to reorder or to move to another list"
+    },
+    "issueDialog": {
+      "title": "New issue",
+      "detail": "An epic holds stories. A story, task, or bug can sit under an epic.",
+      "type": "Type",
+      "name": "Title",
+      "description": "Description",
+      "epic": "Epic",
+      "points": "Points",
+      "priority": "Priority",
+      "create": "Create",
+      "cancel": "Cancel"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "sprintDialog": {
+      "createTitle": "New sprint",
+      "editTitle": "Edit sprint",
+      "detail": "A sprint lasts from one day to four weeks.",
+      "name": "Name",
+      "goal": "Sprint goal",
+      "starts": "Starts on",
+      "ends": "Ends on",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "closeDialog": {
+      "title": "Close {{name}}",
+      "detail": "Choose where the items that are not finished go.",
+      "carry": "Unfinished items go to",
+      "toBacklog": "The backlog",
+      "confirm": "Close sprint",
+      "cancel": "Cancel"
+    },
+    "override": {
+      "title": "Add it anyway?",
+      "detail": "{{title}} is not ready for a sprint. As the PM you can add it anyway. Say why.",
+      "notReady": "It is not Ready yet.",
+      "needsPoints": "It has no points.",
+      "reason": "Reason",
+      "confirm": "Add anyway",
+      "cancel": "Cancel"
+    },
+    "goalDialog": {
+      "title": "Product Goal",
+      "detail": "The goal the whole backlog works toward.",
+      "label": "Product Goal",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "mode": {
+      "label": "Way of working",
+      "scrum": "Scrum",
+      "kanban": "Kanban"
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitleScrum": "How the sprints go: what is left, what each sprint finished, and how much the team finishes.",
+    "subtitleKanban": "How work flows: what is in progress, how long it takes, and how much gets finished.",
+    "sprintLabel": "Sprint",
+    "noSprint": "No sprint to report on yet. Start a sprint in the Backlog tab.",
+    "burndown": {
+      "title": "Burndown",
+      "detail": "Points still open at the end of each day, next to the ideal line.",
+      "ideal": "Ideal",
+      "remaining": "Remaining",
+      "aria": "Burndown of {{name}}, {{total}} points committed",
+      "line": "{{date}}: {{remaining}} points left"
+    },
+    "report": {
+      "title": "Sprint report",
+      "committed": "Committed",
+      "completed": "Completed",
+      "points_one": "{{count}} point",
+      "points_other": "{{count}} points",
+      "finished": "Finished",
+      "notFinished": "Not finished",
+      "added": "Added after the start",
+      "removed": "Removed after the start",
+      "estimates": "Estimates changed",
+      "none": "None.",
+      "estimate": "{{before}} to {{after}} points",
+      "noPoints": "No points"
+    },
+    "velocity": {
+      "title": "Velocity",
+      "detail": "Committed and completed points of the last closed sprints.",
+      "committed": "Committed",
+      "completed": "Completed",
+      "average": "Average completed: {{value}} points",
+      "empty": "No sprint has closed yet.",
+      "aria": "Velocity of the last closed sprints",
+      "line": "{{name}}: {{committed}} committed, {{completed}} completed"
+    },
+    "flow": {
+      "title": "Flow",
+      "period": "Period",
+      "days_one": "Last {{count}} day",
+      "days_other": "Last {{count}} days",
+      "wip": "Work in progress",
+      "wipDetail": "Items in each column against its limit.",
+      "limit": "Limit {{count}}",
+      "over": "Over the limit",
+      "noLimit": "No limit",
+      "noWip": "Nothing is in progress.",
+      "throughput": "Throughput",
+      "finished_one": "{{count}} item finished",
+      "finished_other": "{{count}} items finished",
+      "cycleTime": "Cycle time",
+      "cycleDays": "{{value}} days",
+      "average": "Average",
+      "median": "Median",
+      "p85": "85th percentile",
+      "noCycle": "No item finished in this period.",
+      "age": "Oldest open items",
+      "ageDays": "{{value}} days open",
+      "noAge": "Nothing is open.",
+      "cfd": "Cumulative flow",
+      "cfdDetail": "Items in each category at the end of each day.",
+      "cfdAria": "Cumulative flow of the items of the project",
+      "cfdLine": "{{date}}: {{done}} done, {{inProgress}} in progress, {{todo}} to do",
+      "todo": "To do",
+      "inProgress": "In progress",
+      "done": "Done"
+    },
+    "error": "The reports could not be loaded.",
+    "retry": "Try again"
+  },
+  "sprintBoard": {
+    "title": "Sprint board",
+    "subtitle": "The items of the active sprint, one lane for each. Sub-tasks move across the columns as work goes on.",
+    "search": "Search the board",
+    "mine": "My work",
+    "groupLabel": "Group the lanes by",
+    "groupItem": "Item",
+    "groupEpic": "Epic",
+    "columns": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "done": "Done"
+    },
+    "laneProgress": "{{done}} of {{total}} done",
+    "noCards": "Nothing here",
+    "statusLabel": "Status of {{key}}",
+    "noSprintTitle": "No active sprint",
+    "noSprintDetail": "Start a sprint in the backlog and its items show up here.",
+    "openBacklog": "Go to the backlog",
+    "noMatch": "No card matches these filters.",
+    "retry": "Try again",
+    "error": "The board could not be loaded."
+  },
+  "issueDetail": {
+    "description": "Description",
+    "noDescription": "No description yet.",
+    "acceptance": "Acceptance criteria",
+    "noAcceptance": "No acceptance criteria yet.",
+    "properties": "Details",
+    "status": "Status",
+    "statusComputed": "Follows its items",
+    "points": "Points",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "parent": "Parent",
+    "noParent": "None",
+    "sprint": "Sprint",
+    "inSprint": "In the running sprint",
+    "notInSprint": "Not in a sprint",
+    "subtasks": "Sub-tasks",
+    "items": "Items",
+    "noChildren": "Nothing under this issue yet.",
+    "checklist": "Checklist",
+    "checklistDone": "{{done}} of {{total}} done",
+    "noChecklist": "No checklist items yet.",
+    "checklistAdd": "Add a checklist item",
+    "checklistAddButton": "Add",
+    "checklistDelete": "Delete {{title}}",
+    "checklistTick": "Mark {{title}} as done",
+    "links": "Links",
+    "noLinks": "No links.",
+    "link": {
+      "out": {
+        "blocks": "Blocks",
+        "relates": "Relates to",
+        "found_in": "Found in"
+      },
+      "in": {
+        "blocks": "Blocked by",
+        "relates": "Relates to",
+        "found_in": "Bug found here"
+      }
+    },
+    "outdated": "The PRD changed after this was written. Check that it still fits.",
+    "outdatedSprint": "The PRD changed while this item is in the running sprint. Review it before work goes on.",
+    "markReviewed": "Mark as reviewed",
+    "close": "Close",
+    "loading": "Loading the issue",
+    "error": "The issue could not be loaded.",
+    "retry": "Try again",
+    "moreChildren": "Show more"
+  },
+  "sprintOverview": {
+    "title": "Active sprint",
+    "detail": "{{items}}",
+    "points": "{{done}} of {{committed}} points done",
+    "openBoard": "Open the board",
+    "none": "No sprint is running.",
+    "noneDetail": "Plan one in the backlog.",
+    "openBacklog": "Open the backlog",
+    "error": "The sprint could not be loaded.",
+    "itemsDone": "{{done}} of {{total}} items done"
+  },
+  "draftBacklog": {
+    "button": "Create draft backlog",
+    "running": "Creating drafts",
+    "hint": "Adds draft epics and stories from the headings of this PRD. Only the PM and the tech lead see them until they are published.",
+    "done": "Draft epics and stories were added to the backlog."
+  },
+  "kanbanBoard": {
+    "title": "Kanban board",
+    "subtitle": "The open work, one column for each status. A limit on a column is a warning and never stops a card from moving.",
+    "setLimit": "Set the limit of {{status}}",
+    "overLimit": "Over the limit",
+    "empty": "There is no open work. Add items in the backlog.",
+    "error": "The board could not be loaded.",
+    "retry": "Try again",
+    "limitDialog": {
+      "title": "Limit for {{status}}",
+      "detail": "A warning shows when the column holds more cards than this. A card can still be moved in.",
+      "label": "Most cards at once",
+      "save": "Save the limit",
+      "clear": "Remove the limit",
+      "cancel": "Cancel"
+    }
   }
 }

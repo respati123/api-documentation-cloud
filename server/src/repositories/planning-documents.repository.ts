@@ -43,7 +43,8 @@ export async function findPlanningDocumentFile(db: SQL, documentId: string, vers
 }
 
 export async function insertPlanningDocument(db: SQL, row: { id: string; workspaceId: string; kind: string; title: string; status: string; sourceDocumentId: string | null; createdBy: string }) {
-  await db`INSERT INTO planning_documents (id, workspace_id, kind, title, status, source_document_id, created_by) VALUES (${row.id}, ${row.workspaceId}, ${row.kind}, ${row.title}, ${row.status}, ${row.sourceDocumentId}, ${row.createdBy})`
+  // A document belongs to the project of its workspace. The service makes sure the workspace has one.
+  await db`INSERT INTO planning_documents (id, workspace_id, project_id, kind, title, status, source_document_id, created_by) VALUES (${row.id}, ${row.workspaceId}, (SELECT id FROM projects WHERE workspace_id = ${row.workspaceId} ORDER BY created_at, id LIMIT 1), ${row.kind}, ${row.title}, ${row.status}, ${row.sourceDocumentId}, ${row.createdBy})`
 }
 
 export async function insertPlanningDocumentVersion(
@@ -69,7 +70,7 @@ export async function updatePlanningDocumentStatus(
 
 // PRDs and epics or stories drafted from the document.
 export async function countDocumentDependents(db: SQL, workspaceId: string, documentId: string): Promise<number> {
-  const [row] = await db`SELECT (SELECT count(*) FROM planning_documents WHERE workspace_id = ${workspaceId} AND source_document_id = ${documentId}) + (SELECT count(*) FROM planning_items WHERE workspace_id = ${workspaceId} AND source_document_id = ${documentId}) AS n`
+  const [row] = await db`SELECT (SELECT count(*) FROM planning_documents WHERE workspace_id = ${workspaceId} AND source_document_id = ${documentId}) + (SELECT count(*) FROM issues i JOIN projects p ON p.id = i.project_id WHERE p.workspace_id = ${workspaceId} AND i.source_document_id = ${documentId}) AS n`
   return Number(row.n)
 }
 

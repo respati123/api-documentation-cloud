@@ -8,9 +8,18 @@ import type { WorkRole } from '@/features/projects/models/story.model'
 import { projectsService } from '@/features/projects/services/projects.service'
 import { isOverdue } from '@/features/projects/utils/planning'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
+import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
+import { useDraftBacklogViewModel } from '@/features/projects/viewmodels/use-draft-backlog.viewmodel'
+import { useIssueDetailViewModel } from '@/features/projects/viewmodels/use-issue-detail.viewmodel'
+import { useKanbanBoardViewModel } from '@/features/projects/viewmodels/use-kanban-board.viewmodel'
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
+import { useReportsViewModel } from '@/features/projects/viewmodels/use-reports.viewmodel'
+import { useSprintBoardViewModel } from '@/features/projects/viewmodels/use-sprint-board.viewmodel'
+import { useSprintSummaryViewModel } from '@/features/projects/viewmodels/use-sprint-summary.viewmodel'
+import { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
+import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
 
@@ -128,6 +137,60 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     memberList,
   )
 
+  const mode = selectedProject?.mode ?? 'scrum'
+  const backlog = useBacklogViewModel(
+    workspaceId,
+    selectedProject?.id,
+    selectedProject?.productGoal ?? '',
+    enabled && AGILE_PROJECT_ENABLED && planning.section === 'backlog',
+    { canEdit, canApprove: planning.access.canApprove, canManage: planning.access.canManage },
+    mode,
+  )
+
+  const issueDetail = useIssueDetailViewModel(workspaceId, selectedProject?.id, {
+    canEdit,
+    canApprove: planning.access.canApprove,
+    canManage: planning.access.canManage,
+  })
+
+  // The parts of a story (Definition of Done, designs, contracts, test cases) come from the story routes, which share the issue ids.
+  const issueStory = useStoryExtrasViewModel(
+    workspaceId,
+    issueDetail.storyRef,
+    [],
+    AGILE_PROJECT_ENABLED && issueDetail.storyRef !== null,
+    planning.access.canApprove,
+  )
+
+  const sprintBoard = useSprintBoardViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && mode === 'scrum' && planning.section === 'board',
+    canEdit,
+  )
+  const kanbanBoard = useKanbanBoardViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && mode === 'kanban' && planning.section === 'board',
+    { canEdit, canApprove: planning.access.canApprove },
+  )
+
+  const sprintSummary = useSprintSummaryViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && mode === 'scrum' && planning.section === 'flow',
+  )
+  const draftBacklog = useDraftBacklogViewModel(workspaceId, selectedProject?.id, AGILE_PROJECT_ENABLED && planning.access.canManage, () =>
+    planning.go('backlog'),
+  )
+
+  const reports = useReportsViewModel(
+    workspaceId,
+    selectedProject?.id,
+    mode,
+    enabled && AGILE_PROJECT_ENABLED && planning.section === 'reports',
+  )
+
   const allTasks = tasks.data ?? []
   const taskExtras = useTaskExtrasViewModel(workspaceId, editingTask ?? null, allTasks, planning.codes, true)
   const visible = filterTasks(allTasks, filters, userId)
@@ -138,6 +201,15 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     workspaceName,
     selectedProject,
     planning,
+    backlog,
+    sprintBoard,
+    kanbanBoard,
+    mode,
+    issueDetail,
+    issueStory,
+    sprintSummary,
+    draftBacklog,
+    reports,
     taskComments,
     canSeeTaskComments,
     filters,
