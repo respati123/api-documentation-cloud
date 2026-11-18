@@ -15,7 +15,7 @@ import {
   velocitySchema,
   wipLimitsSchema,
 } from '@/features/projects/models/issue.model'
-import { workspaceCall } from '@/features/projects/services/workspace-transport'
+import { isSampleWorkspace, workspaceCall } from '@/features/projects/services/workspace-transport'
 import { apiPage } from '@/shared/services/api-client'
 
 export interface NewIssueInput {
@@ -56,6 +56,15 @@ const sprintOf = z.object({ sprint: sprintSchema })
 // Every call is project-scoped: /api/workspaces/{workspaceId}/projects/{projectId}/...
 const at = (projectId: string, path: string) => `/projects/${projectId}${path}`
 
+// One page of an issue list. The sample workspace answers from its own data, which has no cursor, so it is one page.
+async function issuePage(token: string, workspaceId: string, projectId: string, query: string, cursor?: string | null) {
+  const path = at(projectId, `/issues?${query}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)
+  const page = isSampleWorkspace(workspaceId)
+    ? { data: await workspaceCall(workspaceId, path, { token }), nextCursor: null }
+    : await apiPage(`/api/workspaces/${workspaceId}${path}`, { token })
+  return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
+}
+
 export const issuesService = {
   backlog: async (token: string, workspaceId: string, projectId: string, cursor?: string | null) =>
     z.parse(
@@ -66,31 +75,16 @@ export const issuesService = {
     ),
 
   // Epics, a page at a time. The panel in the backlog needs them all, so the caller follows the cursor.
-  epics: async (token: string, workspaceId: string, projectId: string, cursor?: string | null) => {
-    const page = await apiPage(
-      `/api/workspaces/${workspaceId}${at(projectId, `/issues?type=epic&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)}`,
-      { token },
-    )
-    return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
-  },
+  epics: (token: string, workspaceId: string, projectId: string, cursor?: string | null) =>
+    issuePage(token, workspaceId, projectId, 'type=epic', cursor),
 
   // The sub-tasks of the whole project, a page at a time. The board keeps those of the items in the sprint.
-  subtasks: async (token: string, workspaceId: string, projectId: string, cursor?: string | null) => {
-    const page = await apiPage(
-      `/api/workspaces/${workspaceId}${at(projectId, `/issues?type=subtask&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)}`,
-      { token },
-    )
-    return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
-  },
+  subtasks: (token: string, workspaceId: string, projectId: string, cursor?: string | null) =>
+    issuePage(token, workspaceId, projectId, 'type=subtask', cursor),
 
   // What sits under an issue: the items of an epic, or the sub-tasks of an item.
-  children: async (token: string, workspaceId: string, projectId: string, parentId: string, cursor?: string | null) => {
-    const page = await apiPage(
-      `/api/workspaces/${workspaceId}${at(projectId, `/issues?epic=${encodeURIComponent(parentId)}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)}`,
-      { token },
-    )
-    return { items: z.parse(z.object({ issues: z.array(issueSchema) }), page.data).issues, nextCursor: page.nextCursor }
-  },
+  children: (token: string, workspaceId: string, projectId: string, parentId: string, cursor?: string | null) =>
+    issuePage(token, workspaceId, projectId, `epic=${encodeURIComponent(parentId)}`, cursor),
 
   issue: async (token: string, workspaceId: string, projectId: string, ref: string) =>
     z.parse(issueOf, await workspaceCall(workspaceId, at(projectId, `/issues/${encodeURIComponent(ref)}`), { token })).issue,

@@ -1,6 +1,7 @@
 import type { PlanningComment, PlanningDocument, PlanningEvent, PlanningItem } from '@/features/projects/models/planning.model'
 import type { Task } from '@/features/projects/models/project.model'
 import type { DodItem, StoryDetails, Subtask } from '@/features/projects/models/story.model'
+import { agileDemoRequest, DEMO_AGILE_PROJECT, NOT_AGILE } from '@/features/projects/services/mock/agile-mock-api'
 import {
   DEMO_LOCKED_MESSAGE,
   DEMO_PROJECT_ID,
@@ -92,6 +93,9 @@ export async function demoRequest(method: string, path: string, body: unknown): 
   const route = `${method} ${path}`
   let match: RegExpMatchArray | null
 
+  const agile = agileDemoRequest(method, path)
+  if (agile !== NOT_AGILE) return agile
+
   if (route === 'GET /projects')
     return {
       projects: [
@@ -102,6 +106,7 @@ export async function demoRequest(method: string, path: string, body: unknown): 
           description: '',
           createdAt: now(),
           taskCount: state.tasks.length,
+          ...DEMO_AGILE_PROJECT,
         },
       ],
     }
