@@ -123,6 +123,8 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
           markReviewed: () => act.mutate(() => issuesService.markSourceReviewed(token, workspaceId, project, current.id)),
         }
       : null,
+    // The story whose Definition of Done, designs, contracts, and test cases the sheet shows.
+    storyRef: current?.type === 'story' ? { id: current.id, status: current.status ?? 'draft' } : null,
     childrenHeading: say(current?.type === 'epic' ? ISSUE_DETAIL_TEXT.items : ISSUE_DETAIL_TEXT.subtasks),
     showChildren: current !== undefined && current.type !== 'subtask',
     children: {

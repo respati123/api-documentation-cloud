@@ -120,7 +120,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
         </>
       )}
 
-      {AGILE_PROJECT_ENABLED && <IssueDetailView vm={vm.issueDetail} />}
+      {AGILE_PROJECT_ENABLED && <IssueDetailView vm={vm.issueDetail} extras={vm.issueStory} />}
       <PlanningDialogsView dialogs={planning.dialogs} />
     </div>
   )

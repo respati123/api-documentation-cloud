@@ -3,7 +3,9 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ISSUE_DETAIL_TEXT } from '@/features/projects/constants/backlog-text.constants'
 import type { useIssueDetailViewModel } from '@/features/projects/viewmodels/use-issue-detail.viewmodel'
+import type { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
 import { CodeChip, Notice } from '@/features/projects/views/planning-marks.view'
+import { DesignNotice, StoryTabs } from '@/features/projects/views/story-parts.view'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Badge } from '@/shared/components/primitives/badge'
@@ -16,9 +18,10 @@ import { SelectField } from '@/shared/components/select-field'
 import { ErrorState } from '@/shared/components/state-views'
 
 export type IssueDetailProps = ReturnType<typeof useIssueDetailViewModel>
+type StoryExtras = ReturnType<typeof useStoryExtrasViewModel>
 
 // The detail of one issue, whatever its type, in a sheet that opens from the backlog and the board.
-export function IssueDetailView({ vm }: { vm: IssueDetailProps }) {
+export function IssueDetailView({ vm, extras }: { vm: IssueDetailProps; extras?: StoryExtras }) {
   const { t } = useTranslation('planning')
   const issue = vm.issue
   return (
@@ -108,12 +111,21 @@ export function IssueDetailView({ vm }: { vm: IssueDetailProps }) {
               </dl>
             </Section>
 
-            <Section title={t(ISSUE_DETAIL_TEXT.description)}>
-              <Text value={issue.description} empty={t(ISSUE_DETAIL_TEXT.noDescription)} testId="issue-detail-description" />
-            </Section>
-            <Section title={t(ISSUE_DETAIL_TEXT.acceptance)}>
-              <Text value={issue.acceptance} empty={t(ISSUE_DETAIL_TEXT.noAcceptance)} testId="issue-detail-acceptance" />
-            </Section>
+            {vm.storyRef && extras ? (
+              <>
+                {extras.available && <DesignNotice extras={extras} />}
+                <StoryTabs extras={extras} description={issue.description} acceptance={issue.acceptance} />
+              </>
+            ) : (
+              <>
+                <Section title={t(ISSUE_DETAIL_TEXT.description)}>
+                  <Text value={issue.description} empty={t(ISSUE_DETAIL_TEXT.noDescription)} testId="issue-detail-description" />
+                </Section>
+                <Section title={t(ISSUE_DETAIL_TEXT.acceptance)}>
+                  <Text value={issue.acceptance} empty={t(ISSUE_DETAIL_TEXT.noAcceptance)} testId="issue-detail-acceptance" />
+                </Section>
+              </>
+            )}
 
             {vm.showChildren && (
               <Section title={vm.childrenHeading}>

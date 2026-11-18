@@ -218,4 +218,21 @@ describe('useIssueDetailViewModel', () => {
     await waitFor(() => expect(result.current.status).toBe('error'))
     expect(result.current.error).toBe('You may not read this project.')
   })
+
+  test('names the story whose parts are shown, and no other type', async () => {
+    reply(issue('a', { type: 'story', status: 'in_qa' }))
+    const story = await open()
+    expect(story.result.current.storyRef).toEqual({ id: 'a', status: 'in_qa' })
+  })
+
+  test('a task has no story parts', async () => {
+    reply(issue('a', { type: 'task' }))
+    const task = await open()
+    expect(task.result.current.storyRef).toBeNull()
+  })
+
+  test('nothing is named while no issue is open', () => {
+    const { result } = renderHook(() => useIssueDetailViewModel('w1', 'p1', PM), { wrapper: Wrapper })
+    expect(result.current.storyRef).toBeNull()
+  })
 })

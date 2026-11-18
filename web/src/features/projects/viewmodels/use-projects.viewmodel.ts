@@ -17,6 +17,7 @@ import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use
 import { useReportsViewModel } from '@/features/projects/viewmodels/use-reports.viewmodel'
 import { useSprintBoardViewModel } from '@/features/projects/viewmodels/use-sprint-board.viewmodel'
 import { useSprintSummaryViewModel } from '@/features/projects/viewmodels/use-sprint-summary.viewmodel'
+import { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
 import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
@@ -152,6 +153,15 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     canManage: planning.access.canManage,
   })
 
+  // The parts of a story (Definition of Done, designs, contracts, test cases) come from the story routes, which share the issue ids.
+  const issueStory = useStoryExtrasViewModel(
+    workspaceId,
+    issueDetail.storyRef,
+    [],
+    AGILE_PROJECT_ENABLED && issueDetail.storyRef !== null,
+    planning.access.canApprove,
+  )
+
   const sprintBoard = useSprintBoardViewModel(
     workspaceId,
     selectedProject?.id,
@@ -196,6 +206,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     kanbanBoard,
     mode,
     issueDetail,
+    issueStory,
     sprintSummary,
     draftBacklog,
     reports,
