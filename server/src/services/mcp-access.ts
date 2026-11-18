@@ -10,8 +10,8 @@ import { findMcpKeyAuth, markGuideRead, touchMcpKey } from '@/repositories/mcp-k
 import { listUserDisciplines } from '@/repositories/planning-audience.repository'
 import { GUIDE_VERSION, guideFor } from '@/services/mcp-guides'
 import { findRole, listUserWorkspaces, listWorkspaceTeam } from '@/repositories/memberships.repository'
-import { findAssignedTask, findTaskInWorkspace, listAssignedTasks, listProjects, listTasks, listUserRolesByWorkspace, updateAssignedTaskStatus } from '@/repositories/projects.repository'
-import { addTaskSubtask, getTaskSubtasks, recordTaskEvent, setTaskSubtaskDone } from '@/services/projects'
+import { findAssignedTask, findTaskInWorkspace, listAssignedTasks, listProjects, listTasks, listUserRolesByWorkspace } from '@/repositories/projects.repository'
+import { addTaskSubtask, getTaskSubtasks, setTaskSubtaskDone } from '@/services/projects'
 import { addStoryTestCase, attachStoryDesign, getStoryDetails, linkStoryContract, linkStoryDataModel, updateStoryDetails } from '@/services/stories'
 import { listParticipatingStories, isStoryParticipant } from '@/repositories/planning.repository'
 import { mcpKeyHash } from '@/services/mcp-keys'
@@ -20,6 +20,7 @@ import { parseInput } from '@/lib/parse-input'
 import { createIssueBody } from '@/models/issue-input'
 import { listChecklist, listLinks, setChecklistItemDone } from '@/services/issue-details'
 import { readBacklog } from '@/services/issue-backlog'
+import { insertPlanningEvent } from '@/repositories/planning-events.repository'
 import { createIssue, getIssue, updateIssue } from '@/services/issues'
 import { searchCollectionRequests } from '@/services/collection-search'
 import { listNotificationsPage } from '@/services/notifications'
@@ -111,9 +112,17 @@ export async function changeMcpAssignedTaskStatus(db: SQL, principal: McpPrincip
   if (typeof status !== 'string' || !statuses.includes(status as TaskStatus)) throw new AppError('TASK_INPUT_INVALID')
   const current = typeof taskId === 'string' ? await findTaskInWorkspace(db, taskId, id) : undefined
   if (current?.locked && status !== 'backlog' && status !== current.status) throw new AppError('TASK_LOCKED')
-  const task = typeof taskId === 'string' ? await updateAssignedTaskStatus(db, taskId, await projectIdsOf(db, id), principal.userId, status as TaskStatus) : undefined
+  const assigned = typeof taskId === 'string' ? await findAssignedTask(db, taskId, await projectIdsOf(db, id), principal.userId) : undefined
+  if (!assigned) throw new AppError('TASK_NOT_FOUND')
+  // The issue service holds an agent key to its own sub-tasks, and runs the roll-up and the open sub-task checks.
+  const scope = await issueScope(db, id)
+  await updateIssue(db, scope, asAgent(principal), assigned.id, { status: status === 'backlog' ? 'todo' : status })
+  const task = await findAssignedTask(db, assigned.id, await projectIdsOf(db, id), principal.userId)
   if (!task) throw new AppError('TASK_NOT_FOUND')
-  if (task.status !== current?.status) await recordTaskEvent(db, id, task.id, principal.userId, `status:${task.status}`, principal.keyId)
+  // The issue service wrote the status event. This is the line the activity panel of the task shows.
+  if (task.status !== current?.status) {
+    await insertPlanningEvent(db, { workspaceId: id, actorId: principal.userId, apiKeyId: principal.keyId, targetKind: 'task', targetId: task.id, action: `status:${task.status}` })
+  }
   return task
 }
 
@@ -388,8 +397,9 @@ export async function readMcpDocumentResource(db: SQL, principal: McpPrincipal, 
 // its owner's own sub-tasks, and the issue service holds it to that.
 const asAgent = (principal: McpPrincipal) => ({ userId: principal.userId, apiKeyId: principal.keyId })
 
+// The oldest project, as everywhere else that takes the one project of a workspace. The list is ordered by the last change.
 async function issueScope(db: SQL, workspaceId: string) {
-  const [project] = await listProjects(db, workspaceId)
+  const [project] = (await listProjects(db, workspaceId)).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
   if (!project) throw new AppError('PROJECT_NOT_FOUND')
   return { workspaceId, projectId: project.id }
 }

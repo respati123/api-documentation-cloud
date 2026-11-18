@@ -103,6 +103,7 @@ const memberTools: McpTool[] = [
   'issue_comment',
   'subtask_update_status',
   'checklist_set_done',
+  'issue_draft',
 ]
 
 // Documents the role may read: the PM and tech lead read all of them, backend the BRD and approved PRDs.
@@ -112,8 +113,8 @@ const artifactTools: McpTool[] = ['story_attach_design', 'story_link_api_contrac
 const storyDetailTools: McpTool[] = ['story_write_details']
 
 const roleTools: Record<McpKeyRole, McpTool[]> = {
-  pm: [...memberTools, ...PLANNING_TOOLS, 'issue_draft', 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools],
-  tech_lead: [...memberTools, 'issue_draft', 'planning_list', 'planning_draft_task', 'planning_comment', ...documentTools, ...artifactTools, ...storyDetailTools],
+  pm: [...memberTools, ...PLANNING_TOOLS, 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools],
+  tech_lead: [...memberTools, 'planning_list', 'planning_draft_task', 'planning_comment', ...documentTools, ...artifactTools, ...storyDetailTools],
   ui_ux: [...memberTools, 'story_attach_design'],
   backend: [...memberTools, ...documentTools, 'story_link_api_contract', 'story_link_data_model'],
   frontend: memberTools,

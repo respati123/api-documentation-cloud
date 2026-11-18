@@ -71,7 +71,7 @@ describe.skipIf(!databaseEnabled)('MCP issue tools', () => {
     const devTools = await names(devKey)
     for (const tool of ['backlog_list', 'sprint_get_active', 'issue_read', 'issue_draft', 'issue_comment', 'subtask_update_status', 'checklist_set_done']) expect(pmTools).toContain(tool)
     expect(devTools).toContain('backlog_list')
-    expect(devTools).not.toContain('issue_draft')
+    expect(devTools).toContain('issue_draft')
   })
 
   test('an agent drafts an issue that stays a draft, and the PM publishes it', async () => {
@@ -141,5 +141,41 @@ describe.skipIf(!databaseEnabled)('MCP issue tools', () => {
     const thread = await call(pmKey, 'discussion_read', { targetKind: 'task', targetId: task.id })
     expect(thread.value.map((comment: Body) => comment.body)).toEqual(['Please look at this'])
     expect((await call(pmKey, 'issue_comment', { issueId: 'nope-nope', body: 'x' })).value.code).toBe('ISSUE_NOT_FOUND')
+  })
+
+  test('any member holds issue_draft, and drafts a bug with it', async () => {
+    const names = ((await http.mcp(devKey, 'tools/list')).json.result as { tools: Array<{ name: string }> }).tools.map((tool) => tool.name)
+    expect(names).toContain('issue_draft')
+    expect(names.filter((name) => name === 'issue_draft')).toHaveLength(1)
+    const drafted = await call(devKey, 'issue_draft', { type: 'bug', title: 'Crash on refund', clientRequestId: 'bug-by-dev' })
+    expect(drafted.isError).toBe(false)
+    expect(drafted.value).toMatchObject({ type: 'bug', title: 'Crash on refund', publishedAt: null })
+  })
+
+  test('the older status tool follows the issue rules: an agent moves its own sub-task and nothing else', async () => {
+    const parent = data(await api('POST', '/issues', owner, { type: 'task', title: 'Parent for the old tool', points: 2, assigneeId: dev.user.id })).issue
+    const sub = data(await api('POST', '/issues', owner, { type: 'subtask', title: 'Sub for the old tool', parentId: parent.id, role: 'backend', assigneeId: dev.user.id })).issue
+
+    const refused = await call(devKey, 'tasks_update_assigned_status', { taskId: parent.id, status: 'done' })
+    expect(refused.isError).toBe(true)
+    expect(refused.value).toMatchObject({ code: 'ISSUE_AGENT_FORBIDDEN' })
+    expect(data(await api('GET', `/issues/${parent.id}`, owner)).issue.status).toBe('todo')
+
+    const moved = await call(devKey, 'tasks_update_assigned_status', { taskId: sub.id, status: 'in_progress' })
+    expect(moved.isError).toBe(false)
+    expect(data(await api('GET', `/issues/${sub.id}`, owner)).issue.status).toBe('in_progress')
+    const events = await db`SELECT api_key_id FROM issue_status_events WHERE issue_id = ${sub.id} AND to_status = 'in_progress'`
+    expect(events).toHaveLength(1)
+    expect(events[0].api_key_id).not.toBeNull()
+  })
+
+  test('the issue tools use the oldest project of the workspace, as the portal does, however recently another was changed', async () => {
+    const secondId = crypto.randomUUID()
+    await db`INSERT INTO projects (id, workspace_id, name, created_by, key, updated_at) VALUES (${secondId}, ${workspaceId}, 'Second', ${owner.user.id}, 'ZZ', now() + interval '1 hour')`
+    const drafted = await call(pmKey, 'issue_draft', { type: 'task', title: 'Lands in the first project', clientRequestId: 'oldest-project' })
+    expect(drafted.isError).toBe(false)
+    expect(drafted.value.projectId).toBe(projectId)
+    const listed = await call(pmKey, 'backlog_list')
+    expect(JSON.stringify(listed.value)).toContain('Lands in the first project')
   })
 })

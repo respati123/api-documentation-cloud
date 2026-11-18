@@ -149,11 +149,6 @@ export async function listAssignedTasks(db: SQL, projectIds: string[], assigneeI
   return db`SELECT ${db.unsafe(plainTaskColumns)} FROM issues i JOIN memberships m ON m.user_id = ${assigneeId} LEFT JOIN users u ON u.id = i.assignee_id WHERE ${db.unsafe(WORK)} AND i.published_at IS NOT NULL AND i.project_id = ANY(ARRAY(SELECT jsonb_array_elements_text((${projectIdList(projectIds)}::text)::jsonb))) AND i.assignee_id = ${assigneeId} AND m.workspace_id = (SELECT workspace_id FROM projects WHERE id = i.project_id) ORDER BY i.status, coalesce(i.rank, 0), i.created_at LIMIT 200`
 }
 
-export async function updateAssignedTaskStatus(db: SQL, taskId: string, projectIds: string[], assigneeId: string, status: TaskStatus): Promise<TaskRow | undefined> {
-  const [row] = await db`UPDATE issues SET status = ${workStatus(status)}, updated_at = now() WHERE id = ${taskId} AND type IN ('task', 'bug', 'subtask') AND published_at IS NOT NULL AND project_id = ANY(ARRAY(SELECT jsonb_array_elements_text((${projectIdList(projectIds)}::text)::jsonb))) AND assignee_id = ${assigneeId} AND EXISTS (SELECT 1 FROM projects p JOIN memberships m ON m.workspace_id = p.workspace_id WHERE p.id = issues.project_id AND m.user_id = ${assigneeId}) RETURNING id, project_id AS "projectId", title, description, status, priority, assignee_id AS "assigneeId", (SELECT email FROM users WHERE id = issues.assignee_id) AS "assigneeEmail", due_date::text AS "dueDate", coalesce(rank, 0)::text AS position, created_at AS "createdAt", updated_at AS "updatedAt"`
-  return row
-}
-
 export async function isWorkspaceMember(db: SQL, workspaceId: string, userId: string): Promise<boolean> {
   const [row] = await db`SELECT 1 FROM memberships WHERE workspace_id = ${workspaceId} AND user_id = ${userId}`
   return row !== undefined
