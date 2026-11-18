@@ -1,7 +1,9 @@
 import { Archive, Download, Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { DRAFT_BACKLOG_TEXT } from '@/features/projects/constants/backlog-text.constants'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { useDocumentDetailViewModel } from '@/features/projects/viewmodels/use-document-detail.viewmodel'
+import type { useDraftBacklogViewModel } from '@/features/projects/viewmodels/use-draft-backlog.viewmodel'
 import type { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { PlanningActivityView } from '@/features/projects/views/planning-activity.view'
 import { PlanningCommentsView } from '@/features/projects/views/planning-comments.view'
@@ -38,8 +40,9 @@ import { cn } from '@/shared/utils/cn'
 
 type Planning = ReturnType<typeof usePlanningViewModel>
 type Detail = ReturnType<typeof useDocumentDetailViewModel>
+type DraftBacklog = ReturnType<typeof useDraftBacklogViewModel>
 
-export function DocumentDetailView({ planning }: { planning: Planning }) {
+export function DocumentDetailView({ planning, draftBacklog }: { planning: Planning; draftBacklog?: DraftBacklog }) {
   const { t } = useTranslation('planning')
   const vm = planning.documentDetail
   const document = vm.document
@@ -77,7 +80,7 @@ export function DocumentDetailView({ planning }: { planning: Planning }) {
             { label: document.title },
           ]}
         />
-        {vm.isPrd && <PrdNotice vm={vm} />}
+        {vm.isPrd && <PrdNotice vm={vm} draftBacklog={draftBacklog} />}
         {vm.isBrdDraft && <BrdNotice vm={vm} />}
         {vm.isDiscarded && (
           <Notice tone="warning" testId="projects-document-discarded">
@@ -429,7 +432,7 @@ function BrdNotice({ vm }: { vm: Detail }) {
   )
 }
 
-function PrdNotice({ vm }: { vm: Detail }) {
+function PrdNotice({ vm, draftBacklog }: { vm: Detail; draftBacklog?: DraftBacklog }) {
   const { t } = useTranslation('planning')
   const document = vm.document
   if (!document) return null
@@ -439,6 +442,26 @@ function PrdNotice({ vm }: { vm: Detail }) {
         <div>
           <p className="font-semibold">{t(PLANNING_TEXT.document.approvedTitle)}</p>
           <p className="mt-0.5 text-sm text-muted-foreground">{t(PLANNING_TEXT.document.approvedDetail)}</p>
+          {draftBacklog?.canRun && document.kind === 'prd' && (
+            <div className="mt-3 grid max-w-[60ch] gap-2">
+              <p className="text-[13px] text-muted-foreground">{t(DRAFT_BACKLOG_TEXT.hint)}</p>
+              {draftBacklog.error && (
+                <Alert variant="destructive" data-testid="projects-document-draft-error">
+                  <AlertDescription>{draftBacklog.error}</AlertDescription>
+                </Alert>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-fit"
+                data-testid="projects-document-draft-backlog"
+                disabled={draftBacklog.isRunning}
+                onClick={() => draftBacklog.run(document.id)}
+              >
+                {t(draftBacklog.isRunning ? DRAFT_BACKLOG_TEXT.running : DRAFT_BACKLOG_TEXT.button)}
+              </Button>
+            </div>
+          )}
         </div>
       </Notice>
     )

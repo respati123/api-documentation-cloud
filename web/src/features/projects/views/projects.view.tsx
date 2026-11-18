@@ -66,10 +66,17 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
         </div>
       ) : (
         <>
-          {planning.section === 'flow' && <FlowView flow={planning.flow} onGo={planning.go} onManageTeam={onManageTeam} />}
+          {planning.section === 'flow' && (
+            <FlowView
+              flow={planning.flow}
+              sprint={AGILE_PROJECT_ENABLED ? vm.sprintSummary : undefined}
+              onGo={planning.go}
+              onManageTeam={onManageTeam}
+            />
+          )}
           {planning.section === 'documents' &&
             (planning.detail === 'document' ? (
-              <DocumentDetailView planning={planning} />
+              <DocumentDetailView planning={planning} draftBacklog={vm.draftBacklog} />
             ) : (
               <DocumentsListView
                 documents={planning.documents}

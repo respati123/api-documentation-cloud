@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { ProjectSection } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { Button } from '@/shared/components/primitives/button'
+import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { cn } from '@/shared/utils/cn'
+
+const RENAMED: Partial<Record<ProjectSection, 'overview' | 'discovery'>> = { flow: 'overview', documents: 'discovery' }
 
 export function ProjectSectionNav({
   current,
@@ -31,7 +34,7 @@ export function ProjectSectionNav({
             )}
             onClick={() => onSelect(section.id)}
           >
-            {t(PLANNING_TEXT.nav[section.id])}
+            {t(PLANNING_TEXT.nav[AGILE_PROJECT_ENABLED ? (RENAMED[section.id] ?? section.id) : section.id])}
             {section.count !== null && <span className="text-[11.5px] text-muted-foreground tabular-nums">{section.count}</span>}
           </Button>
         )

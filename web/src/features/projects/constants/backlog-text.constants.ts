@@ -200,3 +200,23 @@ export const ISSUE_DETAIL_TEXT = {
   retry: 'planning:issueDetail.retry',
   moreChildren: 'planning:issueDetail.moreChildren',
 } as const
+
+// Locale keys for the sprint card on the overview and the draft-backlog action. The words live in planning.json.
+export const SPRINT_OVERVIEW_TEXT = {
+  title: 'planning:sprintOverview.title',
+  detail: 'planning:sprintOverview.detail',
+  points: 'planning:sprintOverview.points',
+  itemsDone: 'planning:sprintOverview.itemsDone',
+  openBoard: 'planning:sprintOverview.openBoard',
+  none: 'planning:sprintOverview.none',
+  noneDetail: 'planning:sprintOverview.noneDetail',
+  openBacklog: 'planning:sprintOverview.openBacklog',
+  error: 'planning:sprintOverview.error',
+} as const
+
+export const DRAFT_BACKLOG_TEXT = {
+  button: 'planning:draftBacklog.button',
+  running: 'planning:draftBacklog.running',
+  hint: 'planning:draftBacklog.hint',
+  done: 'planning:draftBacklog.done',
+} as const

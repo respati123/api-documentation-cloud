@@ -6,7 +6,9 @@
     "epics": "Epic & Story",
     "board": "Papan tugas",
     "backlog": "Backlog",
-    "reports": "Laporan"
+    "reports": "Laporan",
+    "overview": "Ringkasan",
+    "discovery": "Discovery"
   },
   "kind": {
     "brd": "BRD",
@@ -696,5 +698,22 @@
     "error": "Issue tidak dapat dimuat.",
     "retry": "Coba lagi",
     "moreChildren": "Tampilkan lebih banyak"
+  },
+  "sprintOverview": {
+    "title": "Sprint aktif",
+    "detail": "{{items}}",
+    "points": "{{done}} dari {{committed}} poin selesai",
+    "openBoard": "Buka papan",
+    "none": "Tidak ada sprint yang berjalan.",
+    "noneDetail": "Rencanakan satu di backlog.",
+    "openBacklog": "Buka backlog",
+    "error": "Sprint tidak dapat dimuat.",
+    "itemsDone": "{{done}} dari {{total}} item selesai"
+  },
+  "draftBacklog": {
+    "button": "Buat draf backlog",
+    "running": "Membuat draf",
+    "hint": "Menambah draf epic dan story dari judul PRD ini. Hanya PM dan tech lead yang melihatnya sampai dipublikasikan.",
+    "done": "Draf epic dan story sudah ditambahkan ke backlog."
   }
 }

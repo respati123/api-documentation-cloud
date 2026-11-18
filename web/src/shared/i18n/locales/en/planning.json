@@ -6,7 +6,9 @@
     "epics": "Epics & stories",
     "board": "Task board",
     "backlog": "Backlog",
-    "reports": "Reports"
+    "reports": "Reports",
+    "overview": "Overview",
+    "discovery": "Discovery"
   },
   "kind": {
     "brd": "BRD",
@@ -696,5 +698,22 @@
     "error": "The issue could not be loaded.",
     "retry": "Try again",
     "moreChildren": "Show more"
+  },
+  "sprintOverview": {
+    "title": "Active sprint",
+    "detail": "{{items}}",
+    "points": "{{done}} of {{committed}} points done",
+    "openBoard": "Open the board",
+    "none": "No sprint is running.",
+    "noneDetail": "Plan one in the backlog.",
+    "openBacklog": "Open the backlog",
+    "error": "The sprint could not be loaded.",
+    "itemsDone": "{{done}} of {{total}} items done"
+  },
+  "draftBacklog": {
+    "button": "Create draft backlog",
+    "running": "Creating drafts",
+    "hint": "Adds draft epics and stories from the headings of this PRD. Only the PM and the tech lead see them until they are published.",
+    "done": "Draft epics and stories were added to the backlog."
   }
 }

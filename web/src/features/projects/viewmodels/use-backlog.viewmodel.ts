@@ -1,4 +1,3 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
@@ -8,6 +7,7 @@ import { issuesService } from '@/features/projects/services/issues.service'
 import { daysLeft, epicCounts, filterByEpic, type ReadyGap, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
 import { issueKeys } from '@/features/projects/viewmodels/issue-keys'
 import { type BacklogAccess, useBacklogActionsViewModel } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
+import { useBacklogData } from '@/features/projects/viewmodels/use-backlog-data'
 import { usePageList } from '@/shared/hooks/use-page-list'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
@@ -53,14 +53,7 @@ export function useBacklogViewModel(
   const active = signedIn && enabled && Boolean(projectId)
   const project = projectId ?? ''
 
-  const backlog = useInfiniteQuery({
-    queryKey: issueKeys.backlog(workspaceId, project),
-    queryFn: ({ pageParam }) => issuesService.backlog(token, workspaceId, project, pageParam),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.backlog.nextCursor,
-    enabled: active,
-    staleTime: 10_000,
-  })
+  const backlog = useBacklogData(workspaceId, project, active)
   const epics = usePageList<Issue>({
     queryKey: issueKeys.epics(workspaceId, project),
     fetchPage: (cursor) => issuesService.epics(token, workspaceId, project, cursor),

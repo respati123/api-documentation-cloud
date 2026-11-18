@@ -9,11 +9,13 @@ import { projectsService } from '@/features/projects/services/projects.service'
 import { isOverdue } from '@/features/projects/utils/planning'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
 import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
+import { useDraftBacklogViewModel } from '@/features/projects/viewmodels/use-draft-backlog.viewmodel'
 import { useIssueDetailViewModel } from '@/features/projects/viewmodels/use-issue-detail.viewmodel'
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
 import { usePlanningCommentsViewModel } from '@/features/projects/viewmodels/use-planning-comments.viewmodel'
 import { useReportsViewModel } from '@/features/projects/viewmodels/use-reports.viewmodel'
 import { useSprintBoardViewModel } from '@/features/projects/viewmodels/use-sprint-board.viewmodel'
+import { useSprintSummaryViewModel } from '@/features/projects/viewmodels/use-sprint-summary.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
 import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
@@ -154,6 +156,15 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     canEdit,
   )
 
+  const sprintSummary = useSprintSummaryViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && planning.section === 'flow',
+  )
+  const draftBacklog = useDraftBacklogViewModel(workspaceId, selectedProject?.id, AGILE_PROJECT_ENABLED && planning.access.canManage, () =>
+    planning.go('backlog'),
+  )
+
   const reports = useReportsViewModel(
     workspaceId,
     selectedProject?.id,
@@ -174,6 +185,8 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     backlog,
     sprintBoard,
     issueDetail,
+    sprintSummary,
+    draftBacklog,
     reports,
     taskComments,
     canSeeTaskComments,

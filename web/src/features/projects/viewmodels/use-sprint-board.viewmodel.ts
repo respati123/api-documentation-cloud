@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
@@ -8,6 +8,7 @@ import { issuesService } from '@/features/projects/services/issues.service'
 import { daysLeft, sprintTotals } from '@/features/projects/utils/backlog'
 import { BOARD_COLUMNS, boardMatches, epicLanes, itemLanes, type Lane, laneProgress } from '@/features/projects/utils/sprint-board'
 import { issueKeys } from '@/features/projects/viewmodels/issue-keys'
+import { useBacklogData } from '@/features/projects/viewmodels/use-backlog-data'
 import { usePageList } from '@/shared/hooks/use-page-list'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
@@ -44,14 +45,7 @@ export function useSprintBoardViewModel(workspaceId: string, projectId: string |
   const project = projectId ?? ''
   const active = signedIn && enabled && Boolean(projectId)
 
-  const backlog = useInfiniteQuery({
-    queryKey: issueKeys.backlog(workspaceId, project),
-    queryFn: ({ pageParam }) => issuesService.backlog(token, workspaceId, project, pageParam),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last.backlog.nextCursor,
-    enabled: active,
-    staleTime: 10_000,
-  })
+  const backlog = useBacklogData(workspaceId, project, active)
   const sprint = backlog.data?.pages[0]?.sprints.find((item) => item.status === 'active')
   const subtasks = usePageList<Issue>({
     queryKey: issueKeys.subtasks(workspaceId, project),
