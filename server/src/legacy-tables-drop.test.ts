@@ -3,10 +3,10 @@ import type { SQL } from 'bun'
 import { databaseEnabled, openScratchDatabase, type ScratchDatabase } from '@/testing/database'
 
 const DATA_MOVE = new URL('../migrations/0024_issues_data.sql', import.meta.url)
-const DROP = new URL('../migrations/0026_drop_legacy_planning_tables.sql', import.meta.url)
+const DROP = new URL('../migrations-staged/drop_legacy_planning_tables.sql', import.meta.url)
 
-// Migration 0024 keeps the old planning, task, and checklist tables as *_legacy. Migration 0026 drops them for good.
-describe.skipIf(!databaseEnabled)('dropping the legacy planning tables (migration 0026)', () => {
+// Migration 0024 keeps the old planning, task, and checklist tables as *_legacy. The staged migration drops them for good.
+describe.skipIf(!databaseEnabled)('dropping the legacy planning tables (staged migration)', () => {
   let scratch: ScratchDatabase
   let db: SQL
 
