@@ -234,6 +234,15 @@ describe.skipIf(!databaseEnabled)('moving planning and tasks into issues (migrat
     for (const id of ['s1', 't1', 't4', 't6', 'e1', 'e2']) expect(byIssue[id]).toBeUndefined()
   })
 
+  test('that history is dated by the last change of the item, not by the day of the move', async () => {
+    const events = await rows(db`SELECT e.issue_id, e.created_at = i.updated_at AS same, e.from_status FROM issue_status_events e JOIN issues i ON i.id = e.issue_id`)
+    expect(events.length).toBeGreaterThan(0)
+    for (const event of events) {
+      expect(event.same).toBe(true)
+      expect(event.from_status).toBeNull()
+    }
+  })
+
   test('the whole move leaves no issue without a number, and every project count matches', async () => {
     const [{ total }] = await rows(db`SELECT count(*)::int AS total FROM issues`)
     expect(total).toBe(11 + 9 + 1)

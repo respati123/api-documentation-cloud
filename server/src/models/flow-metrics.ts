@@ -8,6 +8,8 @@ export interface FlowItem {
 
 export interface FlowEvent {
   issueId: string
+  // Null when the status before the move was not recorded, as for work that was already under way before the history began.
+  fromStatus?: string | null
   toStatus: string
   at: Date
 }
@@ -58,6 +60,7 @@ export function cycleTimeDays(itemEvents: FlowEvent[]): number | null {
   const sorted = [...itemEvents].sort(byTime)
   const last = sorted.at(-1)
   if (!last || categoryOf(last.toStatus) !== 'done') return null
+  if (sorted.length === 1 && last.fromStatus === null) return null
   const start = startOf(sorted)
   return start ? round(Math.max(0, last.at.getTime() - start.at.getTime()) / DAY, 2) : null
 }

@@ -18,7 +18,7 @@ export async function listFlowItems(db: SQL, projectId: string): Promise<FlowIte
 }
 
 export async function listFlowEvents(db: SQL, projectId: string): Promise<FlowEvent[]> {
-  return db`SELECT e.issue_id AS "issueId", e.to_status AS "toStatus", e.created_at AS at
+  return db`SELECT e.issue_id AS "issueId", e.from_status AS "fromStatus", e.to_status AS "toStatus", e.created_at AS at
     FROM issue_status_events e JOIN issues i ON i.id = e.issue_id
     WHERE i.project_id = ${projectId} AND i.type IN ('story', 'task', 'bug') ORDER BY e.created_at, e.id LIMIT ${EVENT_CAP}`
 }

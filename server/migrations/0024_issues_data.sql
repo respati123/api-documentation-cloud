@@ -110,8 +110,9 @@ FROM tasks t JOIN legacy_numbers n ON n.id = t.id JOIN legacy_ranks r ON r.id = 
 WHERE t.story_id IS NULL;
 
 -- Reports read the history of the status. An item that is already past its first status starts its history here.
+-- The move is dated by the last change of the item, the best guess there is, and its starting status is left empty.
 INSERT INTO issue_status_events (id, issue_id, from_status, to_status, actor_id, created_at)
-SELECT gen_random_uuid()::text, i.id, NULL, i.status, i.created_by, now()
+SELECT gen_random_uuid()::text, i.id, NULL, i.status, i.created_by, i.updated_at
 FROM issues i JOIN legacy_numbers n ON n.id = i.id
 WHERE i.status IS NOT NULL AND i.status NOT IN ('todo', 'draft');
 

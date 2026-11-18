@@ -36,6 +36,11 @@ describe('cycleTimeDays', () => {
     expect(cycleTimeDays([])).toBeNull()
   })
 
+  test('is unknown, not zero, when the only record is a move whose starting status nobody knew', () => {
+    expect(cycleTimeDays([{ ...move('a', 'done', '2026-07-01'), fromStatus: null }])).toBeNull()
+    expect(cycleTimeDays([{ ...move('a', 'done', '2026-07-01'), fromStatus: 'todo' }])).toBe(0)
+  })
+
   test('counts from the first start, even when the item went back to todo in between', () => {
     const events = [move('a', 'in_progress', '2026-07-01'), move('a', 'todo', '2026-07-02'), move('a', 'in_progress', '2026-07-03'), move('a', 'done', '2026-07-05')]
     expect(cycleTimeDays(events)).toBe(4)
