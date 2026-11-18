@@ -72,7 +72,6 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
     onError: (error) => setRowError(failure(error)),
   })
 
-  // --- new issue
   const [issueOpen, setIssueOpen] = useState(false)
   const [type, setType] = useState<IssueType>('story')
   const [title, setTitle] = useState('')
@@ -97,7 +96,6 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
   })
   const allowedTypes: IssueType[] = access.canApprove ? ['epic', 'story', 'task', 'bug'] : ['bug']
 
-  // --- new or edited sprint
   const [sprintOpen, setSprintOpen] = useState(false)
   const [editingSprint, setEditingSprint] = useState<string | null>(null)
   const [sprintName, setSprintName] = useState('')
@@ -117,7 +115,6 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
     },
   })
 
-  // --- close a sprint
   const [closing, setClosing] = useState<{ id: string; name: string } | null>(null)
   const [carryTo, setCarryTo] = useState('backlog')
   const closeSprint = useMutation({
@@ -134,7 +131,7 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
     await issuesService.rank(token, workspaceId, project, issueId, placement)
   }
 
-  // --- the gate: the PM adds an item that is not ready, with a reason
+  // The PM may add an item that is not ready, with a reason.
   const [pending, setPending] = useState<PendingOverride | null>(null)
   const [reason, setReason] = useState('')
   const override = useMutation({
@@ -167,7 +164,6 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
     },
   })
 
-  // --- the Product Goal
   const [goalOpen, setGoalOpen] = useState(false)
   const [goal, setGoal] = useState('')
   const saveGoal = useMutation({
