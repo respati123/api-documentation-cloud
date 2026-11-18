@@ -481,7 +481,76 @@
     "outdated": "PRD changed",
     "unassigned": "Unassigned",
     "error": "The backlog could not be loaded.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "actions": {
+      "newIssue": "New issue",
+      "newSprint": "New sprint",
+      "editGoal": "Edit Product Goal",
+      "editSprint": "Edit sprint",
+      "startSprint": "Start sprint",
+      "closeSprint": "Close sprint",
+      "publish": "Publish",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "addToSprint": "Add to sprint",
+      "removeFromSprint": "Remove from sprint",
+      "points": "Points",
+      "rowMenu": "More actions",
+      "rankHint": "Clear the epic filter to move items in the order of the backlog."
+    },
+    "issueDialog": {
+      "title": "New issue",
+      "detail": "An epic holds stories. A story, task, or bug can sit under an epic.",
+      "type": "Type",
+      "name": "Title",
+      "description": "Description",
+      "epic": "Epic",
+      "points": "Points",
+      "priority": "Priority",
+      "create": "Create",
+      "cancel": "Cancel"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "sprintDialog": {
+      "createTitle": "New sprint",
+      "editTitle": "Edit sprint",
+      "detail": "A sprint lasts from one day to four weeks.",
+      "name": "Name",
+      "goal": "Sprint goal",
+      "starts": "Starts on",
+      "ends": "Ends on",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "closeDialog": {
+      "title": "Close {{name}}",
+      "detail": "Choose where the items that are not finished go.",
+      "carry": "Unfinished items go to",
+      "toBacklog": "The backlog",
+      "confirm": "Close sprint",
+      "cancel": "Cancel"
+    },
+    "override": {
+      "title": "Add it anyway?",
+      "detail": "{{title}} is not ready for a sprint. As the PM you can add it anyway. Say why.",
+      "notReady": "It is not Ready yet.",
+      "needsPoints": "It has no points.",
+      "reason": "Reason",
+      "confirm": "Add anyway",
+      "cancel": "Cancel"
+    },
+    "goalDialog": {
+      "title": "Product Goal",
+      "detail": "The goal the whole backlog works toward.",
+      "label": "Product Goal",
+      "save": "Save",
+      "cancel": "Cancel"
+    }
   },
   "reports": {
     "title": "Reports",

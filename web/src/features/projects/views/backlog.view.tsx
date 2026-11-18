@@ -1,11 +1,23 @@
+import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Play, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BACKLOG_TEXT } from '@/features/projects/constants/backlog-text.constants'
 import type { BacklogRow, useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
+import { BacklogDialogsView } from '@/features/projects/views/backlog-dialogs.view'
 import { CodeChip, Panel, PanelEmpty, StatusIcon, type StatusTone } from '@/features/projects/views/planning-marks.view'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
+import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Badge } from '@/shared/components/primitives/badge'
 import { Button } from '@/shared/components/primitives/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/shared/components/primitives/dropdown-menu'
 import { Skeleton } from '@/shared/components/primitives/skeleton'
+import { SelectField } from '@/shared/components/select-field'
 import { ErrorState } from '@/shared/components/state-views'
 import { cn } from '@/shared/utils/cn'
 
@@ -36,13 +48,36 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
       />
     )
   }
+  const { actions } = vm
 
   return (
     <div className="grid gap-4" data-testid="backlog-view">
-      <header className="grid gap-0.5">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">{t(BACKLOG_TEXT.title)}</h2>
-        <p className="max-w-[62ch] text-[13px] text-muted-foreground">{t(BACKLOG_TEXT.subtitle)}</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="grid gap-0.5">
+          <h2 className="font-heading text-lg font-semibold tracking-tight">{t(BACKLOG_TEXT.title)}</h2>
+          <p className="max-w-[62ch] text-[13px] text-muted-foreground">{t(BACKLOG_TEXT.subtitle)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {vm.canPlan && (
+            <Button size="sm" variant="outline" data-testid="backlog-new-sprint" onClick={actions.sprintDialog.onOpenCreate}>
+              <Plus data-icon="inline-start" />
+              {t(BACKLOG_TEXT.actions.newSprint)}
+            </Button>
+          )}
+          {vm.canCreate && (
+            <Button size="sm" data-testid="backlog-new-issue" onClick={actions.issueDialog.onOpen}>
+              <Plus data-icon="inline-start" />
+              {t(BACKLOG_TEXT.actions.newIssue)}
+            </Button>
+          )}
+        </div>
       </header>
+
+      {actions.rowError && (
+        <Alert variant="destructive" data-testid="backlog-row-error">
+          <AlertDescription>{actions.rowError}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="grid gap-4">
@@ -53,9 +88,36 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
               title={sprint.name}
               description={`${sprint.statusLabel} · ${sprint.dates}`}
               action={
-                <div className="flex flex-wrap justify-end gap-1.5">
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
                   {sprint.daysLeft && <Badge variant="warning">{sprint.daysLeft}</Badge>}
                   <Badge variant="secondary">{sprint.totals}</Badge>
+                  {sprint.canStart && (
+                    <Button size="xs" data-testid={`backlog-start-${sprint.id}`} onClick={() => actions.startSprint(sprint.id)}>
+                      <Play data-icon="inline-start" />
+                      {t(BACKLOG_TEXT.actions.startSprint)}
+                    </Button>
+                  )}
+                  {sprint.canClose && (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      data-testid={`backlog-close-${sprint.id}`}
+                      onClick={() => actions.closeDialog.onOpen(sprint.id)}
+                    >
+                      {t(BACKLOG_TEXT.actions.closeSprint)}
+                    </Button>
+                  )}
+                  {sprint.canEdit && (
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      aria-label={t(BACKLOG_TEXT.actions.editSprint)}
+                      data-testid={`backlog-edit-${sprint.id}`}
+                      onClick={() => actions.sprintDialog.onOpenEdit(sprint.id)}
+                    >
+                      <Pencil />
+                    </Button>
+                  )}
                 </div>
               }
             >
@@ -63,7 +125,11 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
                 {sprint.goal}
                 {sprint.progress && <span className="ml-2 text-foreground">· {sprint.progress}</span>}
               </p>
-              {sprint.rows.length === 0 ? <PanelEmpty>{sprint.emptyLabel}</PanelEmpty> : <RowList rows={sprint.rows} />}
+              {sprint.rows.length === 0 ? (
+                <PanelEmpty>{sprint.emptyLabel}</PanelEmpty>
+              ) : (
+                <RowList rows={sprint.rows} vm={vm} sprintId={sprint.id} />
+              )}
             </Panel>
           ))}
 
@@ -72,7 +138,11 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
             title={t(BACKLOG_TEXT.section.title)}
             action={<Badge variant="secondary">{vm.backlog.count}</Badge>}
           >
-            {vm.backlog.rows.length === 0 ? <PanelEmpty>{vm.backlog.emptyLabel}</PanelEmpty> : <RowList rows={vm.backlog.rows} />}
+            {vm.backlog.rows.length === 0 ? (
+              <PanelEmpty>{vm.backlog.emptyLabel}</PanelEmpty>
+            ) : (
+              <RowList rows={vm.backlog.rows} vm={vm} sprintId={null} />
+            )}
             <div className="px-[18px] pb-3">
               <LoadMoreButton
                 hasMore={vm.backlog.hasMore}
@@ -85,7 +155,23 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
         </div>
 
         <aside className="grid gap-4">
-          <Panel testId="backlog-goal" title={t(BACKLOG_TEXT.productGoal)}>
+          <Panel
+            testId="backlog-goal"
+            title={t(BACKLOG_TEXT.productGoal)}
+            action={
+              vm.canEditGoal ? (
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  aria-label={t(BACKLOG_TEXT.actions.editGoal)}
+                  data-testid="backlog-edit-goal"
+                  onClick={actions.goalDialog.onOpen}
+                >
+                  <Pencil />
+                </Button>
+              ) : undefined
+            }
+          >
             <p className="px-[18px] py-3.5 text-sm">
               {vm.productGoal || <span className="text-muted-foreground">{t(BACKLOG_TEXT.noGoal)}</span>}
             </p>
@@ -129,6 +215,8 @@ export function BacklogView({ vm }: { vm: BacklogProps }) {
           </Panel>
         </aside>
       </div>
+
+      <BacklogDialogsView actions={actions} />
     </div>
   )
 }
@@ -166,18 +254,34 @@ function EpicFilter({
   )
 }
 
-function RowList({ rows }: { rows: BacklogRow[] }) {
+function RowList({ rows, vm, sprintId }: { rows: BacklogRow[]; vm: BacklogProps; sprintId: string | null }) {
+  const ids = rows.map((row) => row.id)
   return (
     <ul className="divide-y divide-border">
-      {rows.map((row) => (
-        <BacklogItem key={row.id} row={row} />
+      {rows.map((row, index) => (
+        <BacklogItem key={row.id} row={row} index={index} ids={ids} vm={vm} sprintId={sprintId} />
       ))}
     </ul>
   )
 }
 
-function BacklogItem({ row }: { row: BacklogRow }) {
+function BacklogItem({
+  row,
+  index,
+  ids,
+  vm,
+  sprintId,
+}: {
+  row: BacklogRow
+  index: number
+  ids: string[]
+  vm: BacklogProps
+  sprintId: string | null
+}) {
   const { t } = useTranslation('planning')
+  const { actions } = vm
+  const targets = actions.sprintTargets.filter((target) => target.id !== sprintId)
+  const hasMenu = vm.canPlan && (sprintId !== null || targets.length > 0)
   return (
     <li data-testid={`backlog-row-${row.id}`} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-[18px] py-2.5">
       <div className="flex items-center gap-2">
@@ -201,7 +305,85 @@ function BacklogItem({ row }: { row: BacklogRow }) {
           {row.ready && <Badge variant="success">{t(BACKLOG_TEXT.ready)}</Badge>}
         </div>
       </div>
-      <Badge variant={row.points === null ? 'outline' : 'accent'}>{row.pointsLabel}</Badge>
+      <div className="flex items-center gap-1">
+        {row.canPublish && (
+          <Button size="xs" variant="outline" data-testid={`backlog-publish-${row.id}`} onClick={() => actions.publish(row.id)}>
+            {t(BACKLOG_TEXT.actions.publish)}
+          </Button>
+        )}
+        {row.canSetPoints ? (
+          <SelectField
+            size="sm"
+            className="w-28"
+            value={row.pointsValue}
+            onValueChange={(value) => actions.setPoints(row.id, value)}
+            options={actions.issueDialog.pointsOptions}
+            label={t(BACKLOG_TEXT.actions.points)}
+            testId={`backlog-points-${row.id}`}
+          />
+        ) : (
+          <Badge variant={row.points === null ? 'outline' : 'accent'}>{row.pointsLabel}</Badge>
+        )}
+        {vm.rankEnabled && (
+          <>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              aria-label={t(BACKLOG_TEXT.actions.moveUp)}
+              data-testid={`backlog-up-${row.id}`}
+              disabled={index === 0}
+              onClick={() => actions.move(ids, index, 'up')}
+            >
+              <ArrowUp />
+            </Button>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              aria-label={t(BACKLOG_TEXT.actions.moveDown)}
+              data-testid={`backlog-down-${row.id}`}
+              disabled={index === ids.length - 1}
+              onClick={() => actions.move(ids, index, 'down')}
+            >
+              <ArrowDown />
+            </Button>
+          </>
+        )}
+        {hasMenu && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  aria-label={t(BACKLOG_TEXT.actions.rowMenu)}
+                  data-testid={`backlog-menu-${row.id}`}
+                />
+              }
+            >
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuGroup>
+                {targets.length > 0 && <DropdownMenuLabel>{t(BACKLOG_TEXT.actions.addToSprint)}</DropdownMenuLabel>}
+                {targets.map((target) => (
+                  <DropdownMenuItem
+                    key={target.id}
+                    data-testid={`backlog-add-${row.id}-${target.id}`}
+                    onClick={() => actions.addToSprint(row.id, target.id, row.title)}
+                  >
+                    {target.name}
+                  </DropdownMenuItem>
+                ))}
+                {sprintId !== null && (
+                  <DropdownMenuItem data-testid={`backlog-remove-${row.id}`} onClick={() => actions.removeFromSprint(sprintId, row.id)}>
+                    {t(BACKLOG_TEXT.actions.removeFromSprint)}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     </li>
   )
 }

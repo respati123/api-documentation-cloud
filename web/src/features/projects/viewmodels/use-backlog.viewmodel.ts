@@ -7,6 +7,7 @@ import { type Issue, type IssueType, type StatusCategory, statusCategory } from 
 import { issuesService } from '@/features/projects/services/issues.service'
 import { daysLeft, epicCounts, filterByEpic, type ReadyGap, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
 import { issueKeys } from '@/features/projects/viewmodels/issue-keys'
+import { type BacklogAccess, useBacklogActionsViewModel } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
 import { usePageList } from '@/shared/hooks/use-page-list'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
@@ -27,13 +28,24 @@ export interface BacklogRow {
   ready: boolean
   isDraft: boolean
   outdated: boolean
+  pointsValue: string
+  canSetPoints: boolean
+  canPublish: boolean
 }
 
 type Text = (key: string, options?: Record<string, unknown>) => string
 
 // The backlog screen: the open sprints with their items, then the items that belong to no sprint, and an epic filter.
 // The sprints come with the first page of the backlog. Only the loose items and the epics page on.
-export function useBacklogViewModel(workspaceId: string, projectId: string | undefined, productGoal: string, enabled: boolean) {
+const NO_ACCESS: BacklogAccess = { canEdit: false, canApprove: false, canManage: false }
+
+export function useBacklogViewModel(
+  workspaceId: string,
+  projectId: string | undefined,
+  productGoal: string,
+  enabled: boolean,
+  access: BacklogAccess = NO_ACCESS,
+) {
   const { t, i18n } = useTranslation('planning')
   const token = useAuthSessionStore((state) => state.token)
   const signedIn = useAuthSessionStore((state) => state.signedIn)
@@ -57,10 +69,25 @@ export function useBacklogViewModel(workspaceId: string, projectId: string | und
 
   const sprintList = backlog.data?.pages[0]?.sprints ?? []
   const looseItems = backlog.data?.pages.flatMap((page) => page.backlog.items) ?? []
+  const actions = useBacklogActionsViewModel({
+    workspaceId,
+    projectId,
+    access,
+    epics: epics.items.map((epic) => ({ id: epic.id, title: epic.title })),
+    openSprints: sprintList.map((sprint) => ({
+      id: sprint.id,
+      name: sprint.name,
+      status: sprint.status === 'active' ? 'active' : 'planned',
+      goal: sprint.goal,
+      startsOn: sprint.startsOn,
+      endsOn: sprint.endsOn,
+    })),
+    productGoal,
+  })
   const epicKeyOf = new Map(epics.items.map((epic) => [epic.id, epic.key]))
   const everything = [...sprintList.flatMap((sprint) => sprint.issues), ...looseItems]
   const counts = epicCounts(epics.items, everything)
-  const toRow = (issue: Issue) => rowOf(issue, t as Text, epicKeyOf)
+  const toRow = (issue: Issue) => rowOf(issue, t as Text, epicKeyOf, access)
   const shownLoose = filterByEpic(looseItems, epicFilter)
   const today = new Date()
   const failure = backlog.error ?? epics.error
@@ -70,6 +97,11 @@ export function useBacklogViewModel(workspaceId: string, projectId: string | und
     error: failure ? readErrorMessage(failure, t(BACKLOG_TEXT.error)) : null,
     onRetry: () => void backlog.refetch(),
     productGoal,
+    actions,
+    canCreate: access.canEdit,
+    canPlan: access.canApprove,
+    canEditGoal: access.canManage,
+    rankEnabled: actions.rankEnabled && epicFilter === '',
     epics: {
       items: epics.items.map((epic) => ({
         id: epic.id,
@@ -94,6 +126,9 @@ export function useBacklogViewModel(workspaceId: string, projectId: string | und
         name: sprint.name,
         goal: sprint.goal || t(BACKLOG_TEXT.sprint.noGoal),
         isActive: sprint.status === 'active',
+        canStart: actions.canStartSprint && sprint.status === 'planned',
+        canClose: access.canApprove && sprint.status === 'active',
+        canEdit: access.canApprove,
         statusLabel: t(sprint.status === 'active' ? BACKLOG_TEXT.sprint.active : BACKLOG_TEXT.sprint.planned),
         dates: t(BACKLOG_TEXT.sprint.dates, {
           from: formatDate(sprint.startsOn, i18n.language) ?? sprint.startsOn,
@@ -117,7 +152,7 @@ export function useBacklogViewModel(workspaceId: string, projectId: string | und
   }
 }
 
-function rowOf(issue: Issue, t: Text, epicKeyOf: Map<string, string>): BacklogRow {
+function rowOf(issue: Issue, t: Text, epicKeyOf: Map<string, string>, access: BacklogAccess): BacklogRow {
   const gaps = readyGaps(issue)
   return {
     id: issue.id,
@@ -135,5 +170,8 @@ function rowOf(issue: Issue, t: Text, epicKeyOf: Map<string, string>): BacklogRo
     ready: gaps.length === 0,
     isDraft: issue.publishedAt === null,
     outdated: issue.sourceOutdated === true,
+    pointsValue: issue.points === null ? '' : String(issue.points),
+    canSetPoints: access.canEdit && issue.type !== 'epic',
+    canPublish: access.canApprove && issue.publishedAt === null,
   }
 }

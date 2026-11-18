@@ -136,6 +136,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     selectedProject?.id,
     selectedProject?.productGoal ?? '',
     enabled && AGILE_PROJECT_ENABLED && planning.section === 'backlog',
+    { canEdit, canApprove: planning.access.canApprove, canManage: planning.access.canManage },
   )
 
   const reports = useReportsViewModel(

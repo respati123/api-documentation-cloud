@@ -21,8 +21,74 @@ const row = (id: string, over: Partial<BacklogRow> = {}): BacklogRow => ({
   ready: true,
   isDraft: false,
   outdated: false,
+  pointsValue: '3',
+  canSetPoints: false,
+  canPublish: false,
   ...over,
 })
+
+const noop = () => {}
+const closed = { open: false, onClose: noop, onSubmit: noop, isSaving: false, error: null }
+
+function actionsStub(over: Record<string, unknown> = {}) {
+  return {
+    rowError: null,
+    rankEnabled: false,
+    sprintTargets: [{ id: 's2', name: 'Sprint 2' }],
+    canStartSprint: true,
+    setPoints: vi.fn(),
+    publish: vi.fn(),
+    move: vi.fn(),
+    addToSprint: vi.fn(),
+    removeFromSprint: vi.fn(),
+    startSprint: vi.fn(),
+    issueDialog: {
+      ...closed,
+      onOpen: vi.fn(),
+      type: 'story',
+      setType: noop,
+      title: '',
+      setTitle: noop,
+      description: '',
+      setDescription: noop,
+      parentId: '',
+      setParentId: noop,
+      points: '',
+      setPoints: noop,
+      priority: 'medium',
+      setPriority: noop,
+      typeOptions: [{ value: 'story', label: 'Story' }],
+      epicOptions: [{ value: '', label: 'No epic' }],
+      pointsOptions: [
+        { value: '', label: 'No points' },
+        { value: '3', label: '3' },
+      ],
+      priorityOptions: [{ value: 'medium', label: 'Medium' }],
+      takesParent: true,
+      takesPoints: true,
+      canSubmit: false,
+    },
+    sprintDialog: {
+      ...closed,
+      editing: false,
+      onOpenCreate: vi.fn(),
+      onOpenEdit: vi.fn(),
+      name: '',
+      setName: noop,
+      goal: '',
+      setGoal: noop,
+      startsOn: '',
+      setStartsOn: noop,
+      endsOn: '',
+      setEndsOn: noop,
+      canSubmit: false,
+    },
+    closeDialog: { ...closed, name: '', onOpen: vi.fn(), carryTo: 'backlog', setCarryTo: noop, options: [] },
+    overrideDialog: { ...closed, title: '', reasons: [], reason: '', setReason: noop, canSubmit: false },
+    goalDialog: { ...closed, onOpen: vi.fn(), goal: '', setGoal: noop },
+    ...over,
+  }
+}
 
 function props(over: Partial<BacklogProps> = {}): BacklogProps {
   return {
@@ -30,6 +96,11 @@ function props(over: Partial<BacklogProps> = {}): BacklogProps {
     error: null,
     onRetry: vi.fn(),
     productGoal: 'Halve checkout time',
+    actions: actionsStub(),
+    canCreate: false,
+    canPlan: false,
+    canEditGoal: false,
+    rankEnabled: false,
     epics: {
       items: [{ id: 'e1', key: 'PARI-1', title: 'Payment', count: 2, selected: false }],
       withoutEpic: 1,
@@ -46,6 +117,9 @@ function props(over: Partial<BacklogProps> = {}): BacklogProps {
         name: 'Sprint 1',
         goal: 'Ship checkout',
         isActive: true,
+        canStart: false,
+        canClose: false,
+        canEdit: false,
         statusLabel: 'Active',
         dates: '1 Jul 2026 to 15 Jul 2026',
         daysLeft: '5 days left',
@@ -160,5 +234,56 @@ describe('BacklogView', () => {
     expect(screen.getByTestId('backlog-error')).toHaveTextContent('You may not read this project.')
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(vm.onRetry).toHaveBeenCalled()
+  })
+
+  test('hides every action from a member who may not plan', () => {
+    render(<BacklogView vm={props()} />)
+    expect(screen.queryByTestId('backlog-new-sprint')).toBeNull()
+    expect(screen.queryByTestId('backlog-new-issue')).toBeNull()
+    expect(screen.queryByTestId('backlog-edit-goal')).toBeNull()
+    expect(screen.queryByTestId('backlog-menu-c')).toBeNull()
+    expect(screen.queryByTestId('backlog-up-c')).toBeNull()
+  })
+
+  test('the header buttons open the sprint and issue dialogs', () => {
+    const vm = props({ canPlan: true, canCreate: true, canEditGoal: true })
+    render(<BacklogView vm={vm} />)
+    fireEvent.click(screen.getByTestId('backlog-new-sprint'))
+    fireEvent.click(screen.getByTestId('backlog-new-issue'))
+    fireEvent.click(screen.getByTestId('backlog-edit-goal'))
+    expect(vm.actions.sprintDialog.onOpenCreate).toHaveBeenCalled()
+    expect(vm.actions.issueDialog.onOpen).toHaveBeenCalled()
+    expect(vm.actions.goalDialog.onOpen).toHaveBeenCalled()
+  })
+
+  test('start, close, and edit appear only when the sprint allows them', () => {
+    const vm = props()
+    vm.sprints[0] = { ...vm.sprints[0], canStart: true, canClose: true, canEdit: true }
+    render(<BacklogView vm={vm} />)
+    fireEvent.click(screen.getByTestId('backlog-start-s1'))
+    fireEvent.click(screen.getByTestId('backlog-close-s1'))
+    fireEvent.click(screen.getByTestId('backlog-edit-s1'))
+    expect(vm.actions.startSprint).toHaveBeenCalledWith('s1')
+    expect(vm.actions.closeDialog.onOpen).toHaveBeenCalledWith('s1')
+    expect(vm.actions.sprintDialog.onOpenEdit).toHaveBeenCalledWith('s1')
+  })
+
+  test('a row publishes a draft and shows its points as a selector', () => {
+    const vm = props()
+    vm.backlog.rows = [row('d', { isDraft: true, canPublish: true, canSetPoints: true })]
+    render(<BacklogView vm={vm} />)
+    fireEvent.click(screen.getByTestId('backlog-publish-d'))
+    expect(vm.actions.publish).toHaveBeenCalledWith('d')
+    expect(screen.getByTestId('backlog-points-d')).toBeInTheDocument()
+  })
+
+  test('moving a row names the ids of its own list, and the ends cannot move further', () => {
+    const vm = props({ rankEnabled: true })
+    vm.backlog.rows = [row('c1'), row('c2')]
+    render(<BacklogView vm={vm} />)
+    expect(screen.getByTestId('backlog-up-c1')).toBeDisabled()
+    expect(screen.getByTestId('backlog-down-c2')).toBeDisabled()
+    fireEvent.click(screen.getByTestId('backlog-down-c1'))
+    expect(vm.actions.move).toHaveBeenCalledWith(['c1', 'c2'], 0, 'down')
   })
 })

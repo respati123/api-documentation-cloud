@@ -481,7 +481,76 @@
     "outdated": "PRD berubah",
     "unassigned": "Belum ditugaskan",
     "error": "Backlog tidak bisa dimuat.",
-    "retry": "Coba lagi"
+    "retry": "Coba lagi",
+    "actions": {
+      "newIssue": "Issue baru",
+      "newSprint": "Sprint baru",
+      "editGoal": "Ubah Product Goal",
+      "editSprint": "Ubah sprint",
+      "startSprint": "Mulai sprint",
+      "closeSprint": "Tutup sprint",
+      "publish": "Publikasikan",
+      "moveUp": "Naikkan",
+      "moveDown": "Turunkan",
+      "addToSprint": "Masukkan ke sprint",
+      "removeFromSprint": "Keluarkan dari sprint",
+      "points": "Poin",
+      "rowMenu": "Aksi lainnya",
+      "rankHint": "Hapus saringan epic untuk memindahkan item sesuai urutan backlog."
+    },
+    "issueDialog": {
+      "title": "Issue baru",
+      "detail": "Epic memuat story. Story, task, atau bug bisa berada di bawah epic.",
+      "type": "Tipe",
+      "name": "Judul",
+      "description": "Deskripsi",
+      "epic": "Epic",
+      "points": "Poin",
+      "priority": "Prioritas",
+      "create": "Buat",
+      "cancel": "Batal"
+    },
+    "priority": {
+      "low": "Rendah",
+      "medium": "Sedang",
+      "high": "Tinggi",
+      "urgent": "Mendesak"
+    },
+    "sprintDialog": {
+      "createTitle": "Sprint baru",
+      "editTitle": "Ubah sprint",
+      "detail": "Sprint berlangsung satu hari sampai empat minggu.",
+      "name": "Nama",
+      "goal": "Tujuan sprint",
+      "starts": "Mulai",
+      "ends": "Selesai",
+      "save": "Simpan",
+      "cancel": "Batal"
+    },
+    "closeDialog": {
+      "title": "Tutup {{name}}",
+      "detail": "Pilih ke mana item yang belum selesai dipindahkan.",
+      "carry": "Item yang belum selesai pindah ke",
+      "toBacklog": "Backlog",
+      "confirm": "Tutup sprint",
+      "cancel": "Batal"
+    },
+    "override": {
+      "title": "Tetap masukkan?",
+      "detail": "{{title}} belum siap masuk sprint. Sebagai PM kamu bisa tetap memasukkannya. Tulis alasannya.",
+      "notReady": "Belum berstatus Ready.",
+      "needsPoints": "Belum punya poin.",
+      "reason": "Alasan",
+      "confirm": "Tetap masukkan",
+      "cancel": "Batal"
+    },
+    "goalDialog": {
+      "title": "Product Goal",
+      "detail": "Tujuan yang dikejar seluruh backlog.",
+      "label": "Product Goal",
+      "save": "Simpan",
+      "cancel": "Batal"
+    }
   },
   "reports": {
     "title": "Laporan",
