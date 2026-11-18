@@ -155,9 +155,10 @@ describe.skipIf(!databaseEnabled)('planning read access by work role', () => {
     expect(toolResult(await tool(designerKey, 'documents_list'))).toMatchObject({ isError: true, value: { code: 'MCP_PERMISSION_DENIED' } })
 
     for (const key of [backendKey, designerKey]) {
-      const items = toolResult(await tool(key, 'project_items_list')).value as Item[]
+      const listed = async (type: string) => toolResult(await tool(key, 'issues_list', { type })).value.issues as Item[]
+      const items = [...(await listed('epic')), ...(await listed('story'))]
       expect(items.map((item) => item.id).sort()).toEqual([w.epicId, w.storyId].sort())
-      expect(toolResult(await tool(key, 'project_tasks_list')).value).toHaveLength(2)
+      expect((await Promise.all(['task', 'bug', 'subtask'].map(listed))).flat()).toHaveLength(2)
       expect(toolResult(await tool(key, 'story_read', { storyId: w.storyId })).isError).toBe(false)
     }
   })

@@ -65,8 +65,6 @@ const workStatus = (status: string | null | undefined): string | null => (status
 const taskColumns = `i.id, i.project_id AS "projectId", i.title, i.description, i.status, i.priority, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", coalesce(i.rank, 0)::text AS position, i.created_at AS "createdAt", i.updated_at AS "updatedAt", CASE WHEN s.type = 'story' THEN i.parent_id END AS "storyId", i.role, (i.type = 'subtask' AND i.role IS NOT NULL AND i.role <> 'ui_ux' AND s.type = 'story' AND s.design_approved_at IS NULL AND s.status NOT IN ('in_progress', 'in_qa', 'done')) AS locked, coalesce((SELECT array_agg(l.from_id ORDER BY l.from_id) FROM issue_links l WHERE l.to_id = i.id AND l.kind = 'blocks'), ARRAY[]::text[]) AS "dependsOn", (SELECT count(*)::int FROM issue_checklist_items c WHERE c.issue_id = i.id AND c.done) AS "subtaskDone", (SELECT count(*)::int FROM issue_checklist_items c WHERE c.issue_id = i.id) AS "subtaskTotal"`
 const taskJoins = 'FROM issues i LEFT JOIN users u ON u.id = i.assignee_id LEFT JOIN issues s ON s.id = i.parent_id'
 // The columns an agent sees for its own tasks.
-const plainTaskColumns = `i.id, i.project_id AS "projectId", i.title, i.description, i.status, i.priority, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", coalesce(i.rank, 0)::text AS position, i.created_at AS "createdAt", i.updated_at AS "updatedAt"`
-const projectIdList = (projectIds: string[]) => JSON.stringify(projectIds)
 
 export async function listTasks(db: SQL, projectId: string): Promise<TaskRow[]> {
   return db`SELECT ${db.unsafe(taskColumns)} ${db.unsafe(taskJoins)} WHERE i.project_id = ${projectId} AND ${db.unsafe(WORK)} AND i.published_at IS NOT NULL ORDER BY i.status, coalesce(i.rank, 0), i.created_at`
@@ -138,10 +136,6 @@ export async function insertSubtask(db: SQL, input: { id: string; taskId: string
 export async function setSubtaskDone(db: SQL, taskId: string, subtaskId: string, done: boolean) {
   const [row] = await db`UPDATE issue_checklist_items SET done = ${done} WHERE id = ${subtaskId} AND issue_id = ${taskId} RETURNING id, title, done, NULL::text AS "assigneeEmail"`
   return row
-}
-
-export async function listAssignedTasks(db: SQL, projectIds: string[], assigneeId: string): Promise<TaskRow[]> {
-  return db`SELECT ${db.unsafe(plainTaskColumns)} FROM issues i JOIN memberships m ON m.user_id = ${assigneeId} LEFT JOIN users u ON u.id = i.assignee_id WHERE ${db.unsafe(WORK)} AND i.published_at IS NOT NULL AND i.project_id = ANY(ARRAY(SELECT jsonb_array_elements_text((${projectIdList(projectIds)}::text)::jsonb))) AND i.assignee_id = ${assigneeId} AND m.workspace_id = (SELECT workspace_id FROM projects WHERE id = i.project_id) ORDER BY i.status, coalesce(i.rank, 0), i.created_at LIMIT 200`
 }
 
 export async function isWorkspaceMember(db: SQL, workspaceId: string, userId: string): Promise<boolean> {

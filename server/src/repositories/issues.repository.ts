@@ -240,12 +240,14 @@ export async function listSprintIssues(db: SQL, sprintId: string, query: DraftVi
 export async function listIssuesByNumber(
   db: SQL,
   projectId: string,
-  query: DraftVisibility & { type?: IssueType; sprintId?: string | null; parentId?: string; limit: number; afterNumber: number | null },
+  query: DraftVisibility & { type?: IssueType; sprintId?: string | null; parentId?: string; assigneeId?: string; participantId?: string; limit: number; afterNumber: number | null },
 ): Promise<IssueRow[]> {
   return db`SELECT ${db.unsafe(columns)} ${db.unsafe(tables)} WHERE i.project_id = ${projectId}
     AND (${query.includeDrafts}::boolean OR i.published_at IS NOT NULL OR i.created_by = ${query.viewerId})
     AND (${query.type ?? null}::text IS NULL OR i.type = ${query.type ?? null})
     AND (${query.parentId ?? null}::text IS NULL OR i.parent_id = ${query.parentId ?? null})
+    AND (${query.assigneeId ?? null}::text IS NULL OR i.assignee_id = ${query.assigneeId ?? null})
+    AND (${query.participantId ?? null}::text IS NULL OR EXISTS (SELECT 1 FROM planning_participants pp WHERE pp.item_id = i.id AND pp.user_id = ${query.participantId ?? null}))
     AND (${query.sprintId === undefined}::boolean OR i.sprint_id IS NOT DISTINCT FROM ${query.sprintId ?? null})
     AND (${query.afterNumber}::int IS NULL OR i.number > ${query.afterNumber}::int)
     ORDER BY i.number LIMIT ${query.limit}`

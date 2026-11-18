@@ -62,8 +62,6 @@
   },
   "tool": {
     "workspaces_list": "List workspaces",
-    "tasks_list_assigned": "See my tasks",
-    "stories_list_participating": "See my stories",
     "planning_list": "See planning",
     "planning_draft_prd": "Draft PRDs",
     "planning_draft_item": "Draft epics and stories",
@@ -73,12 +71,9 @@
     "story_attach_design": "Attach designs",
     "story_link_api_contract": "Link API contracts",
     "story_write_test_case": "Write test cases",
-    "tasks_list_ready": "See tasks ready to start",
     "planning_guide": "Read the required playbook",
     "story_write_details": "Complete story details",
     "planning_upload_brd": "Upload BRD",
-    "project_items_list": "View epics and stories",
-    "project_tasks_list": "View all tasks",
     "documents_list": "List BRDs and PRDs",
     "documents_read": "Read BRDs and PRDs",
     "api_requests_search": "Search API requests",
@@ -94,7 +89,8 @@
     "issue_comment": "Comment on issues",
     "subtask_update_status": "Change my sub-task status",
     "checklist_set_done": "Tick checklist items",
-    "checklist_add": "Add checklist lines"
+    "checklist_add": "Add checklist lines",
+    "issues_list": "List issues"
   },
   "guide": {
     "title": "Required agent playbook",

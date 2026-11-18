@@ -3,8 +3,6 @@ export type McpKeyRole = (typeof MCP_KEY_ROLES)[number]
 
 export const MCP_TOOLS = [
   'workspaces_list',
-  'tasks_list_assigned',
-  'stories_list_participating',
   'planning_list',
   'planning_draft_prd',
   'planning_draft_item',
@@ -15,12 +13,9 @@ export const MCP_TOOLS = [
   'story_link_api_contract',
   'story_link_data_model',
   'story_write_test_case',
-  'tasks_list_ready',
   'planning_guide',
   'story_write_details',
   'planning_upload_brd',
-  'project_items_list',
-  'project_tasks_list',
   'documents_list',
   'documents_read',
   'api_requests_search',
@@ -31,6 +26,7 @@ export const MCP_TOOLS = [
   'backlog_list',
   'sprint_get_active',
   'issue_read',
+  'issues_list',
   'issue_draft',
   'issue_comment',
   'subtask_update_status',
@@ -42,14 +38,9 @@ export type McpTool = (typeof MCP_TOOLS)[number]
 // Tools that only read. A viewer of a workspace may call these there and nothing else.
 export const MCP_READ_TOOLS: readonly McpTool[] = [
   'workspaces_list',
-  'tasks_list_assigned',
-  'stories_list_participating',
   'planning_list',
   'story_read',
-  'tasks_list_ready',
   'planning_guide',
-  'project_items_list',
-  'project_tasks_list',
   'documents_list',
   'documents_read',
   'api_requests_search',
@@ -59,6 +50,7 @@ export const MCP_READ_TOOLS: readonly McpTool[] = [
   'backlog_list',
   'sprint_get_active',
   'issue_read',
+  'issues_list',
 ]
 
 export function isReadTool(tool: McpTool): boolean {
@@ -70,13 +62,8 @@ export const PLANNING_TOOLS: readonly McpTool[] = ['planning_list', 'planning_dr
 
 const memberTools: McpTool[] = [
   'workspaces_list',
-  'tasks_list_assigned',
-  'stories_list_participating',
   'story_read',
-  'tasks_list_ready',
   'planning_guide',
-  'project_items_list',
-  'project_tasks_list',
   'api_requests_search',
   'notifications_list',
   'notifications_mark_read',
@@ -85,6 +72,7 @@ const memberTools: McpTool[] = [
   'backlog_list',
   'sprint_get_active',
   'issue_read',
+  'issues_list',
   'issue_comment',
   'subtask_update_status',
   'checklist_set_done',

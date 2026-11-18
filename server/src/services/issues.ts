@@ -158,7 +158,7 @@ export async function listIssuePage(
   db: SQL,
   scope: IssueScope,
   actor: Actor,
-  filter: { type?: IssueType; sprintId?: string | null; parentId?: string },
+  filter: { type?: IssueType; sprintId?: string | null; parentId?: string; assigneeId?: string; participantId?: string },
   page: { limit: number; cursor: CursorKeys | null },
 ): Promise<{ items: IssueRow[]; nextCursor: string | null }> {
   const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)

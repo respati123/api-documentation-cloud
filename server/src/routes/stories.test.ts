@@ -207,7 +207,7 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     expect(refused).toMatchObject({ isError: true, value: { code: 'MCP_PERMISSION_DENIED' } })
   })
 
-  test('tasks_list_ready lists a task locked by the story design, marked as locked', async () => {
+  test('issues_list with ready lists a task locked by the story design, marked as locked', async () => {
     const { owner, workspaceId } = await project('story-ready')
     const backend = await memberWithRole(owner, workspaceId, 'ready-backend', 'backend')
     const designer = await memberWithRole(owner, workspaceId, 'ready-designer', 'ui_ux')
@@ -217,11 +217,11 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
     await http.call('PATCH', `/api/workspaces/${workspaceId}/tasks/${backendTask.id}`, { token: owner.token, body: { assigneeId: backend.user.id } })
     await http.call('PATCH', `/api/workspaces/${workspaceId}/tasks/${designTask.id}`, { token: owner.token, body: { assigneeId: designer.user.id } })
 
-    const backendReady = toolResult(await http.mcp(await keyFor(backend, 'backend'), 'tools/call', { name: 'tasks_list_ready', arguments: { workspaceId } }))
-    const designerReady = toolResult(await http.mcp(await keyFor(designer, 'ui_ux'), 'tools/call', { name: 'tasks_list_ready', arguments: { workspaceId } }))
+    const backendReady = toolResult(await http.mcp(await keyFor(backend, 'backend'), 'tools/call', { name: 'issues_list', arguments: { workspaceId, ready: true } }))
+    const designerReady = toolResult(await http.mcp(await keyFor(designer, 'ui_ux'), 'tools/call', { name: 'issues_list', arguments: { workspaceId, ready: true } }))
 
-    expect(backendReady.value.map((task: { id: string; locked: boolean }) => [task.id, task.locked])).toEqual([[backendTask.id, true]])
-    expect(designerReady.value.map((task: { id: string; locked: boolean }) => [task.id, task.locked])).toEqual([[designTask.id, false]])
+    expect(backendReady.value.issues.map((task: { id: string; locked: boolean }) => [task.id, task.locked])).toEqual([[backendTask.id, true]])
+    expect(designerReady.value.issues.map((task: { id: string; locked: boolean }) => [task.id, task.locked])).toEqual([[designTask.id, false]])
   })
 
   test('a story cannot start work before its design is approved', async () => {
