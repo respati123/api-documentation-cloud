@@ -86,7 +86,7 @@ export async function readBacklog(
   const kanban = (await findProjectSettings(db, scope.projectId))?.mode === 'kanban'
   const open = kanban ? [] : (await listSprintRows(db, scope.projectId)).filter((sprint) => sprint.status !== 'closed')
   const sprints = await Promise.all(open.map(async (sprint) => ({ ...sprint, issues: await listSprintIssues(db, sprint.id, { ...visibility, limit: SPRINT_ITEM_LIMIT }) })))
-  const rows = await listBacklogPage(db, scope.projectId, { ...visibility, limit: page.limit + 1, after: after ? { rank: Number(after.r), number: Number(after.n) } : null })
+  const rows = await listBacklogPage(db, scope.projectId, { ...visibility, anySprint: kanban, limit: page.limit + 1, after: after ? { rank: Number(after.r), number: Number(after.n) } : null })
   const items = pageOf(rows, page.limit, (row) => encodeCursor({ r: String(row.rank), n: String(row.number) }))
   return { sprints, backlog: items }
 }

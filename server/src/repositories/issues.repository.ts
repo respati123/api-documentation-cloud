@@ -215,15 +215,16 @@ export interface DraftVisibility {
 }
 
 // The open items that belong to no sprint, by rank. Finished items are left out. A page follows `after`.
+// A Kanban project has no sprints, so it reads every open item, even one a planned sprint still holds.
 export async function listBacklogPage(
   db: SQL,
   projectId: string,
-  query: DraftVisibility & { limit: number; after: { rank: number; number: number } | null },
+  query: DraftVisibility & { limit: number; after: { rank: number; number: number } | null; anySprint?: boolean },
 ): Promise<IssueRow[]> {
   const rank = query.after?.rank ?? null
   const number = query.after?.number ?? null
   return db`SELECT ${db.unsafe(columns)} ${db.unsafe(tables)} WHERE i.project_id = ${projectId}
-    AND i.sprint_id IS NULL AND i.rank IS NOT NULL AND i.status IS DISTINCT FROM 'done'
+    AND (${query.anySprint ?? false}::boolean OR i.sprint_id IS NULL) AND i.rank IS NOT NULL AND i.status IS DISTINCT FROM 'done'
     AND (${query.includeDrafts}::boolean OR i.published_at IS NOT NULL OR i.created_by = ${query.viewerId})
     AND (${rank}::float8 IS NULL OR (i.rank::float8, i.number) > (${rank}::float8, ${number}::int))
     ORDER BY i.rank, i.number LIMIT ${query.limit}`

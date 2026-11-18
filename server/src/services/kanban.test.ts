@@ -55,6 +55,17 @@ describe.skipIf(!databaseEnabled)('kanban mode', () => {
       expect(result.backlog.items.map((item) => item.title)).toEqual(['Loose'])
     })
 
+    test('an item left in a planned sprint when the project goes to Kanban stays in the backlog', async () => {
+      const scope = await freshProject()
+      const sprint = await createSprint(world.db, scope, pm(), { name: 'Planned', startsOn: day(0), endsOn: day(7) })
+      const planned = await createIssue(world.db, scope, pm(), { type: 'task', title: 'In a plan', points: 2 })
+      await addSprintItem(world.db, scope, pm(), sprint.id, planned.id)
+      await createIssue(world.db, scope, pm(), { type: 'task', title: 'Loose', points: 1 })
+      await kanban(scope)
+      const result = await readBacklog(world.db, scope, pm(), { limit: 100, cursor: null })
+      expect(result.backlog.items.map((item) => item.title).sort()).toEqual(['In a plan', 'Loose'])
+    })
+
     test('a project cannot go to Kanban while a sprint is running, and can go back to Scrum', async () => {
       const scope = await freshProject()
       const sprint = await createSprint(world.db, scope, pm(), { name: 'Running', startsOn: day(0), endsOn: day(7) })
