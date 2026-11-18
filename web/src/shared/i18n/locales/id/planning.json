@@ -8,7 +8,8 @@
     "backlog": "Backlog",
     "reports": "Laporan",
     "overview": "Ringkasan",
-    "discovery": "Discovery"
+    "discovery": "Discovery",
+    "agileBoard": "Papan"
   },
   "kind": {
     "brd": "BRD",

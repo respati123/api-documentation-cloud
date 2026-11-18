@@ -2,7 +2,7 @@ import type { McpKeyRole } from '@/models/mcp'
 
 // The playbook every agent must read through planning_guide before it writes project data.
 // Bump GUIDE_VERSION whenever a guide changes, so agents that read an older version have to read it again.
-export const GUIDE_VERSION = '2026-11-18.1'
+export const GUIDE_VERSION = '2026-11-18.2'
 
 const shared = `## Rules for every agent
 
@@ -184,7 +184,7 @@ ${shared}
 - Attach each design with story_attach_design: a clear title, an http or https link, and a short note (screens, devices).
 - A person approves the design in the web app. Approval opens the backend, frontend, mobile, and QA tasks.
 - When the workspace links a Stitchkit project under Design, build the screens there with the stitchkit_ tools (each needs workspaceId), then attach each screen with story_attach_design using the screen link.
-- Track your steps with subtask_add and subtask_set_done, and move your task with tasks_update_assigned_status or subtask_update_status.
+- Track your steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 
 ${projectView}`
 
@@ -198,7 +198,7 @@ ${shared}
 - Read the BRD and the approved PRD behind the story with documents_list and documents_read, so the API covers the business rules and limits they state.
 - Keep the API contract in the workspace API docs. Find each request's id with api_requests_search (by name, path, or method), then link it to the story with story_link_api_contract.
 - When the workspace links a DBDesign project under Design, design the tables there with the dbdesign_ tools (each needs workspaceId), then add the tables the story reads or writes with story_link_data_model.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
+- Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 
 ${projectView}
 - documents_list shows the confirmed BRDs and the approved PRDs only. Drafts and PRDs still in review are not shown.`
@@ -211,7 +211,7 @@ ${shared}
 
 - Find work with tasks_list_ready. Read the story with story_read: the approved design, the API contracts, and the acceptance criteria.
 - Build to the approved design and the linked contracts. Show the server's error messages as they come.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
+- Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 
 ${projectView}`
 
@@ -224,7 +224,7 @@ ${shared}
 - Read the story with story_read. Write one test case per acceptance criterion with story_write_test_case: a title, the precondition, numbered steps, and the expected results.
 - Cover the main flow and each failure flow in the story.
 - Run end-to-end tests only after the backend and frontend tasks are done. project_tasks_list shows whether they are.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
+- Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 
 ${projectView}`
 
@@ -236,7 +236,7 @@ ${shared}
 
 - The workspace owner has not given you a project role yet, so you have the member tools only.
 - Read your assigned tasks with tasks_list_assigned and the stories you take part in with stories_list_participating, then story_read for the details.
-- Track steps with subtask_add and subtask_set_done; move your task with tasks_update_assigned_status or subtask_update_status.
+- Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
 - To draft, attach designs, link contracts, or write test cases, ask the workspace owner for a project role.
 
 ${projectView}`

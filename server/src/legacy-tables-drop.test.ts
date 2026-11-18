@@ -3,10 +3,11 @@ import type { SQL } from 'bun'
 import { databaseEnabled, openScratchDatabase, type ScratchDatabase } from '@/testing/database'
 
 const DATA_MOVE = new URL('../migrations/0024_issues_data.sql', import.meta.url)
-const DROP = new URL('../migrations-staged/drop_legacy_planning_tables.sql', import.meta.url)
+const CHECKS = new URL('../migrations-staged/check_before_drop.sql', import.meta.url)
+const DROP = new URL('../migrations/0026_drop_legacy_planning_tables.sql', import.meta.url)
 
-// Migration 0024 keeps the old planning, task, and checklist tables as *_legacy. The staged migration drops them for good.
-describe.skipIf(!databaseEnabled)('dropping the legacy planning tables (staged migration)', () => {
+// Migration 0024 keeps the old planning, task, and checklist tables as *_legacy. Migration 0026 drops them for good.
+describe.skipIf(!databaseEnabled)('dropping the legacy planning tables (migration 0026)', () => {
   let scratch: ScratchDatabase
   let db: SQL
 
@@ -35,6 +36,27 @@ describe.skipIf(!databaseEnabled)('dropping the legacy planning tables (staged m
   })
 
   const exists = async (name: string) => (await db`SELECT to_regclass(${name}) AS found`)[0].found !== null
+
+  const missing = async () => {
+    const text = (await Bun.file(CHECKS).text()).split('\n').filter((line) => !line.startsWith('--')).join('\n')
+    const statements = text.split(';').map((part) => part.trim()).filter(Boolean)
+    const found: Record<string, number> = {}
+    for (const statement of statements) {
+      const [row] = await db.unsafe(statement)
+      found[row.what] = row.missing
+    }
+    return found
+  }
+
+  test('the checks before the drop find nothing missing after the data move, and see a row that is', async () => {
+    expect(await missing()).toEqual({ 'planning items': 0, tasks: 0, 'checklist lines': 0, dependencies: 0 })
+    await db`DELETE FROM issue_checklist_items WHERE id = 'c1'`
+    await db`DELETE FROM issue_links`
+    expect(await missing()).toMatchObject({ 'checklist lines': 1, dependencies: 1 })
+    await db`INSERT INTO issue_checklist_items (id, issue_id, title, done, position) VALUES ('c1', 't1', 'line', false, 1)`
+    await db`INSERT INTO issue_links (id, from_id, to_id, kind, created_by) VALUES ('k1', 't1', 't2', 'blocks', 'u1')`
+    expect(await missing()).toEqual({ 'planning items': 0, tasks: 0, 'checklist lines': 0, dependencies: 0 })
+  })
 
   const GONE = ['planning_items_legacy', 'tasks_legacy', 'task_subtasks_legacy', 'task_dependencies']
 

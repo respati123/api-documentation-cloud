@@ -4,11 +4,7 @@ export type McpKeyRole = (typeof MCP_KEY_ROLES)[number]
 export const MCP_TOOLS = [
   'workspaces_list',
   'tasks_list_assigned',
-  'tasks_get_assigned',
-  'tasks_update_assigned_status',
-  'tasks_comment_assigned',
   'stories_list_participating',
-  'stories_comment_participating',
   'planning_list',
   'planning_draft_prd',
   'planning_draft_item',
@@ -20,9 +16,6 @@ export const MCP_TOOLS = [
   'story_link_data_model',
   'story_write_test_case',
   'tasks_list_ready',
-  'subtasks_list',
-  'subtask_add',
-  'subtask_set_done',
   'planning_guide',
   'story_write_details',
   'planning_upload_brd',
@@ -42,6 +35,7 @@ export const MCP_TOOLS = [
   'issue_comment',
   'subtask_update_status',
   'checklist_set_done',
+  'checklist_add',
 ] as const
 export type McpTool = (typeof MCP_TOOLS)[number]
 
@@ -49,12 +43,10 @@ export type McpTool = (typeof MCP_TOOLS)[number]
 export const MCP_READ_TOOLS: readonly McpTool[] = [
   'workspaces_list',
   'tasks_list_assigned',
-  'tasks_get_assigned',
   'stories_list_participating',
   'planning_list',
   'story_read',
   'tasks_list_ready',
-  'subtasks_list',
   'planning_guide',
   'project_items_list',
   'project_tasks_list',
@@ -79,16 +71,9 @@ export const PLANNING_TOOLS: readonly McpTool[] = ['planning_list', 'planning_dr
 const memberTools: McpTool[] = [
   'workspaces_list',
   'tasks_list_assigned',
-  'tasks_get_assigned',
-  'tasks_update_assigned_status',
-  'tasks_comment_assigned',
   'stories_list_participating',
-  'stories_comment_participating',
   'story_read',
   'tasks_list_ready',
-  'subtasks_list',
-  'subtask_add',
-  'subtask_set_done',
   'planning_guide',
   'project_items_list',
   'project_tasks_list',
@@ -103,6 +88,7 @@ const memberTools: McpTool[] = [
   'issue_comment',
   'subtask_update_status',
   'checklist_set_done',
+  'checklist_add',
   'issue_draft',
 ]
 

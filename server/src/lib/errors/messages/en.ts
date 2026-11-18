@@ -98,6 +98,7 @@ export const en = {
   SPRINT_INPUT_INVALID: 'Sprint details are invalid. A sprint has a name and lasts from one day to four weeks.',
   SPRINT_ALREADY_ACTIVE: 'This project already has an active sprint. Close it before starting another.',
   SPRINT_NOT_EDITABLE: 'This sprint is not in a state where that can be done.',
+  SPRINT_RUNNING: 'A sprint is running. Close it before the project goes to Kanban.',
   SPRINT_ITEM_NOT_READY: 'Only a Ready story with points, or a task or bug with points, can enter a sprint. A PM can override this with a reason.',
   PROJECT_KEY_TAKEN: 'Another project in this workspace already uses that key, now or before.',
   SPRINT_NOT_AVAILABLE: 'Sprints are only used in Scrum mode. This project works in Kanban mode.',

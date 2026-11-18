@@ -104,11 +104,7 @@ export const MCP_KEY_STATE_TEXT: Record<McpKeyStatus, string> = {
 export const MCP_TOOL_TEXT: Record<string, string> = {
   workspaces_list: 'mcp:tool.workspaces_list',
   tasks_list_assigned: 'mcp:tool.tasks_list_assigned',
-  tasks_get_assigned: 'mcp:tool.tasks_get_assigned',
-  tasks_update_assigned_status: 'mcp:tool.tasks_update_assigned_status',
-  tasks_comment_assigned: 'mcp:tool.tasks_comment_assigned',
   stories_list_participating: 'mcp:tool.stories_list_participating',
-  stories_comment_participating: 'mcp:tool.stories_comment_participating',
   planning_list: 'mcp:tool.planning_list',
   planning_draft_prd: 'mcp:tool.planning_draft_prd',
   planning_draft_item: 'mcp:tool.planning_draft_item',
@@ -120,9 +116,6 @@ export const MCP_TOOL_TEXT: Record<string, string> = {
   story_link_data_model: 'mcp:tool.story_link_data_model',
   story_write_test_case: 'mcp:tool.story_write_test_case',
   tasks_list_ready: 'mcp:tool.tasks_list_ready',
-  subtasks_list: 'mcp:tool.subtasks_list',
-  subtask_add: 'mcp:tool.subtask_add',
-  subtask_set_done: 'mcp:tool.subtask_set_done',
   planning_guide: 'mcp:tool.planning_guide',
   story_write_details: 'mcp:tool.story_write_details',
   planning_upload_brd: 'mcp:tool.planning_upload_brd',
@@ -142,4 +135,5 @@ export const MCP_TOOL_TEXT: Record<string, string> = {
   issue_comment: 'mcp:tool.issue_comment',
   subtask_update_status: 'mcp:tool.subtask_update_status',
   checklist_set_done: 'mcp:tool.checklist_set_done',
+  checklist_add: 'mcp:tool.checklist_add',
 }

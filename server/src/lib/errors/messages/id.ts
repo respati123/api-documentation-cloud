@@ -98,6 +98,7 @@ export const id = {
   SPRINT_INPUT_INVALID: 'Detail sprint tidak valid. Sprint punya nama dan berlangsung satu hari sampai empat minggu.',
   SPRINT_ALREADY_ACTIVE: 'Project ini sudah punya sprint aktif. Tutup dulu sebelum memulai yang lain.',
   SPRINT_NOT_EDITABLE: 'Sprint ini sedang tidak dalam keadaan yang memungkinkan aksi itu.',
+  SPRINT_RUNNING: 'Ada sprint yang sedang berjalan. Tutup dulu sebelum project beralih ke Kanban.',
   SPRINT_ITEM_NOT_READY: 'Hanya story Ready yang punya poin, atau task atau bug yang punya poin, yang bisa masuk sprint. PM bisa melewatinya dengan alasan.',
   PROJECT_KEY_TAKEN: 'Project lain di workspace ini sudah memakai key itu, sekarang atau sebelumnya.',
   SPRINT_NOT_AVAILABLE: 'Sprint hanya dipakai di mode Scrum. Project ini bekerja di mode Kanban.',

@@ -175,7 +175,20 @@ describe('BacklogView', () => {
     const item = screen.getByTestId('backlog-row-c')
     expect(item).toHaveTextContent('No points')
     expect(item).toHaveTextContent('Needs points')
-    expect(within(screen.getByTestId('backlog-row-b')).getByText('Ready for a sprint')).toBeInTheDocument()
+    expect(within(screen.getByTestId('backlog-row-b')).queryByText('Ready for a sprint')).toBeNull()
+  })
+
+  test('readiness is shown only for items that wait outside a sprint', () => {
+    const vm = props()
+    vm.sprints[0].rows = [row('a', { ready: true }), row('b', { ready: false, gaps: [{ id: 'status', label: 'Not ready' }] })]
+    vm.backlog.rows = [row('c', { ready: true }), row('d', { ready: false, gaps: [{ id: 'status', label: 'Not ready' }] })]
+    render(<BacklogView vm={vm} />)
+    for (const id of ['a', 'b']) {
+      expect(within(screen.getByTestId(`backlog-row-${id}`)).queryByText('Ready for a sprint')).toBeNull()
+      expect(within(screen.getByTestId(`backlog-row-${id}`)).queryByText('Not ready')).toBeNull()
+    }
+    expect(within(screen.getByTestId('backlog-row-c')).getByText('Ready for a sprint')).toBeInTheDocument()
+    expect(within(screen.getByTestId('backlog-row-d')).getByText('Not ready')).toBeInTheDocument()
   })
 
   test('marks drafts and items whose PRD changed', () => {

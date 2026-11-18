@@ -10,10 +10,10 @@ import { appRolesOf } from '@/services/app-access'
 import { appActorOf, APPS } from '@/services/app-integrations'
 import { broadcastPlanningChange, type PlanningScope } from '@/services/events'
 import { type AudienceTarget, commentTarget, planningAudience } from '@/services/planning-audience'
-import { commentMcpIssue, draftMcpIssue, getMcpActiveSprint, guideIsFresh, listMcpBacklog, readMcpGuide, readMcpIssue, setMcpChecklistItemDone, updateMcpSubtaskStatus, writeMcpStoryDetails } from '@/services/mcp-access'
+import { addMcpChecklistItem, commentMcpIssue, draftMcpIssue, getMcpActiveSprint, guideIsFresh, listMcpBacklog, readMcpGuide, readMcpIssue, setMcpChecklistItemDone, updateMcpSubtaskStatus, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
-import { addMcpSubtask, attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, listMcpSubtasks, readMcpStory, setMcpSubtaskDone, writeMcpTestCase } from '@/services/mcp-access'
-import { authenticateMcpKey, changeMcpAssignedTaskStatus, commentMcpAssignedTask, commentMcpParticipatingStory, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, getMcpAssignedTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpWorkspaces, uploadMcpBrd } from '@/services/mcp-access'
+import { attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, listMcpReadyTasks, readMcpStory, writeMcpTestCase } from '@/services/mcp-access'
+import { authenticateMcpKey, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, listMcpAssignedTasks, listMcpParticipatingStories, listMcpPlanning, listMcpWorkspaces, uploadMcpBrd } from '@/services/mcp-access'
 import { listMcpDocuments, listMcpProjectItems, listMcpProjectTasks, readMcpReadableDocument } from '@/services/mcp-access'
 import { DOCUMENT_URI_TEMPLATE, listMcpDocumentResources, listMcpTeamMembers, readMcpDiscussion, listMcpNotifications, markMcpNotificationsRead, readMcpDocumentResource, searchMcpApiRequests } from '@/services/mcp-access'
 
@@ -25,9 +25,6 @@ const RPC = { parse: -32700, invalidRequest: -32600, methodNotFound: -32601, inv
 
 // Tools that change project data: which part of the project open pages should reload, and who may read the change.
 const MCP_WRITES: Partial<Record<McpTool, { scope: PlanningScope; target: (args: Args) => AudienceTarget }>> = {
-  tasks_update_assigned_status: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
-  tasks_comment_assigned: { scope: 'comments', target: (a) => ({ kind: 'task-thread', id: String(a.taskId) }) },
-  stories_comment_participating: { scope: 'comments', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
   planning_upload_brd: { scope: 'documents', target: () => ({ kind: 'managers' }) },
   planning_draft_prd: { scope: 'documents', target: () => ({ kind: 'managers' }) },
   planning_draft_item: { scope: 'items', target: () => ({ kind: 'managers' }) },
@@ -37,13 +34,12 @@ const MCP_WRITES: Partial<Record<McpTool, { scope: PlanningScope; target: (args:
   story_link_api_contract: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
   story_link_data_model: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
   story_write_test_case: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
-  subtask_add: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
-  subtask_set_done: { scope: 'tasks', target: () => ({ kind: 'everyone' }) },
   story_write_details: { scope: 'items', target: (a) => ({ kind: 'item', id: String(a.storyId) }) },
   issue_draft: { scope: 'items', target: () => ({ kind: 'managers' }) },
   issue_comment: { scope: 'comments', target: (a) => ({ kind: 'item', id: String(a.issueId) }) },
   subtask_update_status: { scope: 'items', target: () => ({ kind: 'everyone' }) },
   checklist_set_done: { scope: 'items', target: () => ({ kind: 'everyone' }) },
+  checklist_add: { scope: 'items', target: () => ({ kind: 'everyone' }) },
 }
 
 // Writes that add something. A retry with the same clientRequestId returns the first result instead of adding twice.
@@ -53,19 +49,17 @@ const REPLAYABLE = new Set<McpTool>([
   'planning_draft_item',
   'planning_draft_task',
   'planning_comment',
-  'tasks_comment_assigned',
-  'stories_comment_participating',
   'story_attach_design',
   'story_link_api_contract',
   'story_link_data_model',
   'story_write_test_case',
-  'subtask_add',
   'issue_draft',
   'issue_comment',
+  'checklist_add',
 ])
 // story_write_details replaces the Definition of Done. Setting a status or a done flag twice changes nothing more.
 const DESTRUCTIVE = new Set<McpTool>(['story_write_details'])
-const IDEMPOTENT = new Set<McpTool>(['tasks_update_assigned_status', 'subtask_set_done', 'subtask_update_status', 'checklist_set_done', 'story_write_details', 'notifications_mark_read'])
+const IDEMPOTENT = new Set<McpTool>(['subtask_update_status', 'checklist_set_done', 'story_write_details', 'notifications_mark_read'])
 
 type RpcRequest = { id?: string | number | null; method?: string; params?: unknown }
 type Args = Record<string, unknown>
@@ -106,13 +100,10 @@ const tools: Record<McpTool, ToolDefinition> = {
   issue_comment: inWorkspace('Comment on an issue', { issueId: text, body: commentBody, parentId, clientRequestId }, ['issueId', 'body'], 'Comment on an issue you may read, or answer a comment on it. Write @handle to mention a member.', (db, p, a) => commentMcpIssue(db, p, a.workspaceId, a.issueId, { body: a.body, parentId: a.parentId })),
   subtask_update_status: inWorkspace('Move my sub-task', { subtaskId: text, status: { type: 'string', enum: ['todo', 'in_progress', 'in_review', 'done'] } }, ['subtaskId', 'status'], 'Change the status of a sub-task assigned to this member. The first sub-task to start moves its Ready story to In Progress.', (db, p, a) => updateMcpSubtaskStatus(db, p, a.workspaceId, a.subtaskId, a.status)),
   checklist_set_done: inWorkspace('Tick a checklist line', { issueId: text, itemId: text, done: { type: 'boolean' } }, ['issueId', 'itemId', 'done'], 'Tick or untick one line of the checklist of an issue assigned to this member.', (db, p, a) => setMcpChecklistItemDone(db, p, a.workspaceId, a.issueId, a.itemId, a.done)),
+  checklist_add: inWorkspace('Add a checklist line', { issueId: text, title: text, clientRequestId }, ['issueId', 'title'], 'Add one line to the checklist of an issue assigned to this member. Read the checklist with issue_read, and tick a line with checklist_set_done.', (db, p, a) => addMcpChecklistItem(db, p, a.workspaceId, a.issueId, a.title)),
   workspaces_list: { title: 'List workspaces', description: 'List the workspaces this member belongs to. Every other tool needs one of these ids.', properties: {}, required: [], run: (db, p) => listMcpWorkspaces(db, p) },
   tasks_list_assigned: inWorkspace('List my tasks', {}, [], 'List published tasks in the workspace assigned to this member.', (db, p, a) => listMcpAssignedTasks(db, p, a.workspaceId)),
-  tasks_get_assigned: inWorkspace('Read my task', { taskId: text }, ['taskId'], 'Read a task assigned to this member.', (db, p, a) => getMcpAssignedTask(db, p, a.workspaceId, a.taskId)),
-  tasks_update_assigned_status: inWorkspace('Move my task', { taskId: text, status: { type: 'string', enum: ['backlog', 'todo', 'in_progress', 'in_review', 'done'] } }, ['taskId', 'status'], 'Change the status of a task assigned to this member.', (db, p, a) => changeMcpAssignedTaskStatus(db, p, a.workspaceId, a.taskId, a.status)),
-  tasks_comment_assigned: inWorkspace('Comment on my task', { taskId: text, body: commentBody, parentId, clientRequestId }, ['taskId', 'body'], 'Comment on a published task assigned to this member, or answer a comment on it.', (db, p, a) => commentMcpAssignedTask(db, p, a.workspaceId, a.taskId, { body: a.body, parentId: a.parentId })),
   stories_list_participating: inWorkspace('List my stories', {}, [], 'List published stories where this member is a participant.', (db, p, a) => listMcpParticipatingStories(db, p, a.workspaceId)),
-  stories_comment_participating: inWorkspace('Comment on my story', { storyId: text, body: commentBody, parentId, clientRequestId }, ['storyId', 'body'], 'Comment on a published story where this member is a participant, or answer a comment on it.', (db, p, a) => commentMcpParticipatingStory(db, p, a.workspaceId, a.storyId, { body: a.body, parentId: a.parentId })),
   project_items_list: inWorkspace('List epics and stories', {}, [], 'List the epics and stories of the workspace, read-only. Drafts are included only for the PM and the tech lead.', (db, p, a) => listMcpProjectItems(db, p, a.workspaceId)),
   project_tasks_list: inWorkspace('List all tasks', {}, [], 'List the tasks of every member in the workspace, read-only. Use tasks_list_assigned for your own work.', (db, p, a) => listMcpProjectTasks(db, p, a.workspaceId)),
   documents_list: inWorkspace('List documents', {}, [], 'List the BRDs and PRDs this key may read: all of them for the PM and the tech lead, approved ones for backend.', (db, p, a) => listMcpDocuments(db, p, a.workspaceId)),
@@ -198,9 +189,6 @@ const tools: Record<McpTool, ToolDefinition> = {
     (db, p, a) => writeMcpTestCase(db, p, a.workspaceId, a.storyId, { title: a.title, precondition: a.precondition, steps: a.steps, expected: a.expected }),
   ),
   tasks_list_ready: inWorkspace('List tasks I can start', {}, [], 'List tasks assigned to this member that can start now: not done, not waiting for a design approval, and with every dependency done.', (db, p, a) => listMcpReadyTasks(db, p, a.workspaceId)),
-  subtasks_list: inWorkspace('List sub-tasks', { taskId: text }, ['taskId'], 'List the sub-tasks of a task assigned to this member.', (db, p, a) => listMcpSubtasks(db, p, a.workspaceId, a.taskId)),
-  subtask_add: inWorkspace('Add a sub-task', { taskId: text, title: text, clientRequestId }, ['taskId', 'title'], 'Add a sub-task to a task assigned to this member.', (db, p, a) => addMcpSubtask(db, p, a.workspaceId, a.taskId, a.title)),
-  subtask_set_done: inWorkspace('Check off a sub-task', { taskId: text, subtaskId: text, done: { type: 'boolean' } }, ['taskId', 'subtaskId', 'done'], 'Mark a sub-task of a task assigned to this member as done or not done.', (db, p, a) => setMcpSubtaskDone(db, p, a.workspaceId, a.taskId, a.subtaskId, a.done)),
   api_requests_search: inWorkspace(
     'Search API requests',
     { query: { type: 'string', description: 'Text found in the request name, url, or folder. Leave out to list the first 50.' }, method: { type: 'string', description: 'Only requests of this HTTP method, for example GET or POST.' } },

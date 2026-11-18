@@ -5,22 +5,19 @@ import type { AppName } from '@/repositories/app-links.repository'
 import type { AppsClient } from '@/services/apps-client'
 import { appRolesOf, workspaceAppAllowed } from '@/services/app-access'
 import { appActorOf } from '@/services/app-integrations'
-import type { TaskStatus } from '@/models/project'
 import { findMcpKeyAuth, markGuideRead, touchMcpKey } from '@/repositories/mcp-keys.repository'
 import { listUserDisciplines } from '@/repositories/planning-audience.repository'
 import { GUIDE_VERSION, guideFor } from '@/services/mcp-guides'
 import { findRole, listUserWorkspaces, listWorkspaceTeam } from '@/repositories/memberships.repository'
-import { findAssignedTask, findTaskInWorkspace, listAssignedTasks, listProjects, listTasks, listUserRolesByWorkspace } from '@/repositories/projects.repository'
-import { addTaskSubtask, getTaskSubtasks, setTaskSubtaskDone } from '@/services/projects'
+import { listAssignedTasks, listProjects, listTasks, listUserRolesByWorkspace } from '@/repositories/projects.repository'
 import { addStoryTestCase, attachStoryDesign, getStoryDetails, linkStoryContract, linkStoryDataModel, updateStoryDetails } from '@/services/stories'
-import { listParticipatingStories, isStoryParticipant } from '@/repositories/planning.repository'
+import { listParticipatingStories } from '@/repositories/planning.repository'
 import { mcpKeyHash } from '@/services/mcp-keys'
 import { decodeCursor } from '@/lib/pagination'
 import { parseInput } from '@/lib/parse-input'
 import { createIssueBody } from '@/models/issue-input'
-import { listChecklist, listLinks, setChecklistItemDone } from '@/services/issue-details'
+import { addChecklistItem, listChecklist, listLinks, setChecklistItemDone } from '@/services/issue-details'
 import { readBacklog } from '@/services/issue-backlog'
-import { insertPlanningEvent } from '@/repositories/planning-events.repository'
 import { createIssue, getIssue, updateIssue } from '@/services/issues'
 import { searchCollectionRequests } from '@/services/collection-search'
 import { listNotificationsPage } from '@/services/notifications'
@@ -28,7 +25,6 @@ import { countUnreadNotifications, listUnreadNotifications, markAllNotifications
 import { findHeadSnapshot } from '@/repositories/stories.repository'
 import { addPlanningComment, listPlanningComments, createPlanningDocument, createPlanningItem, createPlanningTaskDraft, getPlanningDocument, listPlanningDocuments, listPlanningItems, listPlanningTasks, type PlanningVia, type TargetKind } from '@/services/planning'
 
-const statuses: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'in_review', 'done']
 
 // The key only proves who is calling. The tools come from the member's roles: the union over every workspace here,
 // for tools/list and the playbook, and the roles of the named workspace again on every call.
@@ -100,32 +96,6 @@ export async function listMcpAssignedTasks(db: SQL, principal: McpPrincipal, wor
   return listAssignedTasks(db, await projectIdsOf(db, id), principal.userId)
 }
 
-export async function getMcpAssignedTask(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown) {
-  const id = await requireWorkspace(db, principal, 'tasks_get_assigned', workspaceId)
-  const task = typeof taskId === 'string' ? await findAssignedTask(db, taskId, await projectIdsOf(db, id), principal.userId) : undefined
-  if (!task) throw new AppError('TASK_NOT_FOUND')
-  return task
-}
-
-export async function changeMcpAssignedTaskStatus(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, status: unknown) {
-  const id = await requireWorkspace(db, principal, 'tasks_update_assigned_status', workspaceId)
-  if (typeof status !== 'string' || !statuses.includes(status as TaskStatus)) throw new AppError('TASK_INPUT_INVALID')
-  const current = typeof taskId === 'string' ? await findTaskInWorkspace(db, taskId, id) : undefined
-  if (current?.locked && status !== 'backlog' && status !== current.status) throw new AppError('TASK_LOCKED')
-  const assigned = typeof taskId === 'string' ? await findAssignedTask(db, taskId, await projectIdsOf(db, id), principal.userId) : undefined
-  if (!assigned) throw new AppError('TASK_NOT_FOUND')
-  // The issue service holds an agent key to its own sub-tasks, and runs the roll-up and the open sub-task checks.
-  const scope = await issueScope(db, id)
-  await updateIssue(db, scope, asAgent(principal), assigned.id, { status: status === 'backlog' ? 'todo' : status })
-  const task = await findAssignedTask(db, assigned.id, await projectIdsOf(db, id), principal.userId)
-  if (!task) throw new AppError('TASK_NOT_FOUND')
-  // The issue service wrote the status event. This is the line the activity panel of the task shows.
-  if (task.status !== current?.status) {
-    await insertPlanningEvent(db, { workspaceId: id, actorId: principal.userId, apiKeyId: principal.keyId, targetKind: 'task', targetId: task.id, action: `status:${task.status}` })
-  }
-  return task
-}
-
 type CommentInput = { body: unknown; parentId?: unknown }
 
 const handleOf = (email: string) => email.split('@')[0]
@@ -159,27 +129,9 @@ export async function readMcpDiscussion(db: SQL, principal: McpPrincipal, worksp
   return rows.filter((row) => !row.parentId).map((row) => ({ ...view(row), replies: rows.filter((reply) => reply.parentId === row.id).map(view) }))
 }
 
-export async function commentMcpAssignedTask(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, input: CommentInput) {
-  const id = await requireWorkspace(db, principal, 'tasks_comment_assigned', workspaceId)
-  const task = typeof taskId === 'string' ? await findAssignedTask(db, taskId, await projectIdsOf(db, id), principal.userId) : undefined
-  if (!task) throw new AppError('TASK_NOT_FOUND')
-  return postMcpComment(db, principal, id, 'task', task.id, input)
-}
-
 export async function listMcpParticipatingStories(db: SQL, principal: McpPrincipal, workspaceId: unknown) {
   const id = await requireWorkspace(db, principal, 'stories_list_participating', workspaceId)
   return listParticipatingStories(db, id, principal.userId)
-}
-
-async function requireParticipatingStory(db: SQL, workspaceId: string, userId: string, storyId: unknown): Promise<string> {
-  if (typeof storyId !== 'string' || !(await isStoryParticipant(db, workspaceId, storyId, userId))) throw new AppError('PLANNING_NOT_FOUND')
-  return storyId
-}
-
-export async function commentMcpParticipatingStory(db: SQL, principal: McpPrincipal, workspaceId: unknown, storyId: unknown, input: CommentInput) {
-  const id = await requireWorkspace(db, principal, 'stories_comment_participating', workspaceId)
-  const story = await requireParticipatingStory(db, id, principal.userId, storyId)
-  return postMcpComment(db, principal, id, 'story', story, input)
 }
 
 // Read-only views for every member: published work, and the documents the key's role may read.
@@ -301,29 +253,6 @@ export async function listMcpReadyTasks(db: SQL, principal: McpPrincipal, worksp
   const done = new Set(tasks.filter((task) => task.status === 'done').map((task) => task.id))
   // A task locked by its story is listed too, marked locked. Its role waits for the design to be approved.
   return tasks.filter((task) => task.assigneeId === principal.userId && task.status !== 'done' && task.dependsOn.every((dependency) => done.has(dependency)))
-}
-
-async function requireOwnTask(db: SQL, principal: McpPrincipal, tool: McpTool, workspaceId: unknown, taskId: unknown) {
-  const id = await requireWorkspace(db, principal, tool, workspaceId)
-  const task = typeof taskId === 'string' ? await findTaskInWorkspace(db, taskId, id) : undefined
-  if (!task || task.assigneeId !== principal.userId) throw new AppError('TASK_NOT_FOUND')
-  return { workspaceId: id, taskId: task.id }
-}
-
-export async function listMcpSubtasks(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown) {
-  const own = await requireOwnTask(db, principal, 'subtasks_list', workspaceId, taskId)
-  return getTaskSubtasks(db, own.workspaceId, own.taskId, principal.userId)
-}
-
-export async function addMcpSubtask(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, title: unknown) {
-  const own = await requireOwnTask(db, principal, 'subtask_add', workspaceId, taskId)
-  return addTaskSubtask(db, own.workspaceId, own.taskId, principal.userId, title, principal.keyId)
-}
-
-export async function setMcpSubtaskDone(db: SQL, principal: McpPrincipal, workspaceId: unknown, taskId: unknown, subtaskId: unknown, done: unknown) {
-  const own = await requireOwnTask(db, principal, 'subtask_set_done', workspaceId, taskId)
-  if (typeof subtaskId !== 'string') throw new AppError('TASK_INPUT_INVALID')
-  return setTaskSubtaskDone(db, own.workspaceId, own.taskId, subtaskId, principal.userId, done, principal.keyId)
 }
 
 export async function writeMcpStoryDetails(
@@ -452,6 +381,12 @@ export async function updateMcpSubtaskStatus(db: SQL, principal: McpPrincipal, w
   const subtask = await getIssue(db, scope, asAgent(principal), issueRef(subtaskId))
   if (subtask.type !== 'subtask' || typeof status !== 'string') throw new AppError('ISSUE_INPUT_INVALID')
   return updateIssue(db, scope, asAgent(principal), subtask.id, { status })
+}
+
+export async function addMcpChecklistItem(db: SQL, principal: McpPrincipal, workspaceId: unknown, issueId: unknown, title: unknown) {
+  const id = await requireWorkspace(db, principal, 'checklist_add', workspaceId)
+  if (typeof title !== 'string') throw new AppError('ISSUE_INPUT_INVALID')
+  return addChecklistItem(db, await issueScope(db, id), asAgent(principal), issueRef(issueId), title)
 }
 
 export async function setMcpChecklistItemDone(db: SQL, principal: McpPrincipal, workspaceId: unknown, issueId: unknown, itemId: unknown, done: unknown) {

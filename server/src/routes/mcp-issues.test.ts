@@ -152,21 +152,38 @@ describe.skipIf(!databaseEnabled)('MCP issue tools', () => {
     expect(drafted.value).toMatchObject({ type: 'bug', title: 'Crash on refund', publishedAt: null })
   })
 
-  test('the older status tool follows the issue rules: an agent moves its own sub-task and nothing else', async () => {
-    const parent = data(await api('POST', '/issues', owner, { type: 'task', title: 'Parent for the old tool', points: 2, assigneeId: dev.user.id })).issue
-    const sub = data(await api('POST', '/issues', owner, { type: 'subtask', title: 'Sub for the old tool', parentId: parent.id, role: 'backend', assigneeId: dev.user.id })).issue
+  test('the older tools that another tool replaces are gone, and an agent moves its own sub-task with the new one', async () => {
+    const parent = data(await api('POST', '/issues', owner, { type: 'task', title: 'Parent for the sub-task tool', points: 2, assigneeId: dev.user.id })).issue
+    const sub = data(await api('POST', '/issues', owner, { type: 'subtask', title: 'Sub for the sub-task tool', parentId: parent.id, role: 'backend', assigneeId: dev.user.id })).issue
 
-    const refused = await call(devKey, 'tasks_update_assigned_status', { taskId: parent.id, status: 'done' })
+    for (const gone of ['tasks_get_assigned', 'tasks_update_assigned_status', 'tasks_comment_assigned', 'stories_comment_participating', 'subtasks_list', 'subtask_add', 'subtask_set_done']) {
+      const refused = await http.mcp(devKey, 'tools/call', { name: gone, arguments: { workspaceId, taskId: sub.id } })
+      expect(refused.json.error).toMatchObject({ code: -32602 })
+    }
+
+    const refused = await call(devKey, 'subtask_update_status', { subtaskId: parent.id, status: 'done' })
     expect(refused.isError).toBe(true)
-    expect(refused.value).toMatchObject({ code: 'ISSUE_AGENT_FORBIDDEN' })
     expect(data(await api('GET', `/issues/${parent.id}`, owner)).issue.status).toBe('todo')
 
-    const moved = await call(devKey, 'tasks_update_assigned_status', { taskId: sub.id, status: 'in_progress' })
+    const moved = await call(devKey, 'subtask_update_status', { subtaskId: sub.id, status: 'in_progress' })
     expect(moved.isError).toBe(false)
     expect(data(await api('GET', `/issues/${sub.id}`, owner)).issue.status).toBe('in_progress')
     const events = await db`SELECT api_key_id FROM issue_status_events WHERE issue_id = ${sub.id} AND to_status = 'in_progress'`
     expect(events).toHaveLength(1)
     expect(events[0].api_key_id).not.toBeNull()
+  })
+
+  test('an agent adds a line to a checklist, reads it with issue_read, and ticks it', async () => {
+    const task = data(await api('POST', '/issues', owner, { type: 'task', title: 'Task with a checklist', points: 1, assigneeId: dev.user.id })).issue
+    const added = await call(devKey, 'checklist_add', { issueId: task.id, title: 'Write the migration', clientRequestId: 'check-1' })
+    expect(added.isError).toBe(false)
+    expect(added.value).toMatchObject({ title: 'Write the migration', done: false })
+    const again = await call(devKey, 'checklist_add', { issueId: task.id, title: 'Write the migration', clientRequestId: 'check-1' })
+    expect(again.value.id).toBe(added.value.id)
+    const read = await call(devKey, 'issue_read', { issueId: task.id })
+    expect(read.value.checklist.map((item: Body) => item.title)).toEqual(['Write the migration'])
+    expect((await call(devKey, 'checklist_set_done', { issueId: task.id, itemId: added.value.id, done: true })).value.done).toBe(true)
+    expect((await call(devKey, 'checklist_add', { issueId: task.id, title: '   ' })).isError).toBe(true)
   })
 
   test('the issue tools use the oldest project of the workspace, as the portal does, however recently another was changed', async () => {
