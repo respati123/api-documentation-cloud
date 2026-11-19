@@ -41,7 +41,7 @@ function props(overrides: Partial<MyMcpKeyViewProps> = {}): MyMcpKeyViewProps {
     access: [{ id: 'w-1', name: 'Klinik', roles: ['backend', 'qa'], tools: ['workspaces_list', 'story_write_test_case'] }],
     accessStatus: 'ready',
     guide: null,
-    snippets: { env: 'export API_DOCS_MCP_KEY="apm_..."', claude: 'claude mcp add', codex: 'codex mcp add' },
+    snippets: { claude: 'claude mcp add', codex: 'codex mcp add' },
     error: null,
     ...overrides,
   }

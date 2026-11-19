@@ -1,11 +1,27 @@
 export const MCP_SERVER_NAME = 'api-documentation-cloud'
-export const MCP_KEY_ENV = 'API_DOCS_MCP_KEY'
 
-// Commands the member pastes into a terminal. The key stays in an environment variable, never in the command itself.
-export function setupSnippets(mcpUrl: string) {
+export function setupSnippets(mcpUrl: string, secret: string) {
+  const codexConfig = [
+    '',
+    '',
+    `[mcp_servers.${MCP_SERVER_NAME}]`,
+    `url = ${JSON.stringify(mcpUrl)}`,
+    '',
+    `[mcp_servers.${MCP_SERVER_NAME}.http_headers]`,
+    `Authorization = ${JSON.stringify(`Bearer ${secret}`)}`,
+    '',
+  ].join('\n')
+  const codexScript = [
+    'from pathlib import Path; import re;',
+    'path = Path.home() / ".codex/config.toml";',
+    'content = path.read_text() if path.exists() else "";',
+    `content = re.sub(r"(?ms)^\\[mcp_servers\\.${MCP_SERVER_NAME}(?:\\.[^\\]]+)?\\]\\n.*?(?=^\\[|\\Z)", "", content).rstrip();`,
+    'path.parent.mkdir(parents=True, exist_ok=True);',
+    `path.write_text(content + ${JSON.stringify(codexConfig)});`,
+  ].join(' ')
+
   return {
-    env: `export ${MCP_KEY_ENV}="apm_..."`,
-    claude: `claude mcp add --transport http --scope user ${MCP_SERVER_NAME} ${mcpUrl} --header "Authorization: Bearer $${MCP_KEY_ENV}"`,
-    codex: `codex mcp add ${MCP_SERVER_NAME} --url ${mcpUrl} --bearer-token-env-var ${MCP_KEY_ENV}`,
+    claude: `claude mcp add --transport http --scope user ${MCP_SERVER_NAME} ${mcpUrl} --header "Authorization: Bearer ${secret}"`,
+    codex: `python3 -c '${codexScript}'`,
   }
 }

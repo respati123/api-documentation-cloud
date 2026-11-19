@@ -48,10 +48,10 @@ export const MCP_ACCESS_TEXT = {
   setup: {
     title: 'mcp:setup.title',
     detail: 'mcp:setup.detail',
-    envStep: 'mcp:setup.envStep',
     claude: 'mcp:setup.claude',
     codex: 'mcp:setup.codex',
     verify: 'mcp:setup.verify',
+    codexNote: 'mcp:setup.codexNote',
     copy: 'mcp:setup.copy',
     copied: 'mcp:setup.copied',
   },
