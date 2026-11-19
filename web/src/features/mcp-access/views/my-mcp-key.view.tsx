@@ -70,6 +70,21 @@ export function MyMcpKeyView(vm: MyMcpKeyViewProps) {
         </Alert>
       )}
 
+      {vm.snippets && (
+        <Card data-testid="mcp-mine-setup">
+          <CardHeader>
+            <CardTitle>{t(MCP_ACCESS_TEXT.setup.title)}</CardTitle>
+            <CardDescription>{t(MCP_ACCESS_TEXT.setup.detail)}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <SetupStep title={t(MCP_ACCESS_TEXT.setup.claude)} command={vm.snippets.claude} testId="mcp-setup-claude" />
+            <SetupStep title={t(MCP_ACCESS_TEXT.setup.codex)} command={vm.snippets.codex} testId="mcp-setup-codex" />
+            <p className="text-xs text-muted-foreground md:col-span-2">{t(MCP_ACCESS_TEXT.setup.codexNote)}</p>
+            <p className="text-xs text-muted-foreground md:col-span-2">{t(MCP_ACCESS_TEXT.setup.verify)}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {vm.status === 'loading' && <Skeleton className="h-40 w-full rounded-xl" />}
       {vm.status === 'empty' && (
         <EmptyState
@@ -87,19 +102,6 @@ export function MyMcpKeyView(vm: MyMcpKeyViewProps) {
       {vm.status === 'ready' && <McpKeysTable keys={vm.keys} revokingId={vm.revokingId} onRevoke={vm.onRevoke} testId="mcp-mine-keys" />}
 
       <AccessCard vm={vm} />
-
-      <Card data-testid="mcp-mine-setup">
-        <CardHeader>
-          <CardTitle>{t(MCP_ACCESS_TEXT.setup.title)}</CardTitle>
-          <CardDescription>{t(MCP_ACCESS_TEXT.setup.detail)}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 lg:grid-cols-3">
-          <SetupStep title={t(MCP_ACCESS_TEXT.setup.envStep)} command={vm.snippets.env} testId="mcp-setup-env" />
-          <SetupStep title={t(MCP_ACCESS_TEXT.setup.claude)} command={vm.snippets.claude} testId="mcp-setup-claude" />
-          <SetupStep title={t(MCP_ACCESS_TEXT.setup.codex)} command={vm.snippets.codex} testId="mcp-setup-codex" />
-          <p className="text-xs text-muted-foreground lg:col-span-3">{t(MCP_ACCESS_TEXT.setup.verify)}</p>
-        </CardContent>
-      </Card>
 
       {vm.guide && (
         <Card data-testid="mcp-mine-guide">

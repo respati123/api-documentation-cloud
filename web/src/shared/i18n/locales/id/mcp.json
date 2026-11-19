@@ -7,19 +7,19 @@
     "limit": "{{count}} dari {{limit}} key aktif",
     "limitReached": "Batas {{limit}} key aktif tercapai. Cabut key yang tidak dipakai untuk membuat yang baru.",
     "emptyTitle": "Belum ada API key",
-    "emptyDetail": "Buat API key, lalu pasang di Claude Code atau Codex dengan perintah di bawah.",
+    "emptyDetail": "Buat API key untuk mendapatkan perintah siap jalan di Claude Code atau Codex.",
     "secretTitle": "API key \"{{name}}\" siap",
-    "secretWarning": "Salin sekarang. Key ini hanya tampil sekali dan tidak bisa dilihat lagi.",
+    "secretWarning": "Salin key dan perintah setup sekarang. Semuanya hilang saat pesan ini ditutup, dan key tidak bisa ditampilkan lagi.",
     "copy": "Salin key",
     "copied": "Tersalin",
     "dismiss": "Sudah saya simpan"
   },
   "setup": {
     "title": "Cara setup",
-    "detail": "Simpan key di environment variable, lalu daftarkan server MCP di agent kamu.",
-    "envStep": "Simpan key di shell kamu",
+    "detail": "Jalankan salah satu perintah di bawah untuk menambahkan server ini dengan URL dan key dari API key barumu.",
     "claude": "Claude Code",
     "codex": "Codex",
+    "codexNote": "Perintah Codex menyimpan URL dan key di ~/.codex/config.toml. Jika entry server ini sudah ada, perintah akan menggantinya.",
     "verify": "Setelah itu, minta agent memanggil workspaces_list untuk memastikan koneksinya jalan.",
     "copy": "Salin",
     "copied": "Tersalin"

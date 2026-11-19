@@ -7,19 +7,19 @@
     "limit": "{{count}} of {{limit}} active keys",
     "limitReached": "You have {{limit}} active keys. Revoke one you no longer use to create another.",
     "emptyTitle": "No API keys yet",
-    "emptyDetail": "Create an API key, then add it to Claude Code or Codex with the commands below.",
+    "emptyDetail": "Create an API key to get ready-to-run commands for Claude Code or Codex.",
     "secretTitle": "API key \"{{name}}\" is ready",
-    "secretWarning": "Copy it now. It is shown only once and cannot be seen again.",
+    "secretWarning": "Copy the key and setup commands now. They disappear when you dismiss this message, and the key cannot be shown again.",
     "copy": "Copy key",
     "copied": "Copied",
     "dismiss": "I saved it"
   },
   "setup": {
     "title": "Setup",
-    "detail": "Keep the key in an environment variable, then register the MCP server in your agent.",
-    "envStep": "Store the key in your shell",
+    "detail": "Run a command below to add this server with the URL and key from your new API key.",
     "claude": "Claude Code",
     "codex": "Codex",
+    "codexNote": "The Codex command saves the URL and key in ~/.codex/config.toml and replaces this server entry if it already exists.",
     "verify": "Then ask the agent to call workspaces_list to check the connection.",
     "copy": "Copy",
     "copied": "Copied"

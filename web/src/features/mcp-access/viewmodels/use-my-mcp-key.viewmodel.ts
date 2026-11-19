@@ -87,7 +87,7 @@ export function useMyMcpKeyViewModel() {
     access: accessQuery.data ?? [],
     accessStatus: accessQuery.isPending ? ('loading' as const) : ('ready' as const),
     guide: guideQuery.data ?? null,
-    snippets: setupSnippets(absoluteApiUrl('/api/mcp')),
+    snippets: created ? setupSnippets(absoluteApiUrl('/api/mcp'), created.secret) : null,
     error: failure ? readErrorMessage(failure, t(MCP_ACCESS_TEXT.error)) : null,
   }
 }
