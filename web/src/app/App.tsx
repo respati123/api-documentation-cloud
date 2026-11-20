@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AdminUsersPage } from '@/features/admin-users'
 import { AdminWorkspacesPage } from '@/features/admin-workspaces'
 import { AppShellView, SHELL_TEXT, useAppShellViewModel } from '@/features/app-shell'
 import { AuthPage, isPasswordResetRoute, useAuthSessionViewModel } from '@/features/auth'
@@ -37,13 +38,14 @@ export default function App() {
   }
 
   const desktopRequested = hasDesktopLoginRequest(window.location.search)
+  const registrationToken = window.location.pathname === '/join' ? new URLSearchParams(window.location.search).get('token') || null : null
   if (session.status !== 'authenticated' || isPasswordResetRoute()) {
     const inviteMessage = invite.hasPendingInvite
       ? t(WORKSPACE_TEXT.invite.signInPrompt)
       : desktopRequested
         ? t(DESKTOP_TEXT.signInPrompt)
         : null
-    return <AuthPage inviteMessage={inviteMessage} />
+    return <AuthPage inviteMessage={inviteMessage} inviteToken={registrationToken} />
   }
   if (!session.user) return null
   if (desktopRequested) return <DesktopLoginPage email={session.user.email} navigate={shell.navigate} />
@@ -75,6 +77,7 @@ export default function App() {
         {shell.route.page === 'mcp' && <MyMcpKeyPage />}
         {shell.route.page === 'admin-mcp' && <AdminMcpKeysPage />}
         {shell.route.page === 'admin-workspaces' && <AdminWorkspacesPage onOpenWorkspace={openWorkspace} />}
+        {shell.route.page === 'admin-users' && <AdminUsersPage />}
         {shell.route.page === 'workspace' && (
           <Suspense fallback={<LoadingState label={t(WORKSPACE_TEXT.state.loading)} />}>
             <WorkspacePage

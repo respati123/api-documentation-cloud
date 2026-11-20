@@ -9,7 +9,7 @@ export interface ResponseHeaderOptions {
 }
 
 const sensitivePrefixes = ['/api/auth/', '/api/desktop-login/']
-const sensitivePaths = new Set(['/api/me', '/api/sync/events-ticket'])
+const sensitivePaths = new Set(['/api/me', '/api/sync/events-ticket', '/api/admin/users', '/api/admin/user-invites'])
 const sensitiveInvitePath = /^\/api\/workspaces\/[^/]+\/invites$/
 
 export function withResponseHeaders(response: Response, options: ResponseHeaderOptions): Response {

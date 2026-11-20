@@ -3,7 +3,8 @@ import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagination'
 import type { AuthUser, Role } from '@/models/workspace'
-import { deleteMembership, findRole, listMembersPage as listMemberRows, updateRole, type MemberRow } from '@/repositories/memberships.repository'
+import { deleteMembership, findRole, insertMembership, listAvailableMembersPage, listMembersPage as listMemberRows, updateRole, type MemberRow } from '@/repositories/memberships.repository'
+import { findUserById } from '@/repositories/users.repository'
 import { broadcastWorkspaceChange } from '@/services/events'
 import { revokeKeyIfNoWorkspace } from '@/services/mcp-keys'
 
@@ -14,6 +15,20 @@ export async function listMembersPage(db: SQL, workspaceId: string, limit: numbe
   const rows = await listMemberRows(db, { workspaceId, after: after ? { rank, sortAt: after.t, id: after.i } : null, limit: limit + 1 })
   const page = pageOf(rows, limit, (row) => encodeCursor({ r: String(row.rank), t: row.sortAt, i: row.id }))
   return { items: page.items.map(withoutCursorKeys), nextCursor: page.nextCursor }
+}
+
+export async function listAvailableMembers(db: SQL, workspaceId: string, search: string, limit: number, cursor: CursorKeys | null) {
+  const after = cursorValues(cursor, ['email', 'id'])
+  const rows = await listAvailableMembersPage(db, { workspaceId, search: search.trim().slice(0, 254), after, limit: limit + 1 })
+  const page = pageOf(rows, limit, (row) => encodeCursor({ email: row.sortEmail, id: row.id }))
+  return { items: page.items.map(({ sortEmail: _sortEmail, ...member }) => member), nextCursor: page.nextCursor }
+}
+
+export async function addExistingMember(ctx: AppContext, workspaceId: string, userId: string, role: Exclude<Role, 'owner'>): Promise<void> {
+  if (!await findUserById(ctx.db, userId)) throw new AppError('ACCOUNT_NOT_FOUND')
+  if (await findRole(ctx.db, workspaceId, userId)) throw new AppError('ALREADY_MEMBER')
+  await insertMembership(ctx.db, { workspaceId, userId, role })
+  await broadcastWorkspaceChange(ctx, workspaceId, 'members')
 }
 
 export async function changeMemberRole(ctx: AppContext, workspaceId: string, memberId: string, role: Role): Promise<void> {

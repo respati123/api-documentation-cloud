@@ -8,6 +8,8 @@ import { createLogger } from '@/lib/logger'
 import { runMigrations } from '@/migrate'
 import type { AppContext } from '@/context'
 import { insertReset } from '@/repositories/password-resets.repository'
+import { insertUser } from '@/repositories/users.repository'
+import { createSession } from '@/services/auth'
 import { tokenHash } from '@/services/auth'
 import { openDesktopBox } from '@/services/desktop-box'
 
@@ -23,6 +25,7 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
   let app: ReturnType<typeof createApp>
   let ctx: AppContext
   let corsApp: ReturnType<typeof createApp>
+  let testPasswordHash: string
 
   async function call(method: string, path: string, { token, body, headers = {} }: { token?: string; body?: unknown; headers?: Record<string, string> } = {}) {
     if (!app) throw new Error('The app is not built yet.')
@@ -45,9 +48,10 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
 
   async function signUp(label: string) {
     const email = `${label}-${randomUUID()}@test.dev`
-    const response = await call('POST', '/api/auth/register', { body: { email, password } })
-    const data = response.json.data as { token: string; user: { id: string; email: string } }
-    return { token: data.token, user: data.user }
+    const id = randomUUID()
+    await insertUser(db, { id, email, passwordHash: testPasswordHash })
+    const token = await createSession(db, id, 'desktop', 'test')
+    return { token, user: { id, email } }
   }
 
   beforeAll(async () => {
@@ -58,6 +62,7 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     app = createApp(ctx)
     corsApp = createApp(createAppContext({ db, config: { ...config, corsOrigins: ['http://localhost:13100', 'null'] }, logger: silent }))
     await runMigrations(db, new URL('../migrations/', import.meta.url), { info: () => undefined })
+    testPasswordHash = await Bun.password.hash(password, { algorithm: 'argon2id' })
   })
 
   afterAll(async () => {
@@ -103,13 +108,12 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
     expect(response.json.data).toEqual({ ok: true })
   })
 
-  test('register creates an account and returns a session', async () => {
+  test('register requires an invitation for internal accounts', async () => {
     const email = `new-${randomUUID()}@test.dev`
     const response = await call('POST', '/api/auth/register', { body: { email, password } })
 
-    expect(response.status).toBe(201)
-    expect(response.json.code).toBe('CREATED')
-    expect(response.json.data).toMatchObject({ user: { email } })
+    expect(response.status).toBe(400)
+    expect(response.json.code).toBe('INVITE_TOKEN_REQUIRED')
   })
 
   test('register refuses a password that is too short', async () => {
@@ -792,7 +796,7 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
 
   async function webLogin(label: string) {
     const email = `${label}-${randomUUID()}@test.dev`
-    await raw('POST', '/api/auth/register', { body: { email, password } })
+    await insertUser(db, { id: randomUUID(), email, passwordHash: testPasswordHash })
     const login = await raw('POST', '/api/auth/login', { body: { email, password } })
     const cookie = login.setCookie.split(';')[0]
     return { email, cookie }
@@ -800,7 +804,7 @@ describe.skipIf(!enabled)('HTTP routes against PostgreSQL', () => {
 
   test('login sets an HttpOnly session cookie that lasts 30 days', async () => {
     const email = `cookie-attrs-${randomUUID()}@test.dev`
-    await raw('POST', '/api/auth/register', { body: { email, password } })
+    await insertUser(db, { id: randomUUID(), email, passwordHash: testPasswordHash })
     const fresh = await raw('POST', '/api/auth/login', { body: { email, password } })
     expect(fresh.setCookie).toContain('apidocs_session=')
     expect(fresh.setCookie).toContain('HttpOnly')

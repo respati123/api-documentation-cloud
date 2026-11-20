@@ -22,7 +22,9 @@ export async function handlePublicRoutes(ctx: AppContext, request: Request, meth
     const password = typeof body.password === 'string' ? body.password : ''
     if (!/^\S+@\S+\.\S+$/.test(email) || email.length > 254) throw new AppError('EMAIL_INVALID')
     if (!isPasswordLengthValid(password)) throw new AppError('PASSWORD_LENGTH_INVALID')
-    const session = await registerAccount(db, email, password, { client: 'web', device: deviceLabel(request) })
+    const inviteToken = typeof body.inviteToken === 'string' ? body.inviteToken.trim() : ''
+    if (!inviteToken) throw new AppError('INVITE_TOKEN_REQUIRED')
+    const session = await registerAccount(db, email, password, inviteToken, { client: 'web', device: deviceLabel(request) })
     return withCookie(created(session), sessionCookie(session.token, isSecureOrigin(ctx.config.publicWebUrl)))
   }
 

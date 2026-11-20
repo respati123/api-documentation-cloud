@@ -38,7 +38,8 @@
     "mcp": "MCP",
     "admin": "Admin",
     "adminMcp": "Akses MCP",
-    "adminWorkspaces": "Semua workspace"
+    "adminWorkspaces": "Semua workspace",
+    "adminUsers": "Manajemen pengguna"
   },
   "context": {
     "title": "Ringkasan workspace",
@@ -63,7 +64,8 @@
     "workspace": "Workspace",
     "mcp": "API key MCP",
     "adminMcp": "Akses MCP",
-    "adminWorkspaces": "Semua workspace"
+    "adminWorkspaces": "Semua workspace",
+    "adminUsers": "Manajemen pengguna"
   },
   "session": {
     "checking": "Memeriksa sesi kamu…"

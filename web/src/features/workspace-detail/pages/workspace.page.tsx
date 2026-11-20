@@ -158,14 +158,12 @@ export function WorkspacePage({ workspaceId, tab, commitId, navigate }: Workspac
               membersHasMore={vm.membersHasMore}
               membersLoadingMore={vm.membersLoadingMore}
               onLoadMoreMembers={vm.loadMoreMembers}
-              lastInviteLink={vm.inviteDialog.lastInviteLink}
               onInvite={vm.inviteDialog.open}
               onCancelInvite={vm.actions.cancelInvite.mutate}
               onChangeRole={(member, role) => vm.actions.changeRole.mutate({ memberId: member.id, email: member.email, role })}
               onRemoveMember={(member) =>
                 vm.actions.removeMember.mutate({ memberId: member.id, email: member.email, workspaceName: workspace.name })
               }
-              onCopyLink={() => void vm.inviteDialog.copyLink()}
               projectRoles={vm.projectRoles}
             />
           )}
@@ -186,11 +184,19 @@ export function WorkspacePage({ workspaceId, tab, commitId, navigate }: Workspac
       )}
       <InviteDialogView
         isOpen={vm.inviteDialog.isOpen}
-        email={vm.inviteDialog.email}
+        search={vm.inviteDialog.search}
+        users={vm.inviteDialog.users}
+        usersLoading={vm.inviteDialog.usersLoading}
+        usersHasMore={vm.inviteDialog.usersHasMore}
+        usersLoadingMore={vm.inviteDialog.usersLoadingMore}
+        usersError={vm.inviteDialog.usersError}
+        selectedUserId={vm.inviteDialog.selectedUserId}
         role={vm.inviteDialog.role}
         isBusy={vm.inviteDialog.isBusy}
         errorMessage={vm.inviteDialog.errorMessage}
-        onEmailChange={vm.inviteDialog.setEmail}
+        onSearchChange={vm.inviteDialog.setSearch}
+        onLoadMoreUsers={vm.inviteDialog.loadMoreUsers}
+        onUserChange={vm.inviteDialog.setSelectedUserId}
         onRoleChange={vm.inviteDialog.setRole}
         onClose={vm.inviteDialog.close}
         onSubmit={vm.inviteDialog.submit}

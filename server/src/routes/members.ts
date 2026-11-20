@@ -6,7 +6,7 @@ import { created, noContent, ok } from '@/lib/http'
 import { decodeCursor, readLimit } from '@/lib/pagination'
 import { enforceLimit } from '@/services/auth'
 import { requireRole } from '@/services/access'
-import { changeMemberRole, listMembersPage, removeMember } from '@/services/members'
+import { addExistingMember, changeMemberRole, listAvailableMembers, listMembersPage, removeMember } from '@/services/members'
 import { cancelInvite, createInvite, listInvitesPage } from '@/services/invites'
 
 export async function handleMembers(ctx: AppContext, request: Request, url: URL, method: string, workspaceId: string, action: string, user: AuthUser): Promise<Response | undefined> {
@@ -32,6 +32,22 @@ export async function handleMembers(ctx: AppContext, request: Request, url: URL,
     await requireRole(db, workspaceId, user.id, ['owner', 'editor', 'viewer'])
     const page = await listMembersPage(db, workspaceId, readLimit(url), decodeCursor(url.searchParams.get('cursor')))
     return ok({ members: page.items }, { nextCursor: page.nextCursor })
+  }
+
+  if (method === 'GET' && action === 'member-options') {
+    await requireRole(db, workspaceId, user.id, ['owner'])
+    const page = await listAvailableMembers(db, workspaceId, url.searchParams.get('q') ?? '', readLimit(url), decodeCursor(url.searchParams.get('cursor')))
+    return ok({ users: page.items }, { nextCursor: page.nextCursor })
+  }
+
+  if (method === 'POST' && action === 'members') {
+    await requireRole(db, workspaceId, user.id, ['owner'])
+    const body = await bodyOf(request)
+    const userId = typeof body.userId === 'string' ? body.userId.trim() : ''
+    const role = body.role === 'viewer' ? 'viewer' : body.role === 'editor' ? 'editor' : null
+    if (!userId || !role) throw new AppError('MEMBER_INPUT_INVALID')
+    await addExistingMember(ctx, workspaceId, userId, role)
+    return created({ member: { userId, role } })
   }
 
   if (method === 'GET' && action === 'invites') {

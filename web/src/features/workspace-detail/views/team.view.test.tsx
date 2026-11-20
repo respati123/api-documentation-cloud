@@ -18,12 +18,10 @@ const baseProps: TeamViewProps = {
   membersHasMore: false,
   membersLoadingMore: false,
   onLoadMoreMembers: vi.fn(),
-  lastInviteLink: '',
   onInvite: vi.fn(),
   onCancelInvite: vi.fn(),
   onChangeRole: vi.fn(),
   onRemoveMember: vi.fn(),
-  onCopyLink: vi.fn(),
   projectRoles: { rolesOf: () => [], canAssign: false, savingMemberId: null, onAssign: vi.fn(), error: null },
 }
 
@@ -37,13 +35,13 @@ describe('TeamView', () => {
   test('lets an owner invite a teammate', () => {
     render(<TeamView {...baseProps} />)
 
-    expect(screen.getByRole('button', { name: 'Invite teammate' })).toBeInTheDocument()
+    expect(screen.getByTestId('team-add-member-open')).toBeInTheDocument()
   })
 
   test('hides the invite button and the pending list from a viewer', () => {
     render(<TeamView {...baseProps} isOwner={false} />)
 
-    expect(screen.queryByRole('button', { name: 'Invite teammate' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('team-add-member-open')).not.toBeInTheDocument()
     expect(screen.queryByText('Pending invitations')).not.toBeInTheDocument()
   })
 

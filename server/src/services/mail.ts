@@ -26,7 +26,18 @@ export async function sendPasswordResetEmail(config: AppConfig, to: string, rese
   })
 }
 
-// The invite link opens the portal. After signing in there, the workspace shows in the desktop app on its next sign-in.
+export async function sendUserInviteEmail(config: AppConfig, to: string, inviterEmail: string, inviteUrl: string): Promise<void> {
+  const safeInviterEmail = escapeHtml(inviterEmail)
+  const safeInviteUrl = escapeHtml(inviteUrl)
+  await createMailer(config).sendMail({
+    from: config.smtp.from,
+    to,
+    subject: 'Invitation to API Documentation',
+    text: `${inviterEmail} invited you to API Documentation.\n\nOpen this link to set your password and activate your account. It expires in 7 days:\n${inviteUrl}`,
+    html: `<p><strong>${safeInviterEmail}</strong> invited you to API Documentation.</p><p><a href="${safeInviteUrl}">Set your password and activate your account</a></p><p>This invitation expires in 7 days.</p>`,
+  })
+}
+
 export function inviteMessage(invite: { workspaceName: string; role: 'editor' | 'viewer'; inviterEmail: string; inviteUrl: string }) {
   const safeWorkspaceName = escapeHtml(invite.workspaceName)
   const safeRole = escapeHtml(invite.role)
@@ -39,13 +50,6 @@ export function inviteMessage(invite: { workspaceName: string; role: 'editor' | 
 }
 
 export async function sendInviteEmail(config: AppConfig, to: string, workspaceName: string, role: 'editor' | 'viewer', inviterEmail: string, inviteUrl: string): Promise<void> {
-  const transporter = createMailer(config)
   const message = inviteMessage({ workspaceName, role, inviterEmail, inviteUrl })
-  await transporter.sendMail({
-    from: config.smtp.from,
-    to,
-    subject: `Invitation to ${workspaceName}`,
-    text: message.text,
-    html: message.html,
-  })
+  await createMailer(config).sendMail({ from: config.smtp.from, to, subject: `Invitation to ${workspaceName}`, ...message })
 }

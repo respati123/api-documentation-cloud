@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { ProjectRoleSelect, type useProjectRolesViewModel } from '@/features/projects'
 import { WORKSPACES_ROLE_TEXT } from '@/features/workspaces'
-import { CopyButton } from '@/shared/components/copy-button'
 import { LoadMoreButton } from '@/shared/components/load-more-button'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/components/primitives/alert'
+import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,12 +39,10 @@ export interface TeamViewProps {
   membersHasMore: boolean
   membersLoadingMore: boolean
   onLoadMoreMembers: () => void
-  lastInviteLink: string
   onInvite: () => void
   onCancelInvite: (inviteId: string) => void
   onChangeRole: (member: CloudMember, role: MemberRole) => void
   onRemoveMember: (member: CloudMember) => void
-  onCopyLink: () => void
   projectRoles: ReturnType<typeof useProjectRolesViewModel>
 }
 
@@ -64,12 +61,10 @@ export function TeamView({
   membersHasMore,
   membersLoadingMore,
   onLoadMoreMembers,
-  lastInviteLink,
   onInvite,
   onCancelInvite,
   onChangeRole,
   onRemoveMember,
-  onCopyLink,
   projectRoles,
 }: TeamViewProps) {
   const { t, i18n } = useTranslation('team')
@@ -81,8 +76,8 @@ export function TeamView({
           <CardDescription>{t(TEAM_TEXT.people.detail)}</CardDescription>
           {isOwner && (
             <CardAction>
-              <Button variant="outline" size="sm" onClick={onInvite}>
-                {t(TEAM_TEXT.people.invite)}
+              <Button variant="outline" size="sm" data-testid="team-add-member-open" onClick={onInvite}>
+                {t(TEAM_TEXT.add.open)}
               </Button>
             </CardAction>
           )}
@@ -200,20 +195,6 @@ export function TeamView({
             {invitesError && (
               <Alert variant="destructive">
                 <AlertDescription>{invitesError}</AlertDescription>
-              </Alert>
-            )}
-            {lastInviteLink && (
-              <Alert>
-                <AlertTitle>{t(TEAM_TEXT.latestLink.title)}</AlertTitle>
-                <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-                  <span>{t(TEAM_TEXT.latestLink.detail)}</span>
-                  <CopyButton
-                    value={lastInviteLink}
-                    label={t(TEAM_TEXT.latestLink.copy)}
-                    copiedLabel={t(TEAM_TEXT.invite.copied)}
-                    onCopy={onCopyLink}
-                  />
-                </AlertDescription>
               </Alert>
             )}
             {invitesLoading ? (

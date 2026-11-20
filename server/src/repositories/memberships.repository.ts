@@ -53,6 +53,13 @@ export async function listMembersPage(db: SQL, query: { workspaceId: string; aft
   return db`SELECT * FROM (SELECT u.id, u.email, m.role, m.created_at AS "joinedAt", CASE m.role WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END AS rank, m.created_at::text AS "sortAt" FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${query.workspaceId}) q WHERE ${afterRank}::int IS NULL OR (q.rank, q."sortAt"::timestamptz, q.id) > (${afterRank}::int, ${afterAt}::timestamptz, ${afterId}::text) ORDER BY q.rank, q."sortAt"::timestamptz, q.id LIMIT ${query.limit}`
 }
 
+export async function listAvailableMembersPage(db: SQL, query: { workspaceId: string; search: string; after: { email: string; id: string } | null; limit: number }): Promise<Array<{ id: string; email: string; sortEmail: string }>> {
+  const pattern = `%${query.search}%`
+  const afterEmail = query.after?.email ?? null
+  const afterId = query.after?.id ?? null
+  return db`SELECT * FROM (SELECT u.id, u.email, lower(u.email) AS "sortEmail" FROM users u WHERE u.email ILIKE ${pattern} AND NOT EXISTS (SELECT 1 FROM memberships m WHERE m.workspace_id = ${query.workspaceId} AND m.user_id = u.id)) q WHERE ${afterEmail}::text IS NULL OR (q."sortEmail", q.id) > (${afterEmail}, ${afterId}::text) ORDER BY q."sortEmail", q.id LIMIT ${query.limit}`
+}
+
 export async function countMemberships(db: SQL, userId: string): Promise<number> {
   const [row] = await db`SELECT count(*)::int AS count FROM memberships WHERE user_id = ${userId}`
   return row.count

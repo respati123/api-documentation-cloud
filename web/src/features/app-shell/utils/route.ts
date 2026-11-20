@@ -17,6 +17,7 @@ export function readRoute(pathname: string): AppRoute {
   if (parts[0] === 'settings' && parts[1] === 'mcp') return { page: 'mcp' }
   if (parts[0] === 'admin' && parts[1] === 'mcp') return { page: 'admin-mcp' }
   if (parts[0] === 'admin' && parts[1] === 'workspaces') return { page: 'admin-workspaces' }
+  if (parts[0] === 'admin' && parts[1] === 'users') return { page: 'admin-users' }
   if (parts[0] === 'w' && parts[1]) return readWorkspaceRoute(parts[1], parts.slice(2))
   return { page: 'overview' }
 }
@@ -26,6 +27,7 @@ export function routeUrl(route: AppRoute): string {
   if (route.page === 'mcp') return '/settings/mcp'
   if (route.page === 'admin-mcp') return '/admin/mcp'
   if (route.page === 'admin-workspaces') return '/admin/workspaces'
+  if (route.page === 'admin-users') return '/admin/users'
   if (route.page === 'workspace') {
     const base = `/w/${encodeURIComponent(route.workspaceId)}`
     const tab = route.tab ?? 'overview'

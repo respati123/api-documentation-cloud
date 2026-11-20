@@ -4,6 +4,8 @@ import { createApp } from '@/app'
 import { loadConfig } from '@/config'
 import { createAppContext } from '@/context'
 import { createLogger } from '@/lib/logger'
+import { insertUser } from '@/repositories/users.repository'
+import { createSession } from '@/services/auth'
 import { seedAdmin } from '@/services/admin'
 
 export const testPassword = 'correct-horse-1'
@@ -16,6 +18,7 @@ export function createTestHttp(db: SQL, databaseUrl: string) {
   const config = { ...base, smtp: { ...base.smtp, host: undefined } }
   const logger = createLogger({ level: 'error', service: 'api', version: 'test', sink: () => undefined })
   const app = createApp(createAppContext({ db, config, logger }))
+  let passwordHash: Promise<string> | undefined
 
   // A form option sends application/x-www-form-urlencoded, the encoding OAuth token requests use.
   async function call(method: string, path: string, { token, body, form, headers: extra }: { token?: string; body?: unknown; form?: Record<string, string>; headers?: Record<string, string> } = {}) {
@@ -39,8 +42,11 @@ export function createTestHttp(db: SQL, databaseUrl: string) {
 
   async function signUp(label: string): Promise<TestAccount> {
     const email = `${label}-${randomUUID()}@test.dev`
-    const response = await call('POST', '/api/auth/register', { body: { email, password: testPassword } })
-    return response.json.data as TestAccount
+    const id = randomUUID()
+    passwordHash ??= Bun.password.hash(testPassword, { algorithm: 'argon2id' })
+    await insertUser(db, { id, email, passwordHash: await passwordHash })
+    const token = await createSession(db, id, 'desktop', 'test')
+    return { token, user: { id, email } }
   }
 
   async function createWorkspace(owner: TestAccount, name: string): Promise<string> {
