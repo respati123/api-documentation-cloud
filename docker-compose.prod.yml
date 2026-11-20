@@ -1,13 +1,15 @@
 # Production stack. Images come from GitHub Container Registry and are selected by IMAGE_TAG.
-# The Cloud workflow writes .env from the production GitHub Environment's PRODUCTION_ENV secret.
+# The Cloud workflow writes non-secret settings to .env and mounts secret files under /run/secrets.
 services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: apidocs
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: apidocs
+    secrets:
+      - postgres_password
     volumes:
       - apidocs-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +22,7 @@ services:
     image: ghcr.io/respati123/api-documentation-cloud-api:${IMAGE_TAG:?set IMAGE_TAG, for example v0.1.1}
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://apidocs:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/apidocs
+      DATABASE_URL_FILE: /run/secrets/database_url
       PORT: ${API_PORT?set API_PORT in PRODUCTION_ENV}
       LOG_LEVEL: ${LOG_LEVEL?set LOG_LEVEL in PRODUCTION_ENV}
       DB_POOL_MAX: ${DB_POOL_MAX?set DB_POOL_MAX in PRODUCTION_ENV}
@@ -28,18 +30,23 @@ services:
       SMTP_HOST: ${SMTP_HOST?set SMTP_HOST in PRODUCTION_ENV}
       SMTP_PORT: ${SMTP_PORT?set SMTP_PORT in PRODUCTION_ENV}
       SMTP_SECURE: ${SMTP_SECURE?set SMTP_SECURE in PRODUCTION_ENV}
-      SMTP_USER: ${SMTP_USER?set SMTP_USER in PRODUCTION_ENV}
-      SMTP_PASSWORD: ${SMTP_PASSWORD?set SMTP_PASSWORD in PRODUCTION_ENV}
+      SMTP_USER_FILE: /run/secrets/smtp_user
+      SMTP_PASSWORD_FILE: /run/secrets/smtp_password
       SMTP_FROM: ${SMTP_FROM?set SMTP_FROM in PRODUCTION_ENV}
       PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:?set PUBLIC_WEB_URL in .env}
       CORS_ORIGINS: ${CORS_ORIGINS?set CORS_ORIGINS in PRODUCTION_ENV}
-      OIDC_SIGNING_KEY_B64: ${OIDC_SIGNING_KEY_B64?set OIDC_SIGNING_KEY_B64 in PRODUCTION_ENV}
+      OIDC_SIGNING_KEY_B64_FILE: /run/secrets/oidc_signing_key_b64
       OIDC_SIGNING_KEY_ID: ${OIDC_SIGNING_KEY_ID?set OIDC_SIGNING_KEY_ID in PRODUCTION_ENV}
       DBDESIGN_URL: ${DBDESIGN_URL?set DBDESIGN_URL in PRODUCTION_ENV}
       STITCHKIT_URL: ${STITCHKIT_URL?set STITCHKIT_URL in PRODUCTION_ENV}
     depends_on:
       postgres:
         condition: service_healthy
+    secrets:
+      - database_url
+      - smtp_user
+      - smtp_password
+      - oidc_signing_key_b64
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 10s
@@ -59,3 +66,15 @@ services:
 
 volumes:
   apidocs-postgres:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  database_url:
+    file: ./secrets/database_url
+  smtp_user:
+    file: ./secrets/smtp_user
+  smtp_password:
+    file: ./secrets/smtp_password
+  oidc_signing_key_b64:
+    file: ./secrets/oidc_signing_key_b64
