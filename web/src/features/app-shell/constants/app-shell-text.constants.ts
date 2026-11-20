@@ -50,6 +50,7 @@ export const SHELL_TEXT = {
     admin: 'shell:account.admin',
     adminMcp: 'shell:account.adminMcp',
     adminWorkspaces: 'shell:account.adminWorkspaces',
+    adminUsers: 'shell:account.adminUsers',
   },
   breadcrumb: {
     root: 'shell:breadcrumb.root',
@@ -66,6 +67,7 @@ export const SHELL_TEXT = {
     mcp: 'shell:page.mcp',
     adminMcp: 'shell:page.adminMcp',
     adminWorkspaces: 'shell:page.adminWorkspaces',
+    'admin-users': 'shell:page.adminUsers',
   },
   session: {
     checking: 'shell:session.checking',
@@ -96,6 +98,7 @@ export const SHELL_PAGE_TITLE: Record<AppRoute['page'], string> = {
   mcp: SHELL_TEXT.page.mcp,
   'admin-mcp': SHELL_TEXT.page.adminMcp,
   'admin-workspaces': SHELL_TEXT.page.adminWorkspaces,
+  'admin-users': SHELL_TEXT.page['admin-users'],
 }
 
 export const WORKSPACE_TAB_TEXT: Record<WorkspaceTab, string> = {

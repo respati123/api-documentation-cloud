@@ -7,6 +7,7 @@ import { parseSnapshot } from '@/lib/validation'
 import type { AuthUser } from '@/models/workspace'
 import { findCommitInWorkspace } from '@/repositories/commits.repository'
 import { hasMemberWithEmail, insertMembership } from '@/repositories/memberships.repository'
+import { findWorkspaceSummary } from '@/repositories/workspaces.repository'
 import {
   deleteInvite as deleteInviteRow,
   deleteUnusedInvitesForEmail,
@@ -16,13 +17,11 @@ import {
   markInviteUsed,
   type InviteListRow,
 } from '@/repositories/invites.repository'
-import { findWorkspaceSummary } from '@/repositories/workspaces.repository'
 import { tokenHash } from '@/services/auth'
 import { broadcastWorkspaceChange } from '@/services/events'
 import { sendInviteEmail } from '@/services/mail'
 
 type InviteRole = 'editor' | 'viewer'
-
 const inviteLifetimeMs = 7 * 24 * 60 * 60 * 1000
 
 export async function listInvitesPage(db: SQL, workspaceId: string, limit: number, cursor: CursorKeys | null) {
@@ -32,7 +31,6 @@ export async function listInvitesPage(db: SQL, workspaceId: string, limit: numbe
   return { items: page.items.map(withoutSortAt), nextCursor: page.nextCursor }
 }
 
-// A new invite replaces any pending invite for the same email, so only one live link exists per address.
 export async function createInvite(ctx: AppContext, workspaceId: string, actor: AuthUser, email: string, role: InviteRole) {
   const workspace = await findWorkspaceSummary(ctx.db, workspaceId)
   if (!workspace) throw new AppError('WORKSPACE_NOT_FOUND')
@@ -69,7 +67,10 @@ export async function acceptInvite(ctx: AppContext, user: AuthUser, rawToken: st
   return accepted
 }
 
-// Email is optional. A failed send is logged and reported as emailSent: false. The invite link is still returned.
+function withoutSortAt({ sortAt: _sortAt, ...invite }: InviteListRow) {
+  return invite
+}
+
 async function deliverInvite(ctx: AppContext, invite: { email: string; workspaceName: string; role: InviteRole; inviterEmail: string; rawToken: string }): Promise<boolean> {
   if (!ctx.config.smtp.host) return false
   const inviteUrl = `${ctx.config.publicWebUrl}/invite?token=${encodeURIComponent(invite.rawToken)}`
@@ -80,8 +81,4 @@ async function deliverInvite(ctx: AppContext, invite: { email: string; workspace
     ctx.logger.error('Workspace invitation email delivery failed', { error })
     return false
   }
-}
-
-function withoutSortAt({ sortAt: _sortAt, ...invite }: InviteListRow) {
-  return invite
 }

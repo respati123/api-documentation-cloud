@@ -6,6 +6,19 @@ export const TEAM_TEXT = {
     loading: 'team:people.loading',
     empty: 'team:people.empty',
   },
+  add: {
+    open: 'team:add.open',
+    title: 'team:add.title',
+    detail: 'team:add.detail',
+    search: 'team:add.search',
+    user: 'team:add.user',
+    userPlaceholder: 'team:add.userPlaceholder',
+    role: 'team:add.role',
+    submit: 'team:add.submit',
+    adding: 'team:add.adding',
+    noUsers: 'team:add.noUsers',
+    loadFailed: 'team:add.loadFailed',
+  },
   columns: {
     member: 'team:columns.member',
     role: 'team:columns.role',
@@ -44,6 +57,7 @@ export const TEAM_TEXT = {
     removeAction: 'team:confirm.removeAction',
   },
   toast: {
+    added: 'team:toast.added',
     left: 'team:toast.left',
     removed: 'team:toast.removed',
     roleChanged: 'team:toast.roleChanged',

@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useDeferredValue, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
+import { usePageList } from '@/shared/hooks/use-page-list'
 import { ApiError } from '@/shared/services/api-client'
 import { showToast } from '@/shared/toast/toast-manager'
+import { readErrorMessage } from '@/shared/utils/error-message'
 import { TEAM_TEXT } from '../constants/team-text.constants'
 import { workspaceDetailService } from '../services/workspace-detail.service'
 import { workspaceDetailKeys } from './workspace-detail.keys'
@@ -15,32 +17,32 @@ export function useInviteDialogViewModel(workspaceId: string) {
   const token = useAuthSessionStore((state) => state.token)
   const queryClient = useQueryClient()
   const [isOpen, setIsOpen] = useState(false)
-  const [email, setEmail] = useState('')
+  const [search, setSearch] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState('')
   const [role, setRole] = useState<InviteRole>('editor')
-  const [lastInviteLink, setLastInviteLink] = useState('')
+  const query = useDeferredValue(search)
 
-  const invite = useMutation({
-    mutationFn: async () => {
-      const result = await workspaceDetailService.createInvite(token, workspaceId, email.trim(), role)
-      const link = new URL(`/invite?token=${encodeURIComponent(result.token)}`, window.location.origin).toString()
-      return { ...result, link }
-    },
-    onSuccess: (result) => {
-      setLastInviteLink(result.link)
-      setEmail('')
+  const options = usePageList({
+    queryKey: ['workspace-member-options', token, workspaceId, query],
+    fetchPage: (cursor) => workspaceDetailService.memberOptionsPage(token, workspaceId, query, cursor),
+    enabled: isOpen,
+  })
+
+  const addMember = useMutation({
+    mutationFn: () => workspaceDetailService.addMember(token, workspaceId, selectedUserId, role),
+    onSuccess: () => {
       setIsOpen(false)
-      showToast({
-        kind: result.emailSent ? 'success' : 'info',
-        message: result.emailSent
-          ? t(TEAM_TEXT.invite.sent, { email: result.email })
-          : t(TEAM_TEXT.invite.created, { email: result.email }),
-      })
-      void queryClient.invalidateQueries({ queryKey: workspaceDetailKeys.invites(token, workspaceId) })
+      setSearch('')
+      setSelectedUserId('')
+      setRole('editor')
+      const member = options.items.find((item) => item.id === selectedUserId)
+      showToast({ kind: 'success', message: t(TEAM_TEXT.toast.added, { email: member?.email ?? '' }) })
+      void queryClient.invalidateQueries({ queryKey: workspaceDetailKeys.all })
     },
   })
 
   function open() {
-    invite.reset()
+    addMember.reset()
     setIsOpen(true)
   }
 
@@ -50,31 +52,27 @@ export function useInviteDialogViewModel(workspaceId: string) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (email.trim()) invite.mutate()
-  }
-
-  async function copyLink() {
-    if (!lastInviteLink) return
-    try {
-      await navigator.clipboard.writeText(lastInviteLink)
-      showToast({ kind: 'success', message: t(TEAM_TEXT.invite.copied) })
-    } catch {
-      showToast({ kind: 'error', message: t(TEAM_TEXT.invite.clipboardUnavailable) })
-    }
+    if (selectedUserId) addMember.mutate()
   }
 
   return {
     isOpen,
     open,
     close,
-    email,
-    setEmail,
+    search,
+    setSearch,
+    users: options.items,
+    usersLoading: options.isPending,
+    usersHasMore: options.hasMore,
+    usersLoadingMore: options.isLoadingMore,
+    usersError: options.error ? readErrorMessage(options.error, t(TEAM_TEXT.add.loadFailed)) : null,
+    loadMoreUsers: options.loadMore,
+    selectedUserId,
+    setSelectedUserId,
     role,
     setRole,
     submit,
-    isBusy: invite.isPending,
-    errorMessage: invite.error ? (invite.error instanceof ApiError ? invite.error.message : t(TEAM_TEXT.invite.failed)) : null,
-    lastInviteLink,
-    copyLink,
+    isBusy: addMember.isPending,
+    errorMessage: addMember.error instanceof ApiError ? addMember.error.message : addMember.error ? t(TEAM_TEXT.invite.failed) : null,
   }
 }

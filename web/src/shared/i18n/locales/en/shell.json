@@ -38,7 +38,8 @@
     "mcp": "MCP",
     "admin": "Admin",
     "adminMcp": "MCP access",
-    "adminWorkspaces": "All workspaces"
+    "adminWorkspaces": "All workspaces",
+    "adminUsers": "User management"
   },
   "context": {
     "title": "Workspace overview",
@@ -63,7 +64,8 @@
     "workspace": "Workspace",
     "mcp": "MCP API keys",
     "adminMcp": "MCP access",
-    "adminWorkspaces": "All workspaces"
+    "adminWorkspaces": "All workspaces",
+    "adminUsers": "User management"
   },
   "session": {
     "checking": "Checking your session…"

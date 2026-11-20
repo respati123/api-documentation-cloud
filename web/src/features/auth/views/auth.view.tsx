@@ -14,11 +14,21 @@ export interface AuthViewProps {
   errorMessage: string | null
   noticeMessage: string | null
   inviteMessage: string | null
+  allowRegistration?: boolean
   onModeChange: (mode: AuthMode) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 
-export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMessage, onModeChange, onSubmit }: AuthViewProps) {
+export function AuthView({
+  mode,
+  isBusy,
+  errorMessage,
+  noticeMessage,
+  inviteMessage,
+  allowRegistration = false,
+  onModeChange,
+  onSubmit,
+}: AuthViewProps) {
   const { t } = useTranslation('auth')
   const switchTarget = AUTH_SWITCH_TEXT[mode]
 
@@ -59,7 +69,7 @@ export function AuthView({ mode, isBusy, errorMessage, noticeMessage, inviteMess
 
           <AuthForm mode={mode} isBusy={isBusy} errorMessage={errorMessage} onModeChange={onModeChange} onSubmit={onSubmit} />
 
-          {switchTarget && (
+          {switchTarget && !(switchTarget.target === 'register' && !allowRegistration) && (
             <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
               {t(switchTarget.prompt)}
               <Button

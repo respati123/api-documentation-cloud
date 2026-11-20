@@ -27,4 +27,5 @@ export type AppRoute =
   | { page: 'mcp' }
   | { page: 'admin-mcp' }
   | { page: 'admin-workspaces' }
+  | { page: 'admin-users' }
   | { page: 'workspace'; workspaceId: string; tab?: WorkspaceTab; commitId?: string }

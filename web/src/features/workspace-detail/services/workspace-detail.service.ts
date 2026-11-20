@@ -1,5 +1,6 @@
 import * as z from 'zod/mini'
 import { type CommitDetail, commitDetailSchema } from '@/features/workspace-detail/models/commit-detail.model'
+import { type MemberOption, memberOptionSchema } from '@/features/workspace-detail/models/member-option.model'
 import {
   type ApiNode,
   apiNodeSchema,
@@ -37,8 +38,8 @@ const pullResponseSchema = z.object({ workspace: z.nullable(snapshotSchema) })
 const historyResponseSchema = z.object({ commits: z.array(cloudCommitSchema) })
 const commitResponseSchema = z.object({ commit: commitDetailSchema })
 const membersResponseSchema = z.object({ members: z.array(cloudMemberSchema) })
+const memberOptionsResponseSchema = z.object({ users: z.array(memberOptionSchema) })
 const invitesResponseSchema = z.object({ invites: z.array(cloudInviteSchema) })
-const createInviteResponseSchema = z.object({ token: z.string(), email: z.string(), emailSent: z.boolean() })
 const renameResponseSchema = z.object({ workspace: z.object({ id: z.string(), name: z.string() }) })
 
 // The snapshot tree is validated node by node with apiNodeSchema, so a malformed desktop snapshot fails here.
@@ -75,16 +76,20 @@ export const workspaceDetailService = {
     return { items: z.parse(membersResponseSchema, page.data).members, nextCursor: page.nextCursor }
   },
 
+  memberOptionsPage: async (token: string, workspaceId: string, query: string, cursor: string | null): Promise<Page<MemberOption>> => {
+    const search = query.trim() ? `&q=${encodeURIComponent(query.trim())}` : ''
+    const page = await apiPage(`/api/workspaces/${workspaceId}/member-options${pageQuery(cursor)}${search}`, { token })
+    return { items: z.parse(memberOptionsResponseSchema, page.data).users, nextCursor: page.nextCursor }
+  },
+
+  addMember: async (token: string, workspaceId: string, userId: string, role: 'editor' | 'viewer'): Promise<void> => {
+    await apiCall(`/api/workspaces/${workspaceId}/members`, { token, method: 'POST', body: { userId, role } })
+  },
+
   invitesPage: async (token: string, workspaceId: string, cursor: string | null): Promise<Page<CloudInvite>> => {
     const page = await apiPage(`/api/workspaces/${workspaceId}/invites${pageQuery(cursor)}`, { token })
     return { items: z.parse(invitesResponseSchema, page.data).invites, nextCursor: page.nextCursor }
   },
-
-  createInvite: async (token: string, workspaceId: string, email: string, role: 'editor' | 'viewer') =>
-    z.parse(
-      createInviteResponseSchema,
-      await apiCall(`/api/workspaces/${workspaceId}/invites`, { token, method: 'POST', body: { email, role } }),
-    ),
 
   cancelInvite: async (token: string, workspaceId: string, inviteId: string): Promise<void> => {
     await apiCall(`/api/workspaces/${workspaceId}/invites/${inviteId}`, { token, method: 'DELETE' })

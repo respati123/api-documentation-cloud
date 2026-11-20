@@ -2,6 +2,7 @@ import { currentRequestId } from './request-context'
 
 export interface ResponseMeta {
   nextCursor?: string | null
+  total?: number
 }
 
 interface SuccessBody<T> {

@@ -28,6 +28,7 @@ import { handleAppRoutes } from '@/routes/app-integrations'
 import { broadcastPlanningChange, planningScopeOf } from '@/services/events'
 import { audienceFromAction, planningAudience } from '@/services/planning-audience'
 import { handleAdminWorkspaceRoutes } from '@/routes/admin-workspaces'
+import { handleAdminUserRoutes } from '@/routes/admin-users'
 import { handleMcpKeyRoutes } from '@/routes/mcp-keys'
 import { handleNotificationRoutes } from '@/routes/notifications'
 import { handlePlanningRoutes } from '@/routes/planning'
@@ -70,6 +71,8 @@ export async function routeRequest(ctx: AppContext, request: Request, server?: B
   if (mcpKeyResponse) return mcpKeyResponse
   const adminWorkspaceResponse = await handleAdminWorkspaceRoutes(ctx, url, method, path, user)
   if (adminWorkspaceResponse) return adminWorkspaceResponse
+  const adminUserResponse = await handleAdminUserRoutes(ctx, request, url, method, path, user)
+  if (adminUserResponse) return adminUserResponse
   const notificationResponse = await handleNotificationRoutes(ctx, url, method, path, user)
   if (notificationResponse) return notificationResponse
   const ticketResponse = await handleSyncTicket(ctx, method, path, user)

@@ -15,7 +15,9 @@ export function usePendingInviteViewModel(navigate: (route: AppRoute, replace?: 
   const token = useAuthSessionStore((state) => state.token)
   const signedIn = useAuthSessionStore((state) => state.signedIn)
   const queryClient = useQueryClient()
-  const [pendingToken, setPendingToken] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
+  const [pendingToken, setPendingToken] = useState(() =>
+    window.location.pathname === '/invite' ? (new URLSearchParams(window.location.search).get('token') ?? '') : '',
+  )
   const attempted = useRef(false)
 
   const accept = useMutation({

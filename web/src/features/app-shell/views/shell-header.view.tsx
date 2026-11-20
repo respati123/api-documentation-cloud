@@ -180,6 +180,10 @@ export function ShellHeaderView({
                     <Building2 />
                     {t(SHELL_TEXT.account.adminWorkspaces)}
                   </DropdownMenuItem>
+                  <DropdownMenuItem data-testid="cloud-admin-users" onClick={() => onNavigate({ page: 'admin-users' })}>
+                    <ShieldCheck />
+                    {t(SHELL_TEXT.account.adminUsers)}
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
               </>
             )}

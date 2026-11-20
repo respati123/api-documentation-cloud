@@ -7,8 +7,8 @@ export const authService = {
   login: async (email: string, password: string): Promise<AuthSession> =>
     z.parse(authSessionSchema, await apiCall('/api/auth/login', { method: 'POST', body: { email, password } })),
 
-  register: async (email: string, password: string): Promise<AuthSession> =>
-    z.parse(authSessionSchema, await apiCall('/api/auth/register', { method: 'POST', body: { email, password } })),
+  register: async (email: string, password: string, inviteToken: string): Promise<AuthSession> =>
+    z.parse(authSessionSchema, await apiCall('/api/auth/register', { method: 'POST', body: { email, password, inviteToken } })),
 
   currentUser: async (token: string): Promise<CloudUser> => z.parse(currentUserResponseSchema, await apiCall('/api/me', { token })).user,
 

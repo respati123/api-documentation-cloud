@@ -1,10 +1,23 @@
 {
   "people": {
     "title": "People with access",
-    "detail": "Workspace members and their permissions.",
-    "invite": "Invite teammate",
+    "detail": "Accounts are managed centrally. Add an existing account here and choose its role for this workspace.",
+    "invite": "Add member",
     "loading": "Loading members…",
     "empty": "No members found."
+  },
+  "add": {
+    "open": "Add member",
+    "title": "Add an existing account",
+    "detail": "Choose a user from the app directory and assign a workspace role.",
+    "search": "Search accounts",
+    "user": "Account",
+    "userPlaceholder": "Choose an account",
+    "role": "Workspace role",
+    "submit": "Add to workspace",
+    "adding": "Adding…",
+    "noUsers": "No available accounts. Ask an app admin to invite the person first.",
+    "loadFailed": "Available accounts could not be loaded."
   },
   "columns": {
     "member": "Member",
@@ -23,7 +36,7 @@
   },
   "pending": {
     "title": "Pending invitations",
-    "detail": "Invitations expire seven days after they are sent.",
+    "detail": "Older workspace invitations still waiting to be accepted.",
     "loading": "Loading invitations…",
     "empty": "No pending invitations",
     "emptyDetail": "Invite a teammate to give them access to this workspace.",
@@ -44,6 +57,7 @@
     "removeAction": "Remove"
   },
   "toast": {
+    "added": "Added {{email}} to this workspace.",
     "left": "You left {{name}}.",
     "removed": "{{email}} was removed.",
     "roleChanged": "{{email}} is now {{role}}.",

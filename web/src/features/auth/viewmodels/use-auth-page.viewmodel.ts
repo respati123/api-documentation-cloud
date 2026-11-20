@@ -15,32 +15,35 @@ interface AuthSubmission {
   email: string
   password: string
   resetToken: string
+  inviteToken: string
 }
 
-export function useAuthPageViewModel() {
+export function useAuthPageViewModel(inviteToken: string | null) {
   const { t } = useTranslation(['auth', 'common'])
   const queryClient = useQueryClient()
   const saveSession = useAuthSessionStore((state) => state.saveSession)
   const clearSession = useAuthSessionStore((state) => state.clearSession)
   const sessionExpired = useAuthSessionStore((state) => state.sessionExpired)
 
-  const [mode, setMode] = useState<AuthMode>(() => (isPasswordResetRoute() ? 'reset' : 'login'))
+  const [mode, setMode] = useState<AuthMode>(() => (isPasswordResetRoute() ? 'reset' : inviteToken ? 'register' : 'login'))
   const [resetToken] = useState(readResetToken)
   const [notice, setNotice] = useState<string | null>(null)
 
   const submission = useMutation({
-    mutationFn: async ({ mode: action, email, password, resetToken: token }: AuthSubmission) => {
+    mutationFn: async ({ mode: action, email, password, resetToken: token, inviteToken: registrationToken }: AuthSubmission) => {
       if (action === 'login') return authService.login(email, password)
-      if (action === 'register') return authService.register(email, password)
+      if (action === 'register') return authService.register(email, password, registrationToken)
       if (action === 'forgot') return authService.requestPasswordReset(email)
       return authService.resetPassword(token, password)
     },
-    onSuccess: (result, variables) => {
+    onSuccess: async (result, variables) => {
       setNotice(null)
       if (variables.mode === 'login' || variables.mode === 'register') {
         if (!result) return
+        if (variables.mode === 'register') window.history.replaceState({}, '', '/')
         queryClient.setQueryData(authKeys.currentUser(), result.user)
         saveSession(result.user)
+        await queryClient.invalidateQueries({ queryKey: authKeys.currentUser() })
         return
       }
       if (variables.mode === 'forgot') {
@@ -68,12 +71,17 @@ export function useAuthPageViewModel() {
       email: String(form.get('email') ?? ''),
       password: String(form.get('password') ?? ''),
       resetToken,
+      inviteToken: inviteToken ?? '',
     })
   }
 
   return {
     mode,
-    changeMode,
+    changeMode: (next: AuthMode) => {
+      if (next === 'register' && !inviteToken) return
+      changeMode(next)
+    },
+    allowRegistration: inviteToken !== null,
     handleSubmit,
     isBusy: submission.isPending,
     errorMessage: submission.error ? readErrorMessage(submission.error, t(COMMON_TEXT.error.unexpected)) : null,

@@ -1,10 +1,23 @@
 {
   "people": {
     "title": "Orang dengan akses",
-    "detail": "Anggota workspace dan izin mereka.",
-    "invite": "Undang anggota tim",
+    "detail": "Akun dikelola secara terpusat. Tambahkan akun yang sudah ada dan pilih rolenya untuk workspace ini.",
+    "invite": "Tambah anggota",
     "loading": "Memuat anggota…",
     "empty": "Tidak ada anggota."
+  },
+  "add": {
+    "open": "Tambah anggota",
+    "title": "Tambahkan akun yang sudah ada",
+    "detail": "Pilih pengguna dari direktori aplikasi dan tentukan role di workspace ini.",
+    "search": "Cari akun",
+    "user": "Akun",
+    "userPlaceholder": "Pilih akun",
+    "role": "Role workspace",
+    "submit": "Tambahkan ke workspace",
+    "adding": "Menambahkan…",
+    "noUsers": "Tidak ada akun lain. Minta admin aplikasi mengundang pengguna terlebih dahulu.",
+    "loadFailed": "Akun yang tersedia tidak bisa dimuat."
   },
   "columns": {
     "member": "Anggota",
@@ -23,7 +36,7 @@
   },
   "pending": {
     "title": "Undangan tertunda",
-    "detail": "Undangan kedaluwarsa tujuh hari setelah dikirim.",
+    "detail": "Undangan workspace lama yang masih menunggu diterima.",
     "loading": "Memuat undangan…",
     "empty": "Tidak ada undangan tertunda",
     "emptyDetail": "Undang anggota tim agar mereka bisa mengakses workspace ini.",
@@ -44,6 +57,7 @@
     "removeAction": "Hapus"
   },
   "toast": {
+    "added": "{{email}} ditambahkan ke workspace ini.",
     "left": "Kamu sudah keluar dari {{name}}.",
     "removed": "{{email}} sudah dihapus.",
     "roleChanged": "{{email}} sekarang menjadi {{role}}.",
