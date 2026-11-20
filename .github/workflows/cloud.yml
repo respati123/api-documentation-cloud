@@ -210,13 +210,18 @@ jobs:
       packages: read
     env:
       SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-      VPS: ${{ vars.VPS_USER }}@${{ vars.VPS_HOST }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
       OWNER: ${{ github.repository_owner }}
     steps:
       - name: Validate inputs
         env:
           VERSION: ${{ inputs.version }}
           CONFIRM: ${{ inputs.confirm }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           if [ "$CONFIRM" != "deploy" ]; then
             echo "Type 'deploy' in the confirm field to deploy."; exit 1
@@ -224,6 +229,11 @@ jobs:
           if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "version must look like 0.1.4 (digits and dots only)."; exit 1
           fi
+          for name in VPS_HOST VPS_USER SSH_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "Set the ${name} secret in the production environment."; exit 1
+            fi
+          done
           echo "IMAGE_TAG=v${VERSION}" >> "$GITHUB_ENV"
       - name: Check out the tag being deployed
         # Not the default branch: docker-compose.prod.yml must match the image version, including on a rollback.
@@ -249,9 +259,26 @@ jobs:
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "${{ vars.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
-      - name: Copy compose file
-        run: scp -i ~/.ssh/id_deploy docker-compose.prod.yml "$VPS:~/api-docs-cloud/"
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Prepare production environment file
+        env:
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          if [ -z "$PRODUCTION_ENV" ]; then
+            echo "Set the PRODUCTION_ENV secret in the production environment."; exit 1
+          fi
+          umask 077
+          printf '%s\n' "$PRODUCTION_ENV" > "$RUNNER_TEMP/production.env"
+          for name in POSTGRES_PASSWORD CLOUD_WEB_PORT API_PORT PUBLIC_WEB_URL CORS_ORIGINS LOG_LEVEL DB_POOL_MAX DB_STATEMENT_TIMEOUT_MS SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_USER SMTP_PASSWORD SMTP_FROM OIDC_SIGNING_KEY_B64 OIDC_SIGNING_KEY_ID DBDESIGN_URL STITCHKIT_URL; do
+            if ! grep -q "^${name}=" "$RUNNER_TEMP/production.env"; then
+              echo "PRODUCTION_ENV is missing ${name}."; exit 1
+            fi
+          done
+      - name: Copy compose file and production environment
+        run: |
+          scp -i ~/.ssh/id_deploy docker-compose.prod.yml "$VPS:~/api-docs-cloud/"
+          scp -i ~/.ssh/id_deploy "$RUNNER_TEMP/production.env" "$VPS:~/api-docs-cloud/.env"
+          ssh -i ~/.ssh/id_deploy "$VPS" "chmod 600 ~/api-docs-cloud/.env"
       - name: Log in to GHCR, pull, and start
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
