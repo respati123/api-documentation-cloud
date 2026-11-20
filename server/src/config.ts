@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { z } from 'zod'
 
 const logLevels = ['debug', 'info', 'warn', 'error'] as const
@@ -49,13 +50,23 @@ export interface OidcConfig {
 
 export class ConfigError extends Error {
   constructor(invalidKeys: string[]) {
-    super(`Invalid configuration: ${invalidKeys.join(', ')}. Check the values in .env.`)
+    super(`Invalid configuration: ${invalidKeys.join(', ')}. Check the environment and secret files.`)
     this.name = 'ConfigError'
   }
 }
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): AppConfig {
-  const parsed = envSchema.safeParse(env)
+  const valuesFromFiles = { ...env }
+  for (const key of ['DATABASE_URL', 'SMTP_USER', 'SMTP_PASSWORD', 'OIDC_SIGNING_KEY_B64']) {
+    const file = env[`${key}_FILE`]
+    if (!file) continue
+    try {
+      valuesFromFiles[key] = readFileSync(file, 'utf8').replace(/\r?\n$/, '')
+    } catch {
+      throw new ConfigError([key])
+    }
+  }
+  const parsed = envSchema.safeParse(valuesFromFiles)
   if (!parsed.success) throw new ConfigError([...new Set(parsed.error.issues.map((issue) => String(issue.path[0])))])
   const values = parsed.data
   const oidc = readOidc(values)

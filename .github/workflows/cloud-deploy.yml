@@ -1,0 +1,140 @@
+name: Cloud Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy, without the v prefix (for example 0.1.4)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type deploy to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: cloud-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+      OWNER: ${{ github.repository_owner }}
+    steps:
+      - name: Validate inputs
+        env:
+          VERSION: ${{ inputs.version }}
+          CONFIRM: ${{ inputs.confirm }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          if [ "$CONFIRM" != "deploy" ]; then
+            echo "Type 'deploy' in the confirm field to deploy."; exit 1
+          fi
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "version must look like 0.1.4 (digits and dots only)."; exit 1
+          fi
+          for name in VPS_HOST VPS_USER SSH_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "Set the ${name} secret in the production environment."; exit 1
+            fi
+          done
+          echo "IMAGE_TAG=v${VERSION}" >> "$GITHUB_ENV"
+      - name: Check out the tag being deployed
+        # Not the default branch: docker-compose.prod.yml must match the image version, including on a rollback.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify both images exist for this version
+        run: |
+          for name in api web; do
+            ref="ghcr.io/${OWNER}/api-documentation-cloud-${name}:${IMAGE_TAG}"
+            if ! docker manifest inspect "$ref" >/dev/null 2>&1; then
+              echo "Image not found in GHCR: $ref"
+              echo "Push the tag ${IMAGE_TAG} first, and wait for its build to finish."
+              exit 1
+            fi
+          done
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Prepare production config and secrets
+        env:
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          if [ -z "$PRODUCTION_ENV" ]; then
+            echo "Set the PRODUCTION_ENV secret in the production environment."; exit 1
+          fi
+          umask 077
+          printf '%s\n' "$PRODUCTION_ENV" > "$RUNNER_TEMP/production.env"
+          for name in POSTGRES_PASSWORD CLOUD_WEB_PORT API_PORT PUBLIC_WEB_URL CORS_ORIGINS LOG_LEVEL DB_POOL_MAX DB_STATEMENT_TIMEOUT_MS SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_USER SMTP_PASSWORD SMTP_FROM OIDC_SIGNING_KEY_B64 OIDC_SIGNING_KEY_ID DBDESIGN_URL STITCHKIT_URL; do
+            if ! grep -q "^${name}=" "$RUNNER_TEMP/production.env"; then
+              echo "PRODUCTION_ENV is missing ${name}."; exit 1
+            fi
+          done
+          if grep -q 'DATABASE_URL_FILE:' docker-compose.prod.yml; then
+            extract_value() {
+              local key="$1" value
+              value=$(sed -n "s/^${key}=//p" "$RUNNER_TEMP/production.env" | head -n 1)
+              case "$value" in
+                \"*\") value="${value#\"}"; value="${value%\"}" ;;
+                \'*\') value="${value#\'}"; value="${value%\'}" ;;
+              esac
+              printf '%s' "$value"
+            }
+            mkdir -m 700 "$RUNNER_TEMP/production-secrets"
+            postgres_password=$(extract_value POSTGRES_PASSWORD)
+            smtp_user=$(extract_value SMTP_USER)
+            smtp_password=$(extract_value SMTP_PASSWORD)
+            oidc_signing_key=$(extract_value OIDC_SIGNING_KEY_B64)
+            printf '%s' "$postgres_password" > "$RUNNER_TEMP/production-secrets/postgres_password"
+            printf '%s' "$smtp_user" > "$RUNNER_TEMP/production-secrets/smtp_user"
+            printf '%s' "$smtp_password" > "$RUNNER_TEMP/production-secrets/smtp_password"
+            printf '%s' "$oidc_signing_key" > "$RUNNER_TEMP/production-secrets/oidc_signing_key_b64"
+            DATABASE_URL=$(POSTGRES_PASSWORD="$postgres_password" node -e 'process.stdout.write("postgres://apidocs:" + encodeURIComponent(process.env.POSTGRES_PASSWORD) + "@postgres:5432/apidocs")')
+            printf '%s' "$DATABASE_URL" > "$RUNNER_TEMP/production-secrets/database_url"
+            chmod 444 "$RUNNER_TEMP"/production-secrets/*
+            grep -vE '^(POSTGRES_PASSWORD|DATABASE_URL|SMTP_USER|SMTP_PASSWORD|OIDC_SIGNING_KEY_B64)=' "$RUNNER_TEMP/production.env" > "$RUNNER_TEMP/compose.env"
+          else
+            # Older rollback tags expect the original environment variables instead of mounted secrets.
+            cp "$RUNNER_TEMP/production.env" "$RUNNER_TEMP/compose.env"
+          fi
+      - name: Copy compose file and production environment
+        run: |
+          ssh -i ~/.ssh/id_deploy "$VPS" "mkdir -p ~/api-docs-cloud/secrets && chmod 700 ~/api-docs-cloud/secrets"
+          scp -i ~/.ssh/id_deploy docker-compose.prod.yml "$VPS:~/api-docs-cloud/"
+          scp -i ~/.ssh/id_deploy "$RUNNER_TEMP/compose.env" "$VPS:~/api-docs-cloud/.env"
+          if [ -d "$RUNNER_TEMP/production-secrets" ]; then
+            scp -i ~/.ssh/id_deploy "$RUNNER_TEMP"/production-secrets/* "$VPS:~/api-docs-cloud/secrets/"
+            ssh -i ~/.ssh/id_deploy "$VPS" "chmod 444 ~/api-docs-cloud/secrets/*"
+          fi
+          ssh -i ~/.ssh/id_deploy "$VPS" "chmod 600 ~/api-docs-cloud/.env"
+      - name: Log in to GHCR, pull, and start
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/id_deploy "$VPS" \
+            "docker login ghcr.io -u $GHCR_USER --password-stdin && cd ~/api-docs-cloud && IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.prod.yml pull && IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.prod.yml up -d --remove-orphans && docker logout ghcr.io"
+      - name: Health check
+        run: |
+          ssh -i ~/.ssh/id_deploy "$VPS" \
+            "for i in \$(seq 1 20); do curl -fsS http://127.0.0.1:3000/health && exit 0; sleep 3; done; exit 1"

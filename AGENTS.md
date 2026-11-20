@@ -7,7 +7,7 @@ This folder holds the cloud side of API Documentation. It is split into two inde
 | `web/` | Browser portal (React, Vite, Tailwind) | `web/AGENTS.md` |
 | `server/` | API (Bun, PostgreSQL) | `server/AGENTS.md` |
 
-Shared files at this level: `docker-compose.yml` (local stack), `docker-compose.prod.yml` (production stack), `.env.example`, `.github/workflows/cloud.yml` (CI and deploy), and the root `package.json` that runs both apps.
+Shared files at this level: `docker-compose.yml` (local stack), `docker-compose.prod.yml` (production stack), `.env.example`, `.github/workflows/cloud-ci.yml` (PR and main checks), `.github/workflows/cloud-release.yml` (tagged image builds), `.github/workflows/cloud-deploy.yml` (manual VPS deploy), and the root `package.json` that runs both apps.
 
 Nothing in `web/` may import from `server/`, and nothing in `server/` may import from `web/`. The two apps talk only over HTTP and the WebSocket.
 
@@ -74,14 +74,16 @@ Four separate steps, in order:
 
 1. **Push or PR to `main`** runs checks only: typecheck, lint, tests, and the web build. No images are built.
 2. **Push a tag `vX.Y.Z`** on the merge commit (`git tag v0.1.5 <sha> && git push origin v0.1.5`) re-runs the checks at that tag, smoke-tests the API container, then builds and pushes the `api` and `web` images to GHCR tagged `vX.Y.Z`. The web app version shown in the UI comes from the tag, not from `package.json`.
-3. **Deploy** is manual: Actions → Cloud → Run workflow, enter the version (for example `0.1.5`), and type `deploy`. It refuses a version whose images are not in GHCR. Rollback is the same step with an older version.
+3. **Deploy** is manual: Actions → Cloud Deploy → Run workflow, enter the version (for example `0.1.5`), and type `deploy`. It refuses a version whose images are not in GHCR. Rollback is the same step with an older version.
 4. **Check production:** sign in on the portal, and sign in from the desktop app.
+
+The production GitHub Environment's `PRODUCTION_ENV` secret remains the source for deploy configuration. The workflow keeps non-secret settings in the VPS `.env` and mounts credentials as Compose secrets under `/run/secrets` in only the containers that need them. Rollbacks to older tags use that tag's legacy `.env`-based Compose configuration.
 
 The tag is the release. Nothing deploys on its own.
 
 ## OpenID Connect (sign-in for other apps)
 
-The portal is the identity provider for DBDesign and Stitchkit. It needs two values in the server `.env`: `OIDC_SIGNING_KEY_B64` (the PKCS#8 signing key, base64) and `OIDC_SIGNING_KEY_ID`. Both are optional. Set both or neither. Create the key once, as in `PLAN-sso-oidc.md`, Task 0.1, and never commit it.
+The portal is the identity provider for DBDesign and Stitchkit. It needs two values in the server `.env`: `OIDC_SIGNING_KEY_B64` (the PKCS#8 signing key, base64) and `OIDC_SIGNING_KEY_ID`. Both are optional. Set both or neither. Create the key once, as in `PLAN-sso-oidc.md`, Task 0.1, and never commit it. In production, the workflow mounts the signing key as a Compose secret.
 
 DBDesign and Stitchkit are reached at `DBDESIGN_URL` and `STITCHKIT_URL` (optional). The portal calls them with a 60-second service token for the member (`token_use=service`), for the Design pages, the story pickers, and the app tools in the portal MCP.
 
