@@ -60,6 +60,26 @@ export const criterionTestCaseBody = z.strictObject({
 })
 export const issueCriteriaBody = z.strictObject({ numbers: z.array(z.number().int()).max(100) })
 
+// The ticket fields of a task. The service checks lengths and shapes, and says in the readiness what is still missing.
+const ticketCheck = z.strictObject({ given: z.string().max(5000), when: z.string().max(5000), then: z.array(z.string().max(5000)).max(50) })
+const requiredTest = z.strictObject({ case: z.string().max(2000), unhappy: z.boolean() })
+export const ticketBody = z.strictObject({
+  role: z.string().max(20).optional(),
+  repo: z.string().max(1000).optional(),
+  goal: z.string().max(10_000).optional(),
+  scope: z.string().max(10_000).optional(),
+  designNotes: z.string().max(20_000).optional(),
+  codeFollow: z.string().max(5000).optional(),
+  codeTouch: z.string().max(5000).optional(),
+  ticketAcs: z.array(ticketCheck).max(100).optional(),
+  requiredTests: z.array(requiredTest).max(200).optional(),
+  outOfScope: z.string().max(10_000).optional(),
+  skills: z.array(z.string().max(200)).max(100).optional(),
+  size: z.enum(['S', 'M', 'L']).nullable().optional(),
+  usesApi: z.boolean().optional(),
+  openQuestions: z.string().max(10_000).optional(),
+})
+
 export const rankBody = z.strictObject({ afterId: nullableId, beforeId: nullableId })
 export const checklistAddBody = z.strictObject({ title: z.string().max(1000) })
 export const checklistDoneBody = z.strictObject({ done: z.boolean() })
@@ -90,6 +110,7 @@ export const issueListQuery = z.strictObject({
   type: z.enum(ISSUE_TYPES).optional(),
   sprint: id.optional(),
   epic: id.optional(),
+  q: z.string().max(60).optional(),
 })
 
 const outlineStory = z.strictObject({

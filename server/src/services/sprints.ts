@@ -20,6 +20,7 @@ import {
   updateSprintFields,
 } from '@/repositories/sprints.repository'
 import { type Actor, invalid, isAgent, type IssueScope, loadVisible, logEvent } from '@/services/issues'
+import { readinessOf } from '@/services/tickets'
 import { type ProjectRoles, resolveProjectRoles } from '@/services/project-roles'
 
 const MAX_DAYS = 28
@@ -93,7 +94,12 @@ export async function addSprintItem(
   const issue = await loadVisible(db, scope, actor, roles, issueRef)
   if (!isBacklogItem(issue.type) || !issue.publishedAt || (issue.status && statusCategory(issue.status) === 'done')) throw invalid()
 
-  const missing = gateMisses(issue)
+  // A ticket enters a sprint only when it is Ready. Nobody overrides that.
+  if (isTicket(issue)) {
+    const readiness = await readinessOf(db, issue)
+    if (!readiness.ready) throw new AppError('SPRINT_ITEM_NOT_READY', { details: { issue: issue.key, failing: readiness.failing } })
+  }
+  const missing = isTicket(issue) ? [] : gateMisses(issue)
   const reason = options.overrideReason?.trim() ?? ''
   let overrideReason: string | null = null
   if (missing.length > 0) {
@@ -135,6 +141,15 @@ export async function startSprint(db: SQL, scope: IssueScope, actor: Actor, spri
   const sprint = await sprintOf(db, scope, sprintId)
   if (sprint.status !== 'planned') throw new AppError('SPRINT_NOT_EDITABLE')
   if (await hasActiveSprint(db, scope.projectId)) throw new AppError('SPRINT_ALREADY_ACTIVE')
+  // A sprint does not start while it holds a ticket that is not Ready.
+  const notReady = []
+  for (const item of await listSprintItems(db, sprint.id)) {
+    const issue = await findIssue(db, scope.projectId, item.id)
+    if (!issue || !isTicket(issue)) continue
+    const readiness = await readinessOf(db, issue)
+    if (!readiness.ready) notReady.push({ issue: issue.key, failing: readiness.failing })
+  }
+  if (notReady.length > 0) throw new AppError('SPRINT_ITEM_NOT_READY', { details: { issues: notReady } })
   await db.begin(async (tx) => {
     await startSprintRow(tx, sprint.id).catch((error: unknown) => {
       // Two starts at the same moment pass the check above. The unique index lets only one through.
@@ -187,6 +202,10 @@ async function carryTarget(db: SQL, scope: IssueScope, sprint: SprintRow, carryT
   if (!target || target.status !== 'planned') throw badSprint()
   return target
 }
+
+// A task with ticket fields is held to the Definition of Ready. A task without them, such as one from before the
+// team standard, keeps the old rule.
+const isTicket = (issue: IssueRow) => issue.type === 'task' && issue.isTicket
 
 function gateMisses(issue: IssueRow): string[] {
   const missing: string[] = []

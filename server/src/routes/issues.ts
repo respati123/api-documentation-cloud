@@ -20,6 +20,7 @@ import {
   issueListQuery,
   linkAddBody,
   rankBody,
+  ticketBody,
   updateIssueBody,
 } from '@/models/issue-input'
 import type { AuthUser } from '@/models/workspace'
@@ -46,6 +47,7 @@ import {
 } from '@/services/acceptance-criteria'
 import { approveEpicDocument, createEpicDocument, discardEpicDocument, getEpicDocument, listEpicDocuments, reviseEpicDocument } from '@/services/epic-documents'
 import { createIssue, getIssue, listIssuePage, updateIssue } from '@/services/issues'
+import { getReadiness, getTicket, saveTicket } from '@/services/tickets'
 
 async function bodyAs<T extends z.ZodType>(request: Request, schema: T): Promise<z.output<T>> {
   return parseInput(schema, await bodyOf(request), 'ISSUE_INPUT_INVALID')
@@ -100,6 +102,16 @@ export async function handleIssueRoutes(
     if (step === 'test-cases' && method === 'POST') return created({ criterion: await addCriterionTestCase(ctx.db, scope, actor, ref, number, await bodyAs(request, criterionTestCaseBody)) })
     throw new AppError('ROUTE_NOT_FOUND')
   }
+  // The ticket fields of a task, and whether it is Ready.
+  const ticket = action.match(/^projects\/([\w-]+)\/issues\/([\w-]+)\/(ticket|readiness)$/)
+  if (ticket) {
+    const scope = { workspaceId, projectId: ticket[1] }
+    const actor = { userId: user.id }
+    if (ticket[3] === 'ticket' && method === 'GET') return ok({ ticket: await getTicket(ctx.db, scope, actor, ticket[2]) })
+    if (ticket[3] === 'ticket' && method === 'PUT') return ok({ ticket: await saveTicket(ctx.db, scope, actor, ticket[2], await bodyAs(request, ticketBody)) })
+    if (ticket[3] === 'readiness' && method === 'GET') return ok({ readiness: await getReadiness(ctx.db, scope, actor, ticket[2]) })
+    throw new AppError('ROUTE_NOT_FOUND')
+  }
   const delivered = action.match(/^projects\/([\w-]+)\/issues\/([\w-]+)\/delivers$/)
   if (delivered) {
     const scope = { workspaceId, projectId: delivered[1] }
@@ -125,7 +137,7 @@ export async function handleIssueRoutes(
     if (method === 'GET') {
       const query = parseInput(issueListQuery, Object.fromEntries([...url.searchParams].filter(([key]) => key !== 'limit' && key !== 'cursor')), 'ISSUE_INPUT_INVALID')
       const sprintId = query.sprint === undefined ? undefined : query.sprint === 'none' ? null : query.sprint
-      const page = await listIssuePage(db, scope, actor, { type: query.type, sprintId, parentId: query.epic }, { limit: readLimit(url), cursor: decodeCursor(url.searchParams.get('cursor')) })
+      const page = await listIssuePage(db, scope, actor, { type: query.type, sprintId, parentId: query.epic, q: query.q }, { limit: readLimit(url), cursor: decodeCursor(url.searchParams.get('cursor')) })
       return ok({ issues: page.items }, { nextCursor: page.nextCursor })
     }
     if (method === 'POST') return created({ issue: await createIssue(db, scope, actor, await bodyAs(request, createIssueBody)) })
