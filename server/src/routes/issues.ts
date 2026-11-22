@@ -8,8 +8,13 @@ import { parseInput } from '@/lib/parse-input'
 import {
   checklistAddBody,
   checklistDoneBody,
+  criterionBody,
+  criterionMappingBody,
+  criterionStrikeBody,
+  criterionTestCaseBody,
   createIssueBody,
   draftBacklogBody,
+  issueCriteriaBody,
   epicDocumentBody,
   epicDocumentReviseBody,
   issueListQuery,
@@ -29,6 +34,16 @@ import {
   setChecklistItemDone,
 } from '@/services/issue-details'
 import { draftBacklogFromPrd, markSourceReviewed } from '@/services/issue-import'
+import {
+  addCriterionTestCase,
+  addEpicCriterion,
+  listCriteriaOfIssue,
+  listEpicCriteria,
+  mapEpicCriterion,
+  setIssueCriteria,
+  strikeEpicCriterion,
+  updateEpicCriterion,
+} from '@/services/acceptance-criteria'
 import { approveEpicDocument, createEpicDocument, discardEpicDocument, getEpicDocument, listEpicDocuments, reviseEpicDocument } from '@/services/epic-documents'
 import { createIssue, getIssue, listIssuePage, updateIssue } from '@/services/issues'
 
@@ -67,6 +82,30 @@ export async function handleIssueRoutes(
     if (documentId && !step && method === 'PATCH') return ok({ document: await reviseEpicDocument(ctx.db, scope, actor, epicRef, documentId, await bodyAs(request, epicDocumentReviseBody)) })
     if (step === 'approve' && method === 'POST') return ok({ document: await approveEpicDocument(ctx.db, scope, actor, epicRef, documentId) })
     if (step === 'discard' && method === 'POST') return ok({ document: await discardEpicDocument(ctx.db, scope, actor, epicRef, documentId) })
+    throw new AppError('ROUTE_NOT_FOUND')
+  }
+
+  // The acceptance criteria of an epic, by number, and the criteria a task or bug delivers.
+  const criteria = action.match(/^projects\/([\w-]+)\/issues\/([\w-]+)\/acceptance-criteria(?:\/(\d+)(?:\/(strike|design-mapping|test-cases))?)?$/)
+  if (criteria) {
+    const scope = { workspaceId, projectId: criteria[1] }
+    const actor = { userId: user.id }
+    const [, , ref, numberText, step] = criteria
+    const number = numberText === undefined ? undefined : Number(numberText)
+    if (number === undefined && method === 'GET') return ok(await listEpicCriteria(ctx.db, scope, actor, ref))
+    if (number === undefined && method === 'POST') return created({ criterion: await addEpicCriterion(ctx.db, scope, actor, ref, await bodyAs(request, criterionBody)) })
+    if (number !== undefined && !step && method === 'PATCH') return ok({ criterion: await updateEpicCriterion(ctx.db, scope, actor, ref, number, await bodyAs(request, criterionBody)) })
+    if (step === 'strike' && method === 'POST') return ok({ criterion: await strikeEpicCriterion(ctx.db, scope, actor, ref, number, (await bodyAs(request, criterionStrikeBody)).reason) })
+    if (step === 'design-mapping' && method === 'PUT') return ok({ criterion: await mapEpicCriterion(ctx.db, scope, actor, ref, number, (await bodyAs(request, criterionMappingBody)).entries) })
+    if (step === 'test-cases' && method === 'POST') return created({ criterion: await addCriterionTestCase(ctx.db, scope, actor, ref, number, await bodyAs(request, criterionTestCaseBody)) })
+    throw new AppError('ROUTE_NOT_FOUND')
+  }
+  const delivered = action.match(/^projects\/([\w-]+)\/issues\/([\w-]+)\/delivers$/)
+  if (delivered) {
+    const scope = { workspaceId, projectId: delivered[1] }
+    const actor = { userId: user.id }
+    if (method === 'GET') return ok({ criteria: await listCriteriaOfIssue(ctx.db, scope, actor, delivered[2]) })
+    if (method === 'PUT') return ok({ criteria: await setIssueCriteria(ctx.db, scope, actor, delivered[2], (await bodyAs(request, issueCriteriaBody)).numbers) })
     throw new AppError('ROUTE_NOT_FOUND')
   }
 

@@ -108,6 +108,7 @@ export const errorDefinitions = {
   SPRINT_NOT_AVAILABLE: { status: 409 },
   EPIC_DOCUMENT_INCOMPLETE: { status: 400 },
   EPIC_DOCUMENT_BLOCKED: { status: 409 },
+  AC_INCOMPLETE: { status: 400 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 

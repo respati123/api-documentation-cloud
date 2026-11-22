@@ -15,6 +15,7 @@ import {
   SECTION_MAX_LENGTH,
 } from '@/models/epic-document'
 import type { IssueRow } from '@/models/issue'
+import { listAcceptanceCriteria } from '@/repositories/acceptance-criteria.repository'
 import {
   bumpPlanningDocumentVersion,
   type EpicDocumentRow,
@@ -211,6 +212,10 @@ async function moveStatus(db: SQL, scope: IssueScope, actor: Actor, epicRef: str
       const needs = blockedBy(kind, stateOf(await listEpicDocumentRows(tx, epic.id)))
       if (needs) throw new AppError('EPIC_DOCUMENT_BLOCKED', { details: { needs } })
       if (current.stale) throw new AppError('EPIC_DOCUMENT_BLOCKED', { details: { needs: `${EPIC_DOCUMENT_SOURCE[kind]}_current` } })
+      // A spec without one active acceptance criterion cannot be approved.
+      if (kind === 'spec' && !(await listAcceptanceCriteria(tx, epic.id)).some((row) => row.status === 'active')) {
+        throw new AppError('EPIC_DOCUMENT_BLOCKED', { details: { needs: 'acceptance_criteria' } })
+      }
     }
     const approved = status === 'approved'
     const moved = await updatePlanningDocumentStatus(tx, {

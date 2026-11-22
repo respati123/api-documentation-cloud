@@ -74,8 +74,8 @@ export async function listTestCases(db: SQL, storyId: string) {
 }
 
 // Numbers are per story (TC-1, TC-2). The insert takes the next number inside one statement.
-export async function insertTestCase(db: SQL, input: { id: string; storyId: string; title: string; precondition: string; steps: string[]; expected: string[]; createdBy: string; apiKeyId: string | null }): Promise<number> {
-  const [row] = await db`INSERT INTO story_test_cases (id, story_id, number, title, precondition, steps, expected, created_by, api_key_id) VALUES (${input.id}, ${input.storyId}, (SELECT coalesce(max(number), 0) + 1 FROM story_test_cases WHERE story_id = ${input.storyId}), ${input.title}, ${input.precondition}, ARRAY(SELECT jsonb_array_elements_text((${JSON.stringify(input.steps)}::text)::jsonb)), ARRAY(SELECT jsonb_array_elements_text((${JSON.stringify(input.expected)}::text)::jsonb)), ${input.createdBy}, ${input.apiKeyId}) RETURNING number`
+export async function insertTestCase(db: SQL, input: { id: string; storyId: string; title: string; precondition: string; steps: string[]; expected: string[]; createdBy: string; apiKeyId: string | null; acId?: string | null }): Promise<number> {
+  const [row] = await db`INSERT INTO story_test_cases (id, story_id, number, title, precondition, steps, expected, created_by, api_key_id, ac_id) VALUES (${input.id}, ${input.storyId}, (SELECT coalesce(max(number), 0) + 1 FROM story_test_cases WHERE story_id = ${input.storyId}), ${input.title}, ${input.precondition}, ARRAY(SELECT jsonb_array_elements_text((${JSON.stringify(input.steps)}::text)::jsonb)), ARRAY(SELECT jsonb_array_elements_text((${JSON.stringify(input.expected)}::text)::jsonb)), ${input.createdBy}, ${input.apiKeyId}, ${input.acId ?? null}) RETURNING number`
   return row.number
 }
 

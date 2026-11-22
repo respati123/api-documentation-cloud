@@ -111,5 +111,6 @@ export const id = {
   SPRINT_NOT_AVAILABLE: 'Sprint hanya dipakai di mode Scrum. Project ini bekerja di mode Kanban.',
   EPIC_DOCUMENT_INCOMPLETE: 'Dokumen ini belum lengkap. Isi setiap bagian yang disebut di detail.',
   EPIC_DOCUMENT_BLOCKED: 'Langkah ini menunggu langkah sebelumnya. Detail menyebut persetujuan yang dibutuhkan.',
+  AC_INCOMPLETE: 'Kriteria penerimaan butuh judul, Given, When, dan minimal satu Then. Detail menyebut bagian yang kurang.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>
