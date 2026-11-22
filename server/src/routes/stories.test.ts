@@ -338,8 +338,14 @@ describe.skipIf(!databaseEnabled)('story artifacts and task locks', () => {
       definitionOfDone: [{ text: 'Design approved', role: 'ui_ux' }],
     }))
     expect(details.value).toMatchObject({ userStory: { role: 'owner' }, definitionOfDone: [{ text: 'Design approved', role: 'ui_ux' }] })
-    expect(toolResult(await tool('planning_draft_task', { storyId: story.value.id, title: 'Design dialog' })).value.code).toBe('MCP_DRAFT_INCOMPLETE')
-    expect(toolResult(await tool('planning_draft_task', { storyId: story.value.id, title: 'Design dialog', role: 'ui_ux' })).isError).toBe(false)
+    // Splitting a story into tasks is the tech lead's now, so the PM key no longer has the tool.
+    expect(toolResult(await tool('planning_draft_task', { storyId: story.value.id, title: 'Design dialog', role: 'ui_ux' })).value.code).toBe('MCP_PERMISSION_DENIED')
+    const lead = await memberWithRole(owner, workspaceId, 'details-lead', 'tech_lead')
+    const leadKey = await keyFor(lead, 'tech_lead')
+    await http.mcp(leadKey, 'tools/call', { name: 'planning_guide', arguments: {} })
+    const leadTool = (name: string, args: Record<string, unknown>) => http.mcp(leadKey, 'tools/call', { name, arguments: { workspaceId, ...args } })
+    expect(toolResult(await leadTool('planning_draft_task', { storyId: story.value.id, title: 'Design dialog' })).value.code).toBe('MCP_DRAFT_INCOMPLETE')
+    expect(toolResult(await leadTool('planning_draft_task', { storyId: story.value.id, title: 'Design dialog', role: 'ui_ux' })).isError).toBe(false)
   })
 
   test('agent work on stories and tasks shows in the activity log with the key name, and portal work without one', async () => {

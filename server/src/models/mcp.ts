@@ -32,6 +32,20 @@ export const MCP_TOOLS = [
   'subtask_update_status',
   'checklist_set_done',
   'checklist_add',
+  'epic_documents_read',
+  'epic_document_draft',
+  'epic_document_revise',
+  'acceptance_criteria_list',
+  'acceptance_criterion_add',
+  'acceptance_criterion_update',
+  'acceptance_criterion_strike',
+  'acceptance_criterion_map',
+  'criterion_test_case_write',
+  'ticket_read',
+  'ticket_readiness',
+  'ticket_draft',
+  'ticket_update',
+  'subtask_add',
 ] as const
 export type McpTool = (typeof MCP_TOOLS)[number]
 
@@ -51,6 +65,10 @@ export const MCP_READ_TOOLS: readonly McpTool[] = [
   'sprint_get_active',
   'issue_read',
   'issues_list',
+  'epic_documents_read',
+  'acceptance_criteria_list',
+  'ticket_read',
+  'ticket_readiness',
 ]
 
 export function isReadTool(tool: McpTool): boolean {
@@ -78,6 +96,11 @@ const memberTools: McpTool[] = [
   'checklist_set_done',
   'checklist_add',
   'issue_draft',
+  'epic_documents_read',
+  'acceptance_criteria_list',
+  'ticket_read',
+  'ticket_readiness',
+  'subtask_add',
 ]
 
 // Documents the role may read: the PM and tech lead read all of them, backend the BRD and approved PRDs.
@@ -86,14 +109,19 @@ const documentTools: McpTool[] = ['documents_list', 'documents_read']
 const artifactTools: McpTool[] = ['story_attach_design', 'story_link_api_contract', 'story_link_data_model', 'story_write_test_case']
 const storyDetailTools: McpTool[] = ['story_write_details']
 
+// The team standard: the PM writes the spec and its acceptance criteria, the tech lead writes the design and contract
+// and splits the epic into tickets, QA writes a test case per criterion. Splitting work into tasks is no longer the PM's.
+const pmStandardTools: McpTool[] = ['epic_document_draft', 'epic_document_revise', 'acceptance_criterion_add', 'acceptance_criterion_update', 'acceptance_criterion_strike', 'criterion_test_case_write']
+const techLeadStandardTools: McpTool[] = ['epic_document_draft', 'epic_document_revise', 'acceptance_criterion_map', 'criterion_test_case_write', 'ticket_draft', 'ticket_update']
+
 const roleTools: Record<McpKeyRole, McpTool[]> = {
-  pm: [...memberTools, ...PLANNING_TOOLS, 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools],
-  tech_lead: [...memberTools, 'planning_list', 'planning_draft_task', 'planning_comment', ...documentTools, ...artifactTools, ...storyDetailTools],
+  pm: [...memberTools, ...PLANNING_TOOLS.filter((tool) => tool !== 'planning_draft_task'), 'planning_upload_brd', ...documentTools, ...artifactTools, ...storyDetailTools, ...pmStandardTools],
+  tech_lead: [...memberTools, 'planning_list', 'planning_draft_task', 'planning_comment', ...documentTools, ...artifactTools, ...storyDetailTools, ...techLeadStandardTools],
   ui_ux: [...memberTools, 'story_attach_design'],
   backend: [...memberTools, ...documentTools, 'story_link_api_contract', 'story_link_data_model'],
   frontend: memberTools,
   mobile: memberTools,
-  qa: [...memberTools, 'story_write_test_case'],
+  qa: [...memberTools, 'story_write_test_case', 'criterion_test_case_write'],
 }
 
 export function defaultToolsFor(role: McpKeyRole): McpTool[] {

@@ -1,11 +1,21 @@
 import { describe, expect, test } from 'bun:test'
 import { defaultToolsFor, MCP_KEY_ROLES, MCP_TOOLS, type McpTool, PLANNING_TOOLS, toolsForRoles } from '@/models/mcp'
 
-const memberTools: McpTool[] = ['workspaces_list', 'story_read', 'planning_guide', 'api_requests_search', 'notifications_list', 'notifications_mark_read', 'team_members_list', 'discussion_read', 'backlog_list', 'sprint_get_active', 'issue_read', 'issue_comment', 'subtask_update_status', 'checklist_set_done', 'checklist_add', 'issue_draft', 'issues_list']
+const memberTools: McpTool[] = ['workspaces_list', 'story_read', 'planning_guide', 'api_requests_search', 'notifications_list', 'notifications_mark_read', 'team_members_list', 'discussion_read', 'backlog_list', 'sprint_get_active', 'issue_read', 'issue_comment', 'subtask_update_status', 'checklist_set_done', 'checklist_add', 'issue_draft', 'issues_list', 'epic_documents_read', 'acceptance_criteria_list', 'ticket_read', 'ticket_readiness', 'subtask_add']
 
 describe('default MCP tools per key role', () => {
-  test('pm gets every tool', () => {
-    expect(defaultToolsFor('pm').sort()).toEqual([...MCP_TOOLS].sort())
+  test('pm gets every tool except splitting work into tasks or tickets and mapping the design', () => {
+    const notPm: McpTool[] = ['planning_draft_task', 'acceptance_criterion_map', 'ticket_draft', 'ticket_update']
+    expect(defaultToolsFor('pm').sort()).toEqual(MCP_TOOLS.filter((tool) => !notPm.includes(tool)).sort())
+  })
+
+  test('CLOUD-001 AC15: the tech lead drafts tickets and the PM does not; the PM writes the spec and its criteria', () => {
+    const lead = defaultToolsFor('tech_lead')
+    const pm = defaultToolsFor('pm')
+    for (const tool of ['ticket_draft', 'ticket_update', 'planning_draft_task', 'acceptance_criterion_map', 'epic_document_draft'] as const) expect(lead).toContain(tool)
+    for (const tool of ['ticket_draft', 'ticket_update', 'planning_draft_task'] as const) expect(pm).not.toContain(tool)
+    for (const tool of ['epic_document_draft', 'acceptance_criterion_add', 'acceptance_criterion_strike'] as const) expect(pm).toContain(tool)
+    expect(lead).not.toContain('acceptance_criterion_add')
   })
 
   test('tech_lead reads planning and drafts tasks, but does not draft a PRD or an epic', () => {
@@ -18,7 +28,7 @@ describe('default MCP tools per key role', () => {
   test.each([
     ['ui_ux', ['story_attach_design']],
     ['backend', ['story_link_api_contract', 'story_link_data_model', 'documents_list', 'documents_read']],
-    ['qa', ['story_write_test_case']],
+    ['qa', ['story_write_test_case', 'criterion_test_case_write']],
   ] as const)('%s gets the member tools, its own tools, and no planning tool', (role, own) => {
     const tools = defaultToolsFor(role)
     expect(tools.sort()).toEqual([...memberTools, ...own].sort())

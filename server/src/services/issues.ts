@@ -136,8 +136,9 @@ export async function insertNewIssue(tx: SQL, scope: IssueScope, actor: Actor, i
     sourceDocumentId: source.documentId,
     sourceVersion: source.version,
     sourceSection: input.sourceSection ?? null,
-    // Epics and stories wait for an approver to publish them. Agents only draft.
-    published: !isAgent(actor) && (input.type === 'task' || input.type === 'bug' || input.type === 'subtask'),
+    // Epics and stories wait for an approver to publish them. Agents only draft, except the steps an engineer's agent
+    // adds under a ticket, which are that engineer's own work and show right away.
+    published: (!isAgent(actor) && (input.type === 'task' || input.type === 'bug' || input.type === 'subtask')) || (input.type === 'subtask' && fields.parentType === 'task'),
     createdBy: actor.userId,
     featurePrefix: fields.featurePrefix,
   })
@@ -260,7 +261,7 @@ async function validatedFields(db: SQL, scope: IssueScope, input: CreateIssueInp
   if (roleRule === 'required' ? !isWorkRole(role) : roleRule === 'optional' ? role !== null && !isWorkRole(role) : role !== null) throw invalid()
   const featurePrefix = input.featurePrefix ?? null
   if (featurePrefix !== null && (input.type !== 'epic' || !isFeaturePrefix(featurePrefix))) throw invalid()
-  return { title, description, acceptanceCriteria, priority, points, dueDate, assigneeId, role, parentId, featurePrefix }
+  return { title, description, acceptanceCriteria, priority, points, dueDate, assigneeId, role, parentId, featurePrefix, parentType: parent?.type ?? null }
 }
 
 // Story, task, and bug hang under an epic or stand alone. A sub-task needs a story, task, or bug. An epic has no parent.

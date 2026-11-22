@@ -156,7 +156,7 @@ describe.skipIf(!databaseEnabled)('MCP issue tools', () => {
     const parent = data(await api('POST', '/issues', owner, { type: 'task', title: 'Parent for the sub-task tool', points: 2, assigneeId: dev.user.id })).issue
     const sub = data(await api('POST', '/issues', owner, { type: 'subtask', title: 'Sub for the sub-task tool', parentId: parent.id, role: 'backend', assigneeId: dev.user.id })).issue
 
-    for (const gone of ['tasks_get_assigned', 'tasks_update_assigned_status', 'tasks_comment_assigned', 'stories_comment_participating', 'subtasks_list', 'subtask_add', 'subtask_set_done']) {
+    for (const gone of ['tasks_get_assigned', 'tasks_update_assigned_status', 'tasks_comment_assigned', 'stories_comment_participating', 'subtasks_list', 'subtask_set_done']) {
       const refused = await http.mcp(devKey, 'tools/call', { name: gone, arguments: { workspaceId, taskId: sub.id } })
       expect(refused.json.error).toMatchObject({ code: -32602 })
     }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { guideFor } from '@/services/mcp-guides'
+import { guideFor, promptsFor } from '@/services/mcp-guides'
 
 function prdStep(guide: string): string {
   const start = guide.indexOf('## Step 2. Write the PRD')
@@ -59,5 +59,48 @@ describe('discussion rules', () => {
 describe('tech lead playbook', () => {
   test('reviews the implementation and testing decisions of PRD drafts', () => {
     expect(guideFor(['tech_lead'])).toContain('Technical decisions')
+  })
+})
+
+describe('the team standard in the playbooks', () => {
+  test('every agent learns the order of approvals, Given / When / Then, and that grilling stays local', () => {
+    for (const role of ['pm', 'tech_lead', 'backend', 'qa'] as const) {
+      const guide = guideFor([role])
+      expect(guide).toContain('spec approved by the PM, then design approved by the tech lead')
+      expect(guide).toContain('Given / When / Then')
+      expect(guide).toContain('Never upload a grilling transcript')
+    }
+  })
+
+  test('the PM playbook leads with the standard flow and names every spec section', () => {
+    const guide = guideFor(['pm'])
+    expect(guide.indexOf('## The standard flow')).toBeLessThan(guide.indexOf('## The older BRD and PRD flow'))
+    for (const section of ['problem', 'goals', 'users', 'decisions', 'businessRules', 'flows', 'nonFunctional', 'impact', 'dependencies', 'outOfScope', 'openQuestions']) expect(guide).toContain(`- ${section}:`)
+    expect(guide).toContain('acceptance_criterion_strike')
+    expect(guide).not.toContain('Create tasks with planning_draft_task')
+  })
+
+  test('the tech lead playbook holds the ticket rules and all nine Definition of Ready items', () => {
+    const guide = guideFor(['tech_lead'])
+    expect(guide).toContain('One ticket is one mergeable pull request in one repo')
+    for (const item of ['1. Goal, scope', '2. Parent criteria', '3. Spec, design', '4. Dependencies', '5. Design notes', '6. Code areas', '7. Required tests', '8. Size S or M', '9. No blocking']) expect(guide).toContain(item)
+    expect(guide).toContain('Set assigneeId only after a person confirms it')
+  })
+
+  test('engineers read their ticket and add sub-tasks, QA writes a test case per criterion', () => {
+    for (const role of ['backend', 'frontend', 'ui_ux', 'qa'] as const) {
+      expect(guideFor([role])).toContain('ticket_read')
+      expect(guideFor([role])).toContain('subtask_add')
+    }
+    expect(guideFor(['qa'])).toContain('criterion_test_case_write')
+  })
+})
+
+describe('prompts', () => {
+  test('the PM gets the spec prompt and no task prompt; the tech lead gets design and ticket prompts', () => {
+    const pmNames = promptsFor(['pm']).map((prompt) => prompt.name)
+    expect(pmNames).toContain('pm_spec_to_epic')
+    expect(pmNames).not.toContain('pm_story_to_tasks')
+    expect(promptsFor(['tech_lead']).map((prompt) => prompt.name)).toEqual(['tl_design_epic', 'tl_split_tickets', 'pm_story_to_tasks'])
   })
 })
