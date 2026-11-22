@@ -47,7 +47,7 @@ import {
 } from '@/services/acceptance-criteria'
 import { approveEpicDocument, createEpicDocument, discardEpicDocument, getEpicDocument, listEpicDocuments, reviseEpicDocument } from '@/services/epic-documents'
 import { createIssue, getIssue, listIssuePage, updateIssue } from '@/services/issues'
-import { getReadiness, getTicket, saveTicket } from '@/services/tickets'
+import { getReadiness, getTicket, listEpicTickets, saveTicket } from '@/services/tickets'
 
 async function bodyAs<T extends z.ZodType>(request: Request, schema: T): Promise<z.output<T>> {
   return parseInput(schema, await bodyOf(request), 'ISSUE_INPUT_INVALID')
@@ -111,6 +111,12 @@ export async function handleIssueRoutes(
     if (ticket[3] === 'ticket' && method === 'PUT') return ok({ ticket: await saveTicket(ctx.db, scope, actor, ticket[2], await bodyAs(request, ticketBody)) })
     if (ticket[3] === 'readiness' && method === 'GET') return ok({ readiness: await getReadiness(ctx.db, scope, actor, ticket[2]) })
     throw new AppError('ROUTE_NOT_FOUND')
+  }
+  // Every ticket of an epic with its readiness and dependencies, and the load of each member.
+  const epicTickets = action.match(/^projects\/([\w-]+)\/issues\/([\w-]+)\/tickets$/)
+  if (epicTickets) {
+    if (method !== 'GET') throw new AppError('ROUTE_NOT_FOUND')
+    return ok(await listEpicTickets(ctx.db, { workspaceId, projectId: epicTickets[1] }, { userId: user.id }, epicTickets[2]))
   }
   const delivered = action.match(/^projects\/([\w-]+)\/issues\/([\w-]+)\/delivers$/)
   if (delivered) {

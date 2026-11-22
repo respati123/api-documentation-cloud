@@ -8,9 +8,9 @@
     "backlog": "Backlog",
     "reports": "Reports",
     "overview": "Overview",
-    "discovery": "Discovery",
     "agileBoard": "Board",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "agileEpics": "Epics"
   },
   "kind": {
     "brd": "BRD",
@@ -799,6 +799,138 @@
       "todo": "To do",
       "in_progress": "In progress",
       "done": "Done"
+    }
+  },
+  "epicSpace": {
+    "title": "Epics",
+    "subtitle": "Each epic is one feature: spec, design, contract, then tickets.",
+    "listEmptyTitle": "No epics yet",
+    "listEmptyDetail": "The PM agent creates the epic and its spec over MCP. Published epics show here.",
+    "loading": "Loading epics",
+    "error": "The epics could not be loaded",
+    "retry": "Try again",
+    "back": "All epics",
+    "open": "Open the epic",
+    "progress": "{{ready}} of {{total}} tickets Ready",
+    "tab": {
+      "overview": "Overview",
+      "spec": "Spec",
+      "design": "Design",
+      "contract": "Contract",
+      "tickets": "Tickets",
+      "assign": "Assignment"
+    },
+    "stage": {
+      "spec": "Spec",
+      "design": "Design",
+      "contract": "Contract",
+      "tickets": "Tickets"
+    },
+    "stageState": {
+      "approved": "Approved",
+      "review": "Waiting for approval",
+      "stale": "Stale, the spec changed",
+      "missing": "Not written yet"
+    },
+    "stageOwner": {
+      "spec": "The PM approves",
+      "design": "The tech lead approves",
+      "contract": "The tech lead approves",
+      "tickets": "Every ticket passes the Definition of Ready"
+    },
+    "stageCurrent": "Current step",
+    "document": {
+      "version": "Version {{version}}",
+      "approve": "Approve",
+      "approving": "Approving…",
+      "missing": {
+        "spec": "No spec yet. The PM agent writes it over MCP from the feature-spec skill.",
+        "design": "No design yet. The tech lead agent writes it once the spec is approved.",
+        "contract": "No contract yet. The tech lead agent writes it once the design is approved."
+      },
+      "stale": "The spec has a new version since this design was written. The tech lead revises the design before it can be approved.",
+      "blocked": "Waiting for: {{needs}}",
+      "empty": "—"
+    },
+    "section": {
+      "problem": "Problem",
+      "goals": "Goals",
+      "users": "Users",
+      "decisions": "Decisions",
+      "businessRules": "Business rules",
+      "flows": "Flows",
+      "nonFunctional": "Non-functional",
+      "impact": "Impact",
+      "dependencies": "Dependencies",
+      "outOfScope": "Out of scope",
+      "openQuestions": "Open questions",
+      "summary": "Summary",
+      "currentState": "Current state",
+      "architecture": "Architecture",
+      "options": "Options",
+      "dataModel": "Data model",
+      "apiSurface": "API surface",
+      "perRepo": "Per repo",
+      "security": "Security",
+      "rollout": "Rollout",
+      "observability": "Observability",
+      "risks": "Risks",
+      "endpoints": "Endpoints",
+      "errors": "Errors",
+      "breakingChanges": "Breaking changes"
+    },
+    "criteria": {
+      "title": "Acceptance criteria",
+      "allFlows": "All flows",
+      "flowFilter": "Filter by flow",
+      "empty": "No acceptance criteria yet.",
+      "struck": "Struck",
+      "struckReason": "Reason: {{reason}}",
+      "coverage": "{{active}} active · {{inDesign}} in design · {{inTask}} in tickets · {{hasTestCase}} with a test case",
+      "inDesign": "Design",
+      "inTask": "Ticket",
+      "hasTestCase": "Test case"
+    },
+    "matrix": {
+      "title": "AC × repo map",
+      "subtitle": "The component and test level that cover each criterion in each repo.",
+      "criterion": "AC",
+      "empty": "The design has not mapped the criteria to repos yet.",
+      "none": "—"
+    },
+    "tickets": {
+      "title": "Ticket split",
+      "subtitle": "Tickets in waves: a wave can start once the waves before it are done.",
+      "wave": "Wave {{number}}",
+      "looped": "Dependency loop",
+      "loopedDetail": "These tickets wait for each other. The tech lead breaks one of the dependencies.",
+      "empty": "No tickets yet. The tech lead agent splits the epic once the contract is approved.",
+      "ready": "Ready",
+      "notReady": "Not Ready",
+      "dependsOn": "Waits for {{codes}}",
+      "unassigned": "Unassigned",
+      "summary": "{{ready}} of {{total}} Ready"
+    },
+    "assign": {
+      "title": "Assignment proposal",
+      "subtitle": "Ready tickets without an assignee go to the member of the same role with the lightest load. The tech lead confirms or changes it.",
+      "ticket": "Ticket",
+      "proposed": "Proposed",
+      "points": "Points",
+      "nobody": "No member holds this role",
+      "none": "Do not assign yet",
+      "load": "Load per person",
+      "loadSubtitle": "Points of open work in the project, before and after this proposal.",
+      "member": "Member",
+      "before": "Before",
+      "after": "After",
+      "confirm": "Confirm assignment",
+      "confirming": "Saving…",
+      "confirmed_one": "{{count}} ticket assigned.",
+      "confirmed_other": "{{count}} tickets assigned.",
+      "empty": "No Ready ticket is waiting for an assignee.",
+      "onlyLead": "Only the tech lead can confirm the assignment.",
+      "loadEmpty": "Nobody carries open work yet."
     }
   }
 }

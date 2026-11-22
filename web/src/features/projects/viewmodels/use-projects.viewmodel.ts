@@ -10,6 +10,7 @@ import { isOverdue } from '@/features/projects/utils/planning'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
 import { useBacklogViewModel } from '@/features/projects/viewmodels/use-backlog.viewmodel'
 import { useDraftBacklogViewModel } from '@/features/projects/viewmodels/use-draft-backlog.viewmodel'
+import { useEpicWorkspaceViewModel } from '@/features/projects/viewmodels/use-epic-workspace.viewmodel'
 import { useIssueDetailViewModel } from '@/features/projects/viewmodels/use-issue-detail.viewmodel'
 import { useKanbanBoardViewModel } from '@/features/projects/viewmodels/use-kanban-board.viewmodel'
 import { usePlanningViewModel } from '@/features/projects/viewmodels/use-planning.viewmodel'
@@ -20,7 +21,7 @@ import { useSprintSummaryViewModel } from '@/features/projects/viewmodels/use-sp
 import { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
 import { useTimelineViewModel } from '@/features/projects/viewmodels/use-timeline.viewmodel'
-import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
+import { AGILE_PROJECT_ENABLED, ARTIFACT_STANDARD_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
 
@@ -191,6 +192,14 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     enabled && AGILE_PROJECT_ENABLED && planning.section === 'timeline',
   )
 
+  const epicWorkspace = useEpicWorkspaceViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && ARTIFACT_STANDARD_ENABLED && planning.section === 'epics',
+    memberList,
+    planning.access.canManage,
+  )
+
   const reports = useReportsViewModel(
     workspaceId,
     selectedProject?.id,
@@ -211,6 +220,13 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     backlog,
     sprintBoard,
     timeline,
+    epicWorkspace,
+    // Opens an epic's space from anywhere, such as the issue sheet of an epic.
+    openEpic: (id: string) => {
+      issueDetail.close()
+      planning.go('epics')
+      epicWorkspace.open(id)
+    },
     kanbanBoard,
     mode,
     issueDetail,

@@ -1,10 +1,10 @@
 import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.constants'
 import type { ProjectSection } from '@/features/projects/viewmodels/use-planning.viewmodel'
 
-// With the agile screens the first tab is the Overview, the documents are Discovery, and the board is the Board.
+// With the agile screens the first tab is the Overview, the epics are Epics, and the board is the Board.
 const AGILE_NAME: Partial<Record<ProjectSection, string>> = {
   flow: PLANNING_TEXT.nav.overview,
-  documents: PLANNING_TEXT.nav.discovery,
+  epics: PLANNING_TEXT.nav.agileEpics,
   board: PLANNING_TEXT.nav.agileBoard,
 }
 

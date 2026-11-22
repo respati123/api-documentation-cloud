@@ -43,3 +43,14 @@ export async function listBlockerIds(db: SQL, issueId: string): Promise<string[]
 export async function deleteBlockersOf(db: SQL, issueId: string): Promise<void> {
   await db`DELETE FROM issue_links WHERE to_id = ${issueId} AND kind = 'blocks'`
 }
+
+// The points each member carries in work that is not done yet, across the project. Sub-tasks carry no points.
+export async function openPointsByAssignee(db: SQL, projectId: string): Promise<Array<{ userId: string; points: number; count: number }>> {
+  const rows: Array<{ userId: string; points: string | number; count: string | number }> = await db`
+    SELECT assignee_id AS "userId", COALESCE(SUM(points), 0) AS points, COUNT(*) AS count
+    FROM issues
+    WHERE project_id = ${projectId} AND assignee_id IS NOT NULL AND type IN ('task', 'bug', 'story')
+      AND status <> 'done'
+    GROUP BY assignee_id`
+  return rows.map((row) => ({ userId: row.userId, points: Number(row.points), count: Number(row.count) }))
+}

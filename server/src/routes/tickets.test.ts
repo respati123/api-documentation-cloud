@@ -52,4 +52,23 @@ describe.skipIf(!databaseEnabled)('ticket routes', () => {
     expect(bad.status).toBe(400)
     expect((await call('PUT', `/issues/${task.key}/ticket`, { requiredTests: [{ case: 'x' }] })).json.code).toBe('ISSUE_INPUT_INVALID')
   })
+  test('the tickets of an epic come with readiness, dependencies and the load of each member', async () => {
+    const epic = data(await call('POST', '/issues', { type: 'epic', title: 'Payments', featurePrefix: 'PAY' })).issue as Body
+    const first = data(await call('POST', '/issues', { type: 'task', title: 'Charge API', parentId: epic.id, assigneeId: owner.user.id })).issue as Body
+    const second = data(await call('POST', '/issues', { type: 'task', title: 'Charge screen', parentId: epic.id })).issue as Body
+    await call('PUT', `/issues/${first.key}/ticket`, { role: 'backend', size: 'M' })
+    await call('PUT', `/issues/${second.key}/ticket`, { role: 'frontend', size: 'S' })
+    await call('POST', `/issues/${first.key}/links`, { toId: second.id, kind: 'blocks' })
+
+    const listed = await call('GET', '/issues/PAY-001/tickets')
+    expect(listed.status).toBe(200)
+    const tickets = data(listed).tickets as Body[]
+    expect(tickets.map((ticket) => ticket.issue.ticketCode)).toEqual(['PAY-001-BE-1', 'PAY-001-FE-1'])
+    expect(tickets[1].dependsOn).toEqual([first.id])
+    expect(tickets[0].readiness.ready).toBe(false)
+    expect(data(listed).load).toContainEqual({ userId: owner.user.id, points: 3, count: 1 })
+
+    // A task is not an epic.
+    expect((await call('GET', `/issues/${first.key}/tickets`)).json.code).toBe('ISSUE_NOT_FOUND')
+  })
 })

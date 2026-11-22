@@ -8,9 +8,9 @@
     "backlog": "Backlog",
     "reports": "Laporan",
     "overview": "Ringkasan",
-    "discovery": "Discovery",
     "agileBoard": "Papan",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "agileEpics": "Epic"
   },
   "kind": {
     "brd": "BRD",
@@ -799,6 +799,138 @@
       "todo": "To do",
       "in_progress": "Dikerjakan",
       "done": "Selesai"
+    }
+  },
+  "epicSpace": {
+    "title": "Epic",
+    "subtitle": "Setiap epic adalah satu fitur: spec, desain, kontrak, lalu tiket.",
+    "listEmptyTitle": "Belum ada epic",
+    "listEmptyDetail": "Agen PM membuat epic dan spec lewat MCP. Epic yang sudah terbit muncul di sini.",
+    "loading": "Memuat epic",
+    "error": "Epic tidak bisa dimuat",
+    "retry": "Coba lagi",
+    "back": "Semua epic",
+    "open": "Buka ruang epic",
+    "progress": "{{ready}} dari {{total}} tiket Ready",
+    "tab": {
+      "overview": "Ringkasan",
+      "spec": "Spec",
+      "design": "Desain",
+      "contract": "Kontrak",
+      "tickets": "Tiket",
+      "assign": "Penugasan"
+    },
+    "stage": {
+      "spec": "Spec",
+      "design": "Desain",
+      "contract": "Kontrak",
+      "tickets": "Tiket"
+    },
+    "stageState": {
+      "approved": "Disetujui",
+      "review": "Menunggu persetujuan",
+      "stale": "Usang, spec berubah",
+      "missing": "Belum ada"
+    },
+    "stageOwner": {
+      "spec": "PM menyetujui",
+      "design": "Tech lead menyetujui",
+      "contract": "Tech lead menyetujui",
+      "tickets": "Semua tiket lolos Definition of Ready"
+    },
+    "stageCurrent": "Langkah sekarang",
+    "document": {
+      "version": "Versi {{version}}",
+      "approve": "Setujui",
+      "approving": "Menyetujui…",
+      "missing": {
+        "spec": "Spec belum ada. Agen PM menulisnya lewat MCP dari skill feature-spec.",
+        "design": "Desain belum ada. Agen tech lead menulisnya setelah spec disetujui.",
+        "contract": "Kontrak belum ada. Agen tech lead menulisnya setelah desain disetujui."
+      },
+      "stale": "Spec sudah punya versi baru sejak desain ini ditulis. Tech lead perlu merevisi desain sebelum bisa disetujui.",
+      "blocked": "Menunggu: {{needs}}",
+      "empty": "—"
+    },
+    "section": {
+      "problem": "Masalah",
+      "goals": "Tujuan",
+      "users": "Pengguna",
+      "decisions": "Keputusan",
+      "businessRules": "Aturan bisnis",
+      "flows": "Alur",
+      "nonFunctional": "Non-fungsional",
+      "impact": "Dampak",
+      "dependencies": "Dependensi",
+      "outOfScope": "Di luar cakupan",
+      "openQuestions": "Pertanyaan terbuka",
+      "summary": "Ringkasan",
+      "currentState": "Kondisi sekarang",
+      "architecture": "Arsitektur",
+      "options": "Opsi",
+      "dataModel": "Model data",
+      "apiSurface": "Permukaan API",
+      "perRepo": "Per repo",
+      "security": "Keamanan",
+      "rollout": "Rollout",
+      "observability": "Observability",
+      "risks": "Risiko",
+      "endpoints": "Endpoint",
+      "errors": "Error",
+      "breakingChanges": "Perubahan breaking"
+    },
+    "criteria": {
+      "title": "Acceptance criteria",
+      "allFlows": "Semua alur",
+      "flowFilter": "Saring per alur",
+      "empty": "Belum ada acceptance criteria.",
+      "struck": "Dicoret",
+      "struckReason": "Alasan: {{reason}}",
+      "coverage": "{{active}} aktif · {{inDesign}} di desain · {{inTask}} di tiket · {{hasTestCase}} punya test case",
+      "inDesign": "Desain",
+      "inTask": "Tiket",
+      "hasTestCase": "Test case"
+    },
+    "matrix": {
+      "title": "Peta AC × repo",
+      "subtitle": "Komponen dan level tes yang menutup setiap AC di setiap repo.",
+      "criterion": "AC",
+      "empty": "Desain belum memetakan AC ke repo.",
+      "none": "—"
+    },
+    "tickets": {
+      "title": "Pemecahan tiket",
+      "subtitle": "Tiket dalam gelombang: satu gelombang bisa mulai setelah gelombang sebelumnya selesai.",
+      "wave": "Gelombang {{number}}",
+      "looped": "Dependensi melingkar",
+      "loopedDetail": "Tiket ini saling menunggu. Tech lead perlu memutus salah satu dependensi.",
+      "empty": "Belum ada tiket. Agen tech lead memecah epic setelah kontrak disetujui.",
+      "ready": "Ready",
+      "notReady": "Belum Ready",
+      "dependsOn": "Menunggu {{codes}}",
+      "unassigned": "Belum ditugaskan",
+      "summary": "{{ready}} dari {{total}} Ready"
+    },
+    "assign": {
+      "title": "Usulan penugasan",
+      "subtitle": "Tiket Ready tanpa assignee diusulkan ke anggota dengan peran yang sama dan beban paling ringan. Tech lead mengonfirmasi atau mengubahnya.",
+      "ticket": "Tiket",
+      "proposed": "Diusulkan ke",
+      "points": "Poin",
+      "nobody": "Tidak ada anggota dengan peran ini",
+      "none": "Jangan tugaskan dulu",
+      "load": "Beban per orang",
+      "loadSubtitle": "Poin pekerjaan yang belum selesai di proyek, sebelum dan sesudah usulan ini.",
+      "member": "Anggota",
+      "before": "Sebelum",
+      "after": "Sesudah",
+      "confirm": "Konfirmasi penugasan",
+      "confirming": "Menyimpan…",
+      "confirmed_one": "{{count}} tiket ditugaskan.",
+      "confirmed_other": "{{count}} tiket ditugaskan.",
+      "empty": "Tidak ada tiket Ready yang menunggu assignee.",
+      "onlyLead": "Hanya tech lead yang bisa mengonfirmasi penugasan.",
+      "loadEmpty": "Belum ada yang memegang pekerjaan terbuka."
     }
   }
 }

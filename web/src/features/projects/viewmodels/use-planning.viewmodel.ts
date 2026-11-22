@@ -173,11 +173,11 @@ export function usePlanningViewModel(workspaceId: string, members: ProjectMember
       (id) =>
         (id !== 'documents' || canReadDocuments) &&
         ((id !== 'backlog' && id !== 'reports') || AGILE_PROJECT_ENABLED) &&
-        (id !== 'epics' || !AGILE_PROJECT_ENABLED) &&
+        (id !== 'epics' || !AGILE_PROJECT_ENABLED || ARTIFACT_STANDARD_ENABLED) &&
         (id !== 'timeline' || (AGILE_PROJECT_ENABLED && ARTIFACT_STANDARD_ENABLED)),
     ).map((id) => ({
       id,
-      count: id === 'documents' ? documents.length : id === 'epics' ? epics.length : null,
+      count: id === 'documents' ? documents.length : id === 'epics' && !AGILE_PROJECT_ENABLED ? epics.length : null,
     })),
     go,
     detail: detail?.kind ?? null,

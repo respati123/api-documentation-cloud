@@ -3,9 +3,10 @@ import { PLANNING_TEXT } from '@/features/projects/constants/planning-text.const
 import { navLabelKey } from '@/features/projects/utils/section-nav'
 
 describe('navLabelKey', () => {
-  test('the agile screens name the tabs Overview, Discovery, and Board', () => {
+  test('the agile screens name the tabs Overview, Epics, and Board, and the documents keep their name', () => {
     expect(navLabelKey('flow', true)).toBe(PLANNING_TEXT.nav.overview)
-    expect(navLabelKey('documents', true)).toBe(PLANNING_TEXT.nav.discovery)
+    expect(navLabelKey('epics', true)).toBe(PLANNING_TEXT.nav.agileEpics)
+    expect(navLabelKey('documents', true)).toBe(PLANNING_TEXT.nav.documents)
     expect(navLabelKey('board', true)).toBe(PLANNING_TEXT.nav.agileBoard)
   })
 
