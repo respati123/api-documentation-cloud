@@ -167,7 +167,7 @@ describe.skipIf(!databaseEnabled)('DBDesign and Stitchkit integration', () => {
     const epicId = randomUUID()
     const storyId = randomUUID()
     await db`INSERT INTO projects (id, workspace_id, name, created_by, key) VALUES (${workspaceId}, ${workspaceId}, 'Belanja', ${owner.user.id}, 'BLJ') ON CONFLICT (id) DO NOTHING`
-    await db`INSERT INTO issues (id, project_id, number, type, title, created_by) VALUES (${epicId}, ${workspaceId}, 1, 'epic', 'Belanja', ${owner.user.id})`
+    await db`INSERT INTO issues (id, project_id, number, type, title, created_by, feature_prefix, feature_number) VALUES (${epicId}, ${workspaceId}, 1, 'epic', 'Belanja', ${owner.user.id}, 'SHOP', 1)`
     await db`INSERT INTO issues (id, project_id, number, type, parent_id, title, status, created_by) VALUES (${storyId}, ${workspaceId}, 2, 'story', ${epicId}, 'Checkout', 'draft', ${owner.user.id})`
     const path = `/api/workspaces/${workspaceId}/planning/stories/${storyId}`
 

@@ -109,5 +109,7 @@ export const id = {
   SPRINT_ITEM_NOT_READY: 'Hanya story Ready yang punya poin, atau task atau bug yang punya poin, yang bisa masuk sprint. PM bisa melewatinya dengan alasan.',
   PROJECT_KEY_TAKEN: 'Project lain di workspace ini sudah memakai key itu, sekarang atau sebelumnya.',
   SPRINT_NOT_AVAILABLE: 'Sprint hanya dipakai di mode Scrum. Project ini bekerja di mode Kanban.',
+  EPIC_DOCUMENT_INCOMPLETE: 'Dokumen ini belum lengkap. Isi setiap bagian yang disebut di detail.',
+  EPIC_DOCUMENT_BLOCKED: 'Langkah ini menunggu langkah sebelumnya. Detail menyebut persetujuan yang dibutuhkan.',
   INTERNAL_ERROR: 'Terjadi kesalahan. Coba lagi.',
 } satisfies Record<ErrorCode, MessageEntry>

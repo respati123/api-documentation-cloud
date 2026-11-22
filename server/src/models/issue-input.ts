@@ -20,6 +20,7 @@ export const createIssueBody = z.strictObject({
   sourceDocumentId: nullableId,
   sourceVersion: z.number().int().min(1).nullable().optional(),
   sourceSection: z.string().max(300).nullable().optional(),
+  featurePrefix: z.string().max(20).nullable().optional(),
 })
 
 export const updateIssueBody = z.strictObject({
@@ -32,7 +33,13 @@ export const updateIssueBody = z.strictObject({
   parentId: nullableId,
   assigneeId: nullableId,
   dueDate: z.string().max(10).nullable().optional(),
+  featurePrefix: z.string().max(20).optional(),
 })
+
+// The spec, design and contract of an epic. The service checks which sections each kind needs.
+const sections = z.record(z.string().max(60), z.string().max(30_000))
+export const epicDocumentBody = z.strictObject({ kind: z.enum(['spec', 'design', 'contract']), title: z.string().max(1000).optional(), sections })
+export const epicDocumentReviseBody = z.strictObject({ expectedVersion: z.number().int().min(1), title: z.string().max(1000).optional(), sections })
 
 export const rankBody = z.strictObject({ afterId: nullableId, beforeId: nullableId })
 export const checklistAddBody = z.strictObject({ title: z.string().max(1000) })
