@@ -105,6 +105,11 @@ export interface IssueRow {
   featurePrefix: string | null
   featureNumber: number | null
   featureCode: string | null
+  // Tasks with ticket details: the ticket code, such as AUTH-001-BE-2, and the size S, M or L.
+  ticketCode: string | null
+  size: 'S' | 'M' | 'L' | null
+  // True once the tech lead has written ticket fields for the task. Only then does the Definition of Ready apply.
+  isTicket: boolean
   publishedAt: Date | null
   createdBy: string
   createdAt: Date

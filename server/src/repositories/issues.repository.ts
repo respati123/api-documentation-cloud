@@ -1,8 +1,8 @@
 import type { SQL } from 'bun'
 import type { IssueRow, IssueType } from '@/models/issue'
 
-const columns = `i.id, i.project_id AS "projectId", i.number, p.key || '-' || i.number AS key, i.type, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.status, i.points, i.priority, i.rank::float8 AS rank, i.sprint_id AS "sprintId", i.role, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", i.source_reviewed_version AS "sourceReviewedVersion", (src.current_version > i.source_version AND coalesce(i.source_reviewed_version, i.source_version) < src.current_version) AS "sourceOutdated", i.design_approved_by AS "designApprovedBy", i.design_approved_at AS "designApprovedAt", i.test_case_id AS "testCaseId", i.feature_prefix AS "featurePrefix", i.feature_number AS "featureNumber", CASE WHEN i.feature_prefix IS NOT NULL THEN i.feature_prefix || '-' || lpad(i.feature_number::text, 3, '0') END AS "featureCode", i.published_at AS "publishedAt", i.created_by AS "createdBy", i.created_at AS "createdAt", i.updated_at AS "updatedAt"`
-const tables = 'FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN users u ON u.id = i.assignee_id LEFT JOIN planning_documents src ON src.id = i.source_document_id'
+const columns = `i.id, i.project_id AS "projectId", i.number, p.key || '-' || i.number AS key, i.type, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.status, i.points, i.priority, i.rank::float8 AS rank, i.sprint_id AS "sprintId", i.role, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", i.source_reviewed_version AS "sourceReviewedVersion", (src.current_version > i.source_version AND coalesce(i.source_reviewed_version, i.source_version) < src.current_version) AS "sourceOutdated", i.design_approved_by AS "designApprovedBy", i.design_approved_at AS "designApprovedAt", i.test_case_id AS "testCaseId", i.feature_prefix AS "featurePrefix", i.feature_number AS "featureNumber", CASE WHEN i.feature_prefix IS NOT NULL THEN i.feature_prefix || '-' || lpad(i.feature_number::text, 3, '0') END AS "featureCode", CASE WHEN td.role_code IS NOT NULL THEN tep.feature_prefix || '-' || lpad(tep.feature_number::text, 3, '0') || '-' || td.role_code || '-' || td.ticket_seq END AS "ticketCode", td.size, (td.issue_id IS NOT NULL) AS "isTicket", i.published_at AS "publishedAt", i.created_by AS "createdBy", i.created_at AS "createdAt", i.updated_at AS "updatedAt"`
+const tables = 'FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN users u ON u.id = i.assignee_id LEFT JOIN planning_documents src ON src.id = i.source_document_id LEFT JOIN issue_ticket_details td ON td.issue_id = i.id LEFT JOIN issues tep ON tep.id = td.epic_id'
 
 export interface NewIssue {
   id: string
@@ -79,6 +79,11 @@ async function epicPrefix(db: SQL, projectId: string, asked: string | null): Pro
 export async function nextFeatureNumber(db: SQL, projectId: string, prefix: string): Promise<number> {
   const [row] = await db`SELECT coalesce(max(feature_number), 0) + 1 AS number FROM issues WHERE project_id = ${projectId} AND feature_prefix = ${prefix}`
   return Number(row.number)
+}
+
+export async function findIssueByTicketCode(db: SQL, projectId: string, code: { prefix: string; featureNumber: number; roleCode: string; seq: number }): Promise<IssueRow | undefined> {
+  const [row] = await db`SELECT ${db.unsafe(columns)} ${db.unsafe(tables)} WHERE i.project_id = ${projectId} AND tep.feature_prefix = ${code.prefix} AND tep.feature_number = ${code.featureNumber} AND td.role_code = ${code.roleCode} AND td.ticket_seq = ${code.seq}`
+  return row
 }
 
 export async function findEpicByFeatureCode(db: SQL, projectId: string, prefix: string, number: number): Promise<IssueRow | undefined> {

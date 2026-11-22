@@ -16,10 +16,12 @@ import {
   RANK_STEP,
 } from '@/models/issue'
 import { isFeaturePrefix, parseFeatureCode } from '@/models/feature-code'
+import { parseTicketCode } from '@/models/ticket'
 import { isWorkRole } from '@/models/story'
 import {
   allocateIssueNumber,
   findEpicByFeatureCode,
+  findIssueByTicketCode,
   findIssue,
   findIssueByNumber,
   insertIssue,
@@ -96,7 +98,14 @@ function mayCreate(type: IssueType, roles: ProjectRoles, subtaskRole: string | n
 export async function createIssue(db: SQL, scope: IssueScope, actor: Actor, input: CreateIssueInput): Promise<IssueRow> {
   const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
   if (!isIssueType(input.type)) throw invalid()
-  if (!mayCreate(input.type, roles, input.role ?? null)) throw new AppError('ROLE_NOT_ALLOWED')
+  // A sub-task of a ticket is a step the engineer adds: its assignee, a member of its role, or the PM and tech lead.
+  // It goes to the person who adds it unless someone else is named.
+  const parentTask = input.type === 'subtask' && input.parentId ? await findIssue(db, scope.projectId, input.parentId) : undefined
+  if (parentTask?.type === 'task') {
+    const mayAdd = roles.workspaceRole !== 'viewer' && (roles.isApprover || parentTask.assigneeId === actor.userId || hasDiscipline(roles, parentTask.role))
+    if (!mayAdd) throw new AppError('ROLE_NOT_ALLOWED')
+    input = { ...input, assigneeId: input.assigneeId === undefined ? actor.userId : input.assigneeId }
+  } else if (!mayCreate(input.type, roles, input.role ?? null)) throw new AppError('ROLE_NOT_ALLOWED')
   const id = await db.begin((tx) => insertNewIssue(tx, scope, actor, input))
   return (await findIssue(db, scope.projectId, id)) as IssueRow
 }
@@ -121,7 +130,7 @@ export async function insertNewIssue(tx: SQL, scope: IssueScope, actor: Actor, i
     points: fields.points,
     priority: fields.priority,
     rank,
-    role: input.type === 'subtask' ? fields.role : null,
+    role: fields.role,
     assigneeId: fields.assigneeId,
     dueDate: fields.dueDate,
     sourceDocumentId: source.documentId,
@@ -166,10 +175,18 @@ export async function listIssuePage(
   db: SQL,
   scope: IssueScope,
   actor: Actor,
-  filter: { type?: IssueType; sprintId?: string | null; parentId?: string; assigneeId?: string; participantId?: string },
+  filter: { type?: IssueType; sprintId?: string | null; parentId?: string; assigneeId?: string; participantId?: string; q?: string },
   page: { limit: number; cursor: CursorKeys | null },
 ): Promise<{ items: IssueRow[]; nextCursor: string | null }> {
   const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
+  // A search by ticket code, feature code or key gives that one issue, when the caller may see it.
+  if (filter.q !== undefined) {
+    const found = await loadVisible(db, scope, actor, roles, filter.q.trim()).catch((error: unknown) => {
+      if (error instanceof AppError && error.code === 'ISSUE_NOT_FOUND') return undefined
+      throw error
+    })
+    return { items: found ? [found] : [], nextCursor: null }
+  }
   const after = cursorValues(page.cursor, ['n'])
   if (after && !Number.isInteger(Number(after.n))) throw new AppError('PAGINATION_INVALID')
   const rows = await listIssuesByNumber(db, scope.projectId, {
@@ -208,8 +225,11 @@ export async function updateIssue(db: SQL, scope: IssueScope, actor: Actor, ref:
 // An issue is found by its id or by its key, such as PARI-12. A draft is hidden from members who may not see it.
 export async function loadVisible(db: SQL, scope: IssueScope, actor: Actor, roles: ProjectRoles, ref: string): Promise<IssueRow> {
   // An epic also opens by its feature code, such as AUTH-001. A code that names no epic is read as an issue key.
-  const code = parseFeatureCode(ref)
-  const epic = code ? await findEpicByFeatureCode(db, scope.projectId, code.prefix, code.number) : undefined
+  // A ticket opens by its ticket code, such as AUTH-001-BE-2.
+  const ticketCode = parseTicketCode(ref)
+  const ticket = ticketCode ? await findIssueByTicketCode(db, scope.projectId, ticketCode) : undefined
+  const code = ticket ? null : parseFeatureCode(ref)
+  const epic = ticket ?? (code ? await findEpicByFeatureCode(db, scope.projectId, code.prefix, code.number) : undefined)
   const keyed = epic ? null : /^([A-Za-z]+)-(\d+)$/.exec(ref)
   const issue = epic ?? (keyed ? await findIssueByNumber(db, scope.projectId, Number(keyed[2])) : await findIssue(db, scope.projectId, ref))
   if (!issue) throw new AppError('ISSUE_NOT_FOUND')
@@ -233,21 +253,24 @@ async function validatedFields(db: SQL, scope: IssueScope, input: CreateIssueInp
   if (!(await ensureAssigneeInProject(db, scope.workspaceId, scope.projectId, assigneeId))) throw invalid()
 
   const role = input.role ?? null
-  if (input.type === 'subtask' ? !isWorkRole(role) : role !== null) throw invalid()
   const parentId = input.parentId ?? null
-  await checkParent(db, scope, input.type, parentId)
+  const parent = await checkParent(db, scope, input.type, parentId)
+  // A sub-task of a story names its role. A sub-task of a task, and a task, may name one. Nothing else carries a role.
+  const roleRule = input.type === 'subtask' ? (parent?.type === 'story' ? 'required' : 'optional') : input.type === 'task' ? 'optional' : 'none'
+  if (roleRule === 'required' ? !isWorkRole(role) : roleRule === 'optional' ? role !== null && !isWorkRole(role) : role !== null) throw invalid()
   const featurePrefix = input.featurePrefix ?? null
   if (featurePrefix !== null && (input.type !== 'epic' || !isFeaturePrefix(featurePrefix))) throw invalid()
   return { title, description, acceptanceCriteria, priority, points, dueDate, assigneeId, role, parentId, featurePrefix }
 }
 
 // Story, task, and bug hang under an epic or stand alone. A sub-task needs a story, task, or bug. An epic has no parent.
-async function checkParent(db: SQL, scope: IssueScope, type: IssueType, parentId: string | null): Promise<void> {
+async function checkParent(db: SQL, scope: IssueScope, type: IssueType, parentId: string | null): Promise<IssueRow | undefined> {
   if (type === 'epic' ? parentId !== null : type === 'subtask' && parentId === null) throw invalid()
-  if (parentId === null) return
+  if (parentId === null) return undefined
   const parent = await findIssue(db, scope.projectId, parentId)
   const parentTypes: IssueType[] = type === 'subtask' ? ['story', 'task', 'bug'] : ['epic']
   if (!parent || !parentTypes.includes(parent.type)) throw invalid()
+  return parent
 }
 
 async function validatedPatch(db: SQL, scope: IssueScope, issue: IssueRow, patch: UpdateIssueInput): Promise<IssuePatch> {
