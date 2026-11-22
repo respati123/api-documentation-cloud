@@ -3,6 +3,7 @@ import { EPIC_DOCUMENT_SECTIONS } from '@/models/epic-document'
 import { databaseEnabled } from '@/testing/database'
 import { type IssueWorld, openIssueWorld, type Person } from '@/testing/issue-world'
 import { approveEpicDocument, createEpicDocument, discardEpicDocument, getEpicDocument, listEpicDocuments, reviseEpicDocument } from '@/services/epic-documents'
+import { addEpicCriterion } from '@/services/acceptance-criteria'
 import { publishIssue } from '@/services/issue-backlog'
 import { createIssue as createAnyIssue } from '@/services/issues'
 
@@ -24,7 +25,12 @@ describe.skipIf(!databaseEnabled)('epic documents', () => {
   })
 
   const newEpic = async (prefix: string) => (await createIssue(world, prefix)).id
-  const create = (who: Person, epic: string, kind: 'spec' | 'design' | 'contract', body = sections(kind)) => createEpicDocument(world.db, world.scope, world.as(who), epic, { kind, sections: body })
+  // A spec is approved only with an acceptance criterion, so every spec made here gets one.
+  const create = async (who: Person, epic: string, kind: 'spec' | 'design' | 'contract', body = sections(kind)) => {
+    const document = await createEpicDocument(world.db, world.scope, world.as(who), epic, { kind, sections: body })
+    if (kind === 'spec') await addEpicCriterion(world.db, world.scope, world.as(who), epic, { title: 'Signs in', given: 'an account', when: 'the user signs in', then: ['the home page opens'] })
+    return document
+  }
   const approve = (who: Person, epic: string, id: string) => approveEpicDocument(world.db, world.scope, world.as(who), epic, id)
 
   test('the PM drafts the spec with every section, and the sections come back in order', async () => {
@@ -115,6 +121,12 @@ describe.skipIf(!databaseEnabled)('epic documents', () => {
     await world.rejectsWith(() => getEpicDocument(world.db, world.scope, world.as('dev'), epic, spec.id), 'PLANNING_NOT_FOUND')
     await approve('pm', epic, spec.id)
     expect((await listEpicDocuments(world.db, world.scope, world.as('dev'), epic)).documents).toHaveLength(1)
+  })
+
+  test('a spec without an active acceptance criterion cannot be approved', async () => {
+    const epic = await newEpic('NOAC')
+    const spec = await createEpicDocument(world.db, world.scope, world.as('pm'), epic, { kind: 'spec', sections: sections('spec') })
+    await expect(approve('pm', epic, spec.id)).rejects.toMatchObject({ code: 'EPIC_DOCUMENT_BLOCKED', details: { needs: 'acceptance_criteria' } })
   })
 
   test('documents hang on epics only, and the epic opens by its feature code', async () => {

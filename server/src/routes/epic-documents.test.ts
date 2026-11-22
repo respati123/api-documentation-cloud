@@ -39,6 +39,8 @@ describe.skipIf(!databaseEnabled)('epic document routes', () => {
     const spec = await call('POST', '/issues/AUTH-001/documents', { kind: 'spec', sections: sections('spec') })
     expect(spec.status).toBe(201)
     const specId = (data(spec).document as Body).id
+    const criterion = await call('POST', '/issues/AUTH-001/acceptance-criteria', { flow: 'Sign in', title: 'Signs in', given: 'an account', when: 'the user signs in', then: ['the home page opens'] })
+    expect(criterion.status).toBe(201)
     expect((await call('POST', `/issues/AUTH-001/documents/${specId}/approve`)).status).toBe(200)
 
     const design = await call('POST', `/issues/${epic.id}/documents`, { kind: 'design', sections: sections('design') })

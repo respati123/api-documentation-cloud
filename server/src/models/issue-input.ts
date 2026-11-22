@@ -41,6 +41,25 @@ const sections = z.record(z.string().max(60), z.string().max(30_000))
 export const epicDocumentBody = z.strictObject({ kind: z.enum(['spec', 'design', 'contract']), title: z.string().max(1000).optional(), sections })
 export const epicDocumentReviseBody = z.strictObject({ expectedVersion: z.number().int().min(1), title: z.string().max(1000).optional(), sections })
 
+// Acceptance criteria of an epic. The service names missing Given, When or Then parts.
+export const criterionBody = z.strictObject({
+  flow: z.string().max(1000).optional(),
+  title: z.string().max(1000).optional(),
+  given: z.string().max(5000).optional(),
+  when: z.string().max(5000).optional(),
+  then: z.array(z.string().max(5000)).max(50).optional(),
+})
+export const criterionStrikeBody = z.strictObject({ reason: z.string().max(2000) })
+const mappingEntry = z.strictObject({ repo: z.string().max(20), component: z.string().max(1000), testLevel: z.string().max(20) })
+export const criterionMappingBody = z.strictObject({ entries: z.array(mappingEntry).max(50) })
+export const criterionTestCaseBody = z.strictObject({
+  title: z.string().max(1000),
+  precondition: z.string().max(5000).optional(),
+  steps: z.array(z.string().max(5000)).max(100),
+  expected: z.array(z.string().max(5000)).max(100),
+})
+export const issueCriteriaBody = z.strictObject({ numbers: z.array(z.number().int()).max(100) })
+
 export const rankBody = z.strictObject({ afterId: nullableId, beforeId: nullableId })
 export const checklistAddBody = z.strictObject({ title: z.string().max(1000) })
 export const checklistDoneBody = z.strictObject({ done: z.boolean() })

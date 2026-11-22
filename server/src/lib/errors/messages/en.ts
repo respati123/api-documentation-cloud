@@ -111,5 +111,6 @@ export const en = {
   SPRINT_NOT_AVAILABLE: 'Sprints are only used in Scrum mode. This project works in Kanban mode.',
   EPIC_DOCUMENT_INCOMPLETE: 'This document is missing sections. Fill in every section listed in the details.',
   EPIC_DOCUMENT_BLOCKED: 'This step is waiting for an earlier one. The details name the approval it needs.',
+  AC_INCOMPLETE: 'An acceptance criterion needs a title, Given, When and at least one Then. The details name the missing parts.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>
