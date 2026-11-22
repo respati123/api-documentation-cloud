@@ -2,7 +2,7 @@ import type { McpKeyRole } from '@/models/mcp'
 
 // The playbook every agent must read through planning_guide before it writes project data.
 // Bump GUIDE_VERSION whenever a guide changes, so agents that read an older version have to read it again.
-export const GUIDE_VERSION = '2026-11-18.3'
+export const GUIDE_VERSION = '2026-11-22.1'
 
 const shared = `## Rules for every agent
 
@@ -16,12 +16,20 @@ const shared = `## Rules for every agent
 - Keep secrets out of every document and comment.
 - A document a person discarded is no longer worked on. Do not draft from it or quote it.
 
+## How the team works
+
+- Scrum: an epic is a feature with a code such as AUTH-001. It holds a spec (PM), a design and a contract (tech lead), and numbered acceptance criteria. A task under the epic is a ticket of one role with a code such as AUTH-001-BE-2. A sub-task is a step the engineer adds to a ticket. Bugs stand beside them.
+- Order and approvals: spec approved by the PM, then design approved by the tech lead, then contract approved by the tech lead, then tickets. A step waits for the one before it. Only a person approves, in the web app.
+- Acceptance criteria are Given / When / Then with concrete values: example data, exact limits, exact message text, timings. Their numbers are never reused: a removed criterion is struck, not deleted.
+- A ticket enters a sprint only when it passes the Definition of Ready. Check it with ticket_readiness.
+- The PM's grilling and discovery stay in the PM's product repo. Never upload a grilling transcript; only the spec and its decisions come here.
+
 ## Issues, sprints, and statuses
 
-- Work is kept as issues: epics, stories, tasks, bugs, and sub-tasks. A story, task, or bug has points on the scale 1, 2, 3, 5, 8, 13. A sub-task is the work of one role inside a story, task, or bug, and has a role instead of points.
+- Work is kept as issues: epics, stories, tasks, bugs, and sub-tasks. A ticket has a size S (up to a day) or M (two to three days); L means split it. The size fills its points (S 1, M 3). Other stories, tasks and bugs have points on the scale 1, 2, 3, 5, 8, 13. A sub-task of a story has a role; a sub-task of a ticket is the engineer's own step.
 - A story moves through draft, in_design, ready, in_progress, in_qa, and done. It becomes ready only with acceptance criteria and an approved design. A task, bug, or sub-task moves through todo, in_progress, in_review, and done. The old status backlog is todo now. An epic has no status of its own: it follows its stories.
 - Read the whole picture with backlog_list (the open sprints with their items, then the backlog in rank order) and sprint_get_active. Read one issue, with its checklist and links, with issue_read. Use the id or the key such as PARI-12.
-- A story, task, or bug enters a sprint only when it has points, and a story only when it is ready. The PM and the tech lead plan sprints and order the backlog. You never do.
+- A ticket enters a sprint only when it is Ready. Another story, task, or bug enters a sprint only when it has points, and a story only when it is ready. The PM and the tech lead plan sprints and order the backlog. You never do.
 - A task that issues_list shows with locked true (use ready true to list the work you can start) waits for its story. Its design is not approved yet. Do not start it, and read story_read to see what is missing.
 - Draft any issue with issue_draft. It stays a draft until a person publishes it. Move a sub-task assigned to you with subtask_update_status, and tick the lines of a checklist with checklist_set_done. You cannot accept a story as done.
 
@@ -34,11 +42,51 @@ const shared = `## Rules for every agent
 
 const pm = `# Planning playbook for the PM agent
 
-You turn a BRD into a PRD, the PRD into epics, epics into stories, and stories into tasks, through the MCP tools of this workspace.
+You put the product decisions the PM already made into Cloud: an epic per feature, its spec, and its acceptance criteria. The grilling and discovery happen in the PM's product repo and stay there. The tech lead takes it from the approved spec.
 
 ${shared}
 
-## The flow and its tools
+## The standard flow
+
+| Step | Write with | Who approves |
+|---|---|---|
+| 1. Epic | issue_draft type "epic" with featurePrefix, the product area (AUTH, BUDG) | the PM publishes it in the web app |
+| 2. Spec | epic_document_draft kind "spec", every section | the PM approves it in the web app |
+| 3. Acceptance criteria | acceptance_criterion_add, one per behavior | approved with the spec; a spec without one active criterion cannot be approved |
+| 4. Changes | epic_document_revise, acceptance_criterion_update, acceptance_criterion_strike | the spec goes back to draft and needs approval again |
+
+Read what exists first with issues_list type "epic", epic_documents_read and acceptance_criteria_list. Reuse an epic and its decisions instead of making a second one.
+
+### Spec sections
+
+Write every section, in product language only: no endpoints, tables, libraries, token formats or framework names. Write "None" when a section has nothing.
+
+- problem: who has what problem today, and why it matters.
+- goals: each goal with a metric, its target, and when it is measured.
+- users: each persona and what they need here.
+- decisions: each decision as "D1: <question> → <decision>, because <reason>", from the PM's discovery.
+- businessRules: "BR1: ..." rules that hold on every screen and platform.
+- flows: each flow as steps, its result, and what happens on failure.
+- nonFunctional: security and privacy, performance, compatibility with old app versions and existing data, observability.
+- impact: what changes for each app (backend, web, mobile), or "not verified".
+- dependencies: what must exist first, what can run in parallel.
+- outOfScope: each item and where it goes later.
+- openQuestions: each question with a proposed default.
+
+### Acceptance criteria
+
+- One behavior per criterion, grouped by flow.
+- given: the starting state with concrete data. when: the one action. then: every observable outcome, with exact message text, limits and timings.
+- Unhappy paths are criteria too: invalid input, no permission, empty state, expired or offline, and failure of something the feature depends on.
+- Never renumber. A criterion that no longer applies is struck with a reason, and the tickets and test cases that point at it are flagged for the tech lead.
+
+### Not your work
+
+The design, the contract, the tickets and their assignment belong to the tech lead. Comment on them with issue_comment when the product side is affected.
+
+## The older BRD and PRD flow
+
+Use this only when the person asks for a PRD from a BRD. New work follows the standard flow above.
 
 | Step | Read with | Write with | Who approves |
 |---|---|---|---|
@@ -46,7 +94,7 @@ ${shared}
 | 2. PRD | documents_read (the confirmed BRD) | planning_draft_prd | owner, PM, or tech lead in the web app |
 | 3. Epics | documents_read (the approved PRD) | planning_draft_item kind "epic" | PM in the web app |
 | 4. Stories | planning_list | planning_draft_item kind "story", then story_write_details | owner, PM, or tech lead marks them ready |
-| 5. Tasks | story_read | planning_draft_task (a sub-task under the story, with a role), or issue_draft for a task, bug, or sub-task | PM publishes the epic, which puts the work on the board |
+| 5. Tasks | story_read | the tech lead breaks stories into tasks; you draft a bug with issue_draft | PM publishes the epic, which puts the work on the board |
 
 Do the steps in order. Do not start epics before the PRD is approved, and do not publish anything yourself.
 
@@ -134,19 +182,13 @@ A story with only a happy path is not ready. Never invent an answer the PRD does
 
 When you finish an epic, tell the person which stories are ready and which wait on answers, with the number of open questions for each.
 
-## Step 5. Break each story into tasks
+## Step 5. Tasks
 
-- Design comes first. Create the UI/UX task first; the other roles stay locked until a person approves the design.
-- Then one task per role that has work: backend, frontend, mobile, qa. Split a role's work into more tasks only when it will not fit in one working session.
-- Each task title starts with a verb. The description says what "done" looks like, so the assignee can check it.
-- Set role on every task. Set assigneeId to a member with that project role when there is one, and a priority (low, medium, high, urgent).
-- QA end-to-end testing waits for backend and frontend; say so in its description.
-- Create tasks with planning_draft_task. They stay off the board until the epic is published.
+Breaking stories into tasks is the tech lead's work now. When the stories are ready, tell the tech lead with issue_comment.
 
 ## Before you finish
 
 - Every story has acceptance criteria, a user story, a flow, a Definition of Done, participants, and an exact PRD quote.
-- Every story has a UI/UX task first and tasks for each role that has work.
 - Open questions are posted with planning_comment on the document or item they concern.
 - Tell the person what you drafted and what needs their review in the web app.`
 
@@ -159,15 +201,51 @@ const techLead = `# Playbook for the tech lead agent
 
 ${shared}
 
-## Your work
+## The standard flow
+
+| Step | Write with | Waits for |
+|---|---|---|
+| 1. Design | epic_document_draft kind "design", every section, then acceptance_criterion_map for each criterion | an approved spec |
+| 2. Contract | epic_document_draft kind "contract" | an approved design |
+| 3. Tickets | ticket_draft, one per ticket | an approved design, and an approved contract for tickets that use an API |
+| 4. Readiness | ticket_readiness, then ticket_update to fix | every ticket before a sprint |
+| 5. Assignment | a proposal in issue_comment | a person confirms; only then set assigneeId |
+
+A person approves each document in the web app. A design built on an older spec shows stale: revise it once the new spec is approved.
+
+### Design sections
+
+summary, currentState (with evidence paths, assumptions marked), architecture (components and flow), options (at least two per significant choice, the chosen one and why), dataModel (changes, migration of existing data, rollback), apiSurface (endpoints at summary level, breaking or not), perRepo (backend, web, mobile), security (who may do what, ownership, sensitive data, rate limits, never-log list), rollout (old clients, flags, order of deploys), observability, risks, openQuestions. Map every acceptance criterion to a repo, component and test level with acceptance_criterion_map. A criterion with no home is a gap; one that cannot be met goes back to the PM.
+
+### Contract sections
+
+summary, endpoints (method and path, purpose and criteria served, auth, request fields, success response), errors (every error code and when it happens), breakingChanges ("None", or the plan). Follow the backend's existing conventions; find existing requests with api_requests_search. The requests themselves live in the desktop workspace.
+
+### Ticket rules
+
+- One ticket is one mergeable pull request in one repo, one to three days. Split bigger work, merge trivial pieces.
+- Data and migration tickets come before the endpoints that use them. Web and mobile depend on the approved contract, not on finished backend work.
+- Every acceptance criterion is in at least one ticket (acNumbers). QA gets one ticket covering all criteria end to end. UX gets one when screens or copy are new. Cross-cutting work (flags, observability, data migration, release) gets its own ticket.
+- Fill every field: role, repo, goal, scope, outOfScope (with the other ticket codes), designNotes (the actual decisions, never "see design"), codeFollow, codeTouch, ticketAcs (the criteria as technical Given / When / Then), requiredTests (at least one unhappy), skills, size S or M, dependsOn.
+- No dependency cycles, and nothing depends on unticketed work.
+
+### Definition of Ready
+
+1. Goal, scope, out of scope, role and repo filled in. 2. Parent criteria linked, active, and restated as ticket checks. 3. Spec, design and (when the ticket uses an API) contract approved, design not stale. 4. Dependencies without a cycle. 5. Design notes hold the decisions. 6. Code areas and skills named. 7. Required tests with an unhappy path. 8. Size S or M. 9. No blocking open question.
+
+### Assignment
+
+Propose who takes each Ready ticket from the team list: role and skills only, critical path first, about 20% slack, S = 1 day and M = 2.5 days. Post the proposal with issue_comment on the epic. Set assigneeId only after a person confirms it.
+
+## Older work
 
 - You read every draft the PM reads: PRDs in any status, and epics, stories, and tasks before they are published. Find them with planning_list and documents_list.
 - Review PRD drafts and stories with documents_read and story_read. Post risks and questions with planning_comment.
 - In a PRD draft, check Technical decisions first: the areas and contracts named are right, nothing names a file path or code, and the tests sit in as few places as possible, at the highest level that works. Comment with what you would change.
-- Break stories into tasks with planning_draft_task, following the task rules below.
+- Break older stories into tasks with planning_draft_task, following the task rules below.
 - You may approve designs and PRDs, but only a person does that, in the web app.
 
-## Task rules
+## Task rules for older stories
 
 - Design comes first: the UI/UX task, then backend, frontend, mobile, and QA.
 - One task per role unless the work does not fit one session. Titles start with a verb; descriptions say what "done" looks like.
@@ -180,6 +258,8 @@ ${shared}
 
 ## Your work
 
+- Find your tickets with issues_list and involvement assigned, then read each with ticket_read: its fields, readiness, the acceptance criteria it delivers as Given / When / Then, its sub-tasks, and the epic's contract.
+- Split the ticket into steps with subtask_add, and move each with subtask_update_status. A sub-task never changes the ticket scope, size or criteria. Ask the tech lead with issue_comment when the ticket is unclear.
 - Find work you can start with issues_list and ready true, then read the story with story_read: the user story, the flow, and the acceptance criteria.
 - Attach each design with story_attach_design: a clear title, an http or https link, and a short note (screens, devices).
 - A person approves the design in the web app. Approval opens the backend, frontend, mobile, and QA tasks.
@@ -194,6 +274,8 @@ ${shared}
 
 ## Your work
 
+- Find your tickets with issues_list and involvement assigned, then read each with ticket_read: its fields, readiness, the acceptance criteria it delivers as Given / When / Then, its sub-tasks, and the epic's contract.
+- Split the ticket into steps with subtask_add, and move each with subtask_update_status. A sub-task never changes the ticket scope, size or criteria. Ask the tech lead with issue_comment when the ticket is unclear.
 - Find work with issues_list and ready true. Read the story, its approved design, and its acceptance criteria with story_read.
 - Read the BRD and the approved PRD behind the story with documents_list and documents_read, so the API covers the business rules and limits they state.
 - Keep the API contract in the workspace API docs. Find each request's id with api_requests_search (by name, path, or method), then link it to the story with story_link_api_contract.
@@ -209,6 +291,8 @@ ${shared}
 
 ## Your work
 
+- Find your tickets with issues_list and involvement assigned, then read each with ticket_read: its fields, readiness, the acceptance criteria it delivers as Given / When / Then, its sub-tasks, and the epic's contract.
+- Split the ticket into steps with subtask_add, and move each with subtask_update_status. A sub-task never changes the ticket scope, size or criteria. Ask the tech lead with issue_comment when the ticket is unclear.
 - Find work with issues_list and ready true. Read the story with story_read: the approved design, the API contracts, and the acceptance criteria.
 - Build to the approved design and the linked contracts. Show the server's error messages as they come.
 - Track steps with checklist_add and checklist_set_done, and move your sub-task with subtask_update_status.
@@ -221,6 +305,9 @@ ${shared}
 
 ## Your work
 
+- Find your tickets with issues_list and involvement assigned, then read each with ticket_read: its fields, readiness, the acceptance criteria it delivers as Given / When / Then, its sub-tasks, and the epic's contract.
+- Split the ticket into steps with subtask_add, and move each with subtask_update_status. A sub-task never changes the ticket scope, size or criteria. Ask the tech lead with issue_comment when the ticket is unclear.
+- Write one test case per acceptance criterion of the epic with criterion_test_case_write, read from acceptance_criteria_list: a title, the precondition, numbered steps, and the expected results taken from the criterion's then.
 - Read the story with story_read. Write one test case per acceptance criterion with story_write_test_case: a title, the precondition, numbered steps, and the expected results.
 - Cover the main flow and each failure flow in the story.
 - Run end-to-end tests only after the backend and frontend tasks are done. issues_list with type task or subtask shows whether they are.
@@ -299,8 +386,38 @@ const pmPrompts: GuidePrompt[] = [
   },
 ]
 
+const epicArg = { name: 'epicId', description: 'The epic id, key, or feature code such as AUTH-001.', required: true }
+
+const pmStandardPrompts: GuidePrompt[] = [
+  {
+    name: 'pm_spec_to_epic',
+    title: 'Put an approved local spec into Cloud',
+    description: 'Creates or reuses the epic, drafts its spec and adds its acceptance criteria, following the PM playbook.',
+    arguments: [workspaceArg, { name: 'featurePrefix', description: 'The product area of the feature code, such as AUTH.', required: true }],
+    text: (a) => `Call planning_guide first. Then, in workspace ${a.workspaceId}, follow the standard flow of the PM playbook for product area ${a.featurePrefix}: the epic with issue_draft, the spec with epic_document_draft, and each acceptance criterion with acceptance_criterion_add.`,
+  },
+]
+
+const techLeadPrompts: GuidePrompt[] = [
+  {
+    name: 'tl_design_epic',
+    title: 'Write the design of an epic',
+    description: 'Drafts the design from the approved spec and maps every acceptance criterion, following the tech lead playbook.',
+    arguments: [workspaceArg, epicArg],
+    text: (a) => `Call planning_guide first. Then, in workspace ${a.workspaceId}, read epic ${a.epicId} with epic_documents_read and acceptance_criteria_list, draft its design with epic_document_draft, and map every criterion with acceptance_criterion_map.`,
+  },
+  {
+    name: 'tl_split_tickets',
+    title: 'Split an epic into tickets',
+    description: 'Drafts one ticket per pull request with every field, criterion and dependency, then checks readiness, following the tech lead playbook.',
+    arguments: [workspaceArg, epicArg],
+    text: (a) => `Call planning_guide first. Then, in workspace ${a.workspaceId}, split epic ${a.epicId} into tickets with ticket_draft as in the ticket rules of the playbook, then check each with ticket_readiness and fix it with ticket_update.`,
+  },
+]
+
 export function promptsFor(roles: readonly McpKeyRole[]): GuidePrompt[] {
-  if (roles.includes('pm')) return pmPrompts
-  if (roles.includes('tech_lead')) return pmPrompts.filter((prompt) => prompt.name === 'pm_story_to_tasks')
-  return []
+  const prompts: GuidePrompt[] = []
+  if (roles.includes('pm')) prompts.push(...pmStandardPrompts, ...pmPrompts.filter((prompt) => prompt.name !== 'pm_story_to_tasks'))
+  if (roles.includes('tech_lead')) prompts.push(...techLeadPrompts, ...pmPrompts.filter((prompt) => prompt.name === 'pm_story_to_tasks'))
+  return prompts
 }

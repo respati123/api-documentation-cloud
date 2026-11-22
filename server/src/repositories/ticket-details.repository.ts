@@ -33,3 +33,13 @@ export async function saveTicketDetails(db: SQL, row: TicketDetailsRow): Promise
       required_tests = EXCLUDED.required_tests, out_of_scope = EXCLUDED.out_of_scope, skills = EXCLUDED.skills, size = EXCLUDED.size, uses_api = EXCLUDED.uses_api,
       open_questions = EXCLUDED.open_questions, updated_at = now()`
 }
+
+// The issues that block a ticket, that is, what it depends on.
+export async function listBlockerIds(db: SQL, issueId: string): Promise<string[]> {
+  const rows: Array<{ id: string }> = await db`SELECT from_id AS id FROM issue_links WHERE to_id = ${issueId} AND kind = 'blocks'`
+  return rows.map((row) => row.id)
+}
+
+export async function deleteBlockersOf(db: SQL, issueId: string): Promise<void> {
+  await db`DELETE FROM issue_links WHERE to_id = ${issueId} AND kind = 'blocks'`
+}

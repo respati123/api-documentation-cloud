@@ -12,6 +12,22 @@ import { broadcastPlanningChange, type PlanningScope } from '@/services/events'
 import { type AudienceTarget, commentTarget, planningAudience } from '@/services/planning-audience'
 import { addMcpChecklistItem, listMcpIssues, commentMcpIssue, draftMcpIssue, getMcpActiveSprint, guideIsFresh, listMcpBacklog, readMcpGuide, readMcpIssue, setMcpChecklistItemDone, updateMcpSubtaskStatus, writeMcpStoryDetails } from '@/services/mcp-access'
 import { promptsFor, serverInstructions } from '@/services/mcp-guides'
+import {
+  addMcpCriterion,
+  addMcpSubtask,
+  draftMcpEpicDocument,
+  draftMcpTicket,
+  listMcpCriteria,
+  mapMcpCriterion,
+  readMcpEpicDocuments,
+  readMcpReadiness,
+  readMcpTicket,
+  reviseMcpEpicDocument,
+  strikeMcpCriterion,
+  updateMcpCriterion,
+  updateMcpTicket,
+  writeMcpCriterionTestCase,
+} from '@/services/mcp-standard'
 import { attachMcpDesign, linkMcpContract, linkMcpDataModel, requireAppWorkspace, readMcpStory, writeMcpTestCase } from '@/services/mcp-access'
 import { authenticateMcpKey, commentMcpPlanning, draftMcpItem, draftMcpPrd, draftMcpTask, listMcpPlanning, listMcpWorkspaces, uploadMcpBrd } from '@/services/mcp-access'
 import { listMcpDocuments, readMcpReadableDocument } from '@/services/mcp-access'
@@ -40,6 +56,16 @@ const MCP_WRITES: Partial<Record<McpTool, { scope: PlanningScope; target: (args:
   subtask_update_status: { scope: 'items', target: () => ({ kind: 'everyone' }) },
   checklist_set_done: { scope: 'items', target: () => ({ kind: 'everyone' }) },
   checklist_add: { scope: 'items', target: () => ({ kind: 'everyone' }) },
+  epic_document_draft: { scope: 'documents', target: () => ({ kind: 'managers' }) },
+  epic_document_revise: { scope: 'documents', target: () => ({ kind: 'managers' }) },
+  acceptance_criterion_add: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  acceptance_criterion_update: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  acceptance_criterion_strike: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  acceptance_criterion_map: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  criterion_test_case_write: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  ticket_draft: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  ticket_update: { scope: 'items', target: () => ({ kind: 'managers' }) },
+  subtask_add: { scope: 'items', target: () => ({ kind: 'everyone' }) },
 }
 
 // Writes that add something. A retry with the same clientRequestId returns the first result instead of adding twice.
@@ -56,10 +82,15 @@ const REPLAYABLE = new Set<McpTool>([
   'issue_draft',
   'issue_comment',
   'checklist_add',
+  'epic_document_draft',
+  'acceptance_criterion_add',
+  'criterion_test_case_write',
+  'ticket_draft',
+  'subtask_add',
 ])
 // story_write_details replaces the Definition of Done. Setting a status or a done flag twice changes nothing more.
 const DESTRUCTIVE = new Set<McpTool>(['story_write_details'])
-const IDEMPOTENT = new Set<McpTool>(['subtask_update_status', 'checklist_set_done', 'story_write_details', 'notifications_mark_read'])
+const IDEMPOTENT = new Set<McpTool>(['subtask_update_status', 'checklist_set_done', 'story_write_details', 'notifications_mark_read', 'acceptance_criterion_update', 'acceptance_criterion_map', 'ticket_update'])
 
 type RpcRequest = { id?: string | number | null; method?: string; params?: unknown }
 type Args = Record<string, unknown>
@@ -70,6 +101,25 @@ const workspaceId = { type: 'string', description: 'Workspace id from workspaces
 const commentBody = { type: 'string', description: 'The comment. Write @handle to mention a member; find handles with team_members_list.' }
 const parentId = { type: 'string', description: 'Id of the comment you answer, from discussion_read. Leave out to start a new thread.' }
 const clientRequestId = { type: 'string', maxLength: 100, description: 'Optional id you choose for this write. Send the same id when you retry after a timeout, and the first result comes back instead of a second copy.' }
+
+const ticketProperties = {
+  role: { type: 'string', enum: ['backend', 'frontend', 'mobile', 'qa', 'ui_ux'], description: 'The role of the ticket. It gives the ticket its code, such as AUTH-001-BE-2.' },
+  repo: text,
+  goal: text,
+  scope: text,
+  designNotes: { type: 'string', description: 'The decisions this ticket implements: endpoints, fields, states, rules, error codes. Never just "see design".' },
+  codeFollow: { type: 'string', description: 'An existing path to copy the pattern from.' },
+  codeTouch: { type: 'string', description: 'The paths or modules expected to change.' },
+  ticketAcs: { type: 'array', items: { type: 'object', properties: { given: text, when: text, then: { type: 'array', items: text } }, required: ['given', 'when', 'then'] }, description: 'The parent criteria restated as technical checks.' },
+  requiredTests: { type: 'array', items: { type: 'object', properties: { case: text, unhappy: { type: 'boolean' } }, required: ['case', 'unhappy'] }, description: 'Concrete cases, at least one unhappy path.' },
+  outOfScope: { type: 'string', description: 'Work in other tickets, with their codes.' },
+  skills: { type: 'array', items: text, description: 'Engineering skills, such as api-endpoint, db-migration, ui-component, mobile-screen.' },
+  size: { type: 'string', enum: ['S', 'M', 'L'], description: 'S up to a day, M two to three days. L means split it.' },
+  usesApi: { type: 'boolean', description: 'False when the ticket neither builds nor calls an API, so it does not wait for the contract.' },
+  openQuestions: { type: 'string', description: 'A question that blocks the ticket. Leave empty when none.' },
+  acNumbers: { type: 'array', items: { type: 'integer', minimum: 1 }, description: 'The acceptance criteria of the epic this ticket delivers.' },
+  dependsOn: { type: 'array', items: text, description: 'Ticket codes, keys or ids of the work that must finish first. Replaces the current list.' },
+}
 
 function inWorkspace(title: string, properties: Record<string, unknown>, required: string[], description: string, run: ToolDefinition['run']): ToolDefinition {
   return { title, description, properties: { workspaceId, ...properties }, required: ['workspaceId', ...required], run }
@@ -105,6 +155,7 @@ const tools: Record<McpTool, ToolDefinition> = {
       priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
       role: { type: 'string', enum: ['ui_ux', 'backend', 'frontend', 'mobile', 'qa'], description: 'The role of a sub-task. Required for a sub-task.' },
       assigneeId: text,
+      featurePrefix: { type: 'string', description: 'For an epic: the product area of its feature code, 2 to 8 capital letters such as AUTH. Leave out to use the project key.' },
       clientRequestId,
     },
     ['type', 'title'],
@@ -220,6 +271,95 @@ const tools: Record<McpTool, ToolDefinition> = {
     'Read the comments on a document, epic, story, or task you may read, as threads with their replies. Use a comment id as parentId to answer it.',
     (db, p, a) => readMcpDiscussion(db, p, a.workspaceId, { targetKind: a.targetKind, targetId: a.targetId }),
   ),
+  epic_documents_read: inWorkspace('Read the documents of an epic', { epicId: { type: 'string', description: 'The epic id, key such as PARI-3, or feature code such as AUTH-001.' } }, ['epicId'], 'Read the spec, design and contract of an epic, with their status, version, sections and staleness, and for each kind what it still waits for (blocked). Members see approved documents; the PM and tech lead see drafts too.', (db, p, a) => readMcpEpicDocuments(db, p, a.workspaceId, a.epicId)),
+  epic_document_draft: inWorkspace(
+    'Draft a spec, design or contract',
+    {
+      epicId: text,
+      kind: { type: 'string', enum: ['spec', 'design', 'contract'] },
+      title: text,
+      sections: { type: 'object', additionalProperties: { type: 'string' }, description: 'Every section of the kind, as named in planning_guide. Write "None" for a section with nothing in it.' },
+      clientRequestId,
+    },
+    ['epicId', 'kind', 'sections'],
+    'Draft the spec (PM) or the design or contract (tech lead) of an epic, following planning_guide. A design waits for an approved spec, a contract for an approved design. Missing sections are named in EPIC_DOCUMENT_INCOMPLETE. A person approves it in the web app.',
+    (db, p, a) => draftMcpEpicDocument(db, p, a.workspaceId, a),
+  ),
+  epic_document_revise: inWorkspace(
+    'Revise a spec, design or contract',
+    { epicId: text, documentId: text, expectedVersion: { type: 'integer', minimum: 1, description: 'The version you read. A newer one is a conflict: read again.' }, title: text, sections: { type: 'object', additionalProperties: { type: 'string' } } },
+    ['epicId', 'documentId', 'expectedVersion', 'sections'],
+    'Save a new version of an epic document with all its sections. It goes back to draft and needs approval again. A design revised after a new spec is approved catches up with it.',
+    (db, p, a) => reviseMcpEpicDocument(db, p, a.workspaceId, a),
+  ),
+  acceptance_criteria_list: inWorkspace('Read acceptance criteria', { epicId: text }, ['epicId'], 'Read the acceptance criteria of an epic as Given / When / Then, with their number, status, design mapping, coverage, the tickets and test cases that point at each, and the work flagged by struck criteria.', (db, p, a) => listMcpCriteria(db, p, a.workspaceId, a.epicId)),
+  acceptance_criterion_add: inWorkspace(
+    'Add an acceptance criterion',
+    {
+      epicId: text,
+      flow: { type: 'string', description: 'The flow it belongs to, such as Sign in.' },
+      title: text,
+      given: { type: 'string', description: 'The starting state, with concrete data.' },
+      when: { type: 'string', description: 'The one action.' },
+      then: { type: 'array', items: text, minItems: 1, maxItems: 10, description: 'Every observable outcome: exact message text, limits, timings.' },
+      clientRequestId,
+    },
+    ['epicId', 'title', 'given', 'when', 'then'],
+    'Add an acceptance criterion to the spec of an epic while the spec is a draft (PM). The server gives it the next number, never reused.',
+    (db, p, a) => addMcpCriterion(db, p, a.workspaceId, a),
+  ),
+  acceptance_criterion_update: inWorkspace(
+    'Edit an acceptance criterion',
+    { epicId: text, number: { type: 'integer', minimum: 1 }, flow: text, title: text, given: text, when: text, then: { type: 'array', items: text } },
+    ['epicId', 'number', 'title', 'given', 'when', 'then'],
+    'Replace the text of an active acceptance criterion while the spec is a draft (PM).',
+    (db, p, a) => updateMcpCriterion(db, p, a.workspaceId, a),
+  ),
+  acceptance_criterion_strike: inWorkspace(
+    'Strike an acceptance criterion',
+    { epicId: text, number: { type: 'integer', minimum: 1 }, reason: { type: 'string', description: 'Why, and where the work went, such as Moved to AUTH-004.' } },
+    ['epicId', 'number', 'reason'],
+    'Strike an acceptance criterion instead of deleting it, while the spec is a draft (PM). Its number stays taken, and the tickets and test cases that point at it are flagged.',
+    (db, p, a) => strikeMcpCriterion(db, p, a.workspaceId, a),
+  ),
+  acceptance_criterion_map: inWorkspace(
+    'Map a criterion to the design',
+    {
+      epicId: text,
+      number: { type: 'integer', minimum: 1 },
+      entries: {
+        type: 'array',
+        items: { type: 'object', properties: { repo: { type: 'string', enum: ['backend', 'web', 'mobile', 'qa', 'ui_ux'] }, component: text, testLevel: { type: 'string', enum: ['unit', 'integration', 'e2e', 'manual'] } }, required: ['repo', 'component', 'testLevel'] },
+      },
+    },
+    ['epicId', 'number', 'entries'],
+    'Say where the design satisfies an acceptance criterion: repo, component and test level, while the design is a draft (tech lead). Replaces the current mapping.',
+    (db, p, a) => mapMcpCriterion(db, p, a.workspaceId, a),
+  ),
+  criterion_test_case_write: inWorkspace(
+    'Write a test case for a criterion',
+    { epicId: text, number: { type: 'integer', minimum: 1 }, title: text, precondition: text, steps: { type: 'array', items: text }, expected: { type: 'array', items: text }, clientRequestId },
+    ['epicId', 'number', 'title', 'steps', 'expected'],
+    'Add a test case that checks one active acceptance criterion of an epic (QA, PM or tech lead).',
+    (db, p, a) => writeMcpCriterionTestCase(db, p, a.workspaceId, a),
+  ),
+  ticket_read: inWorkspace('Read a ticket', { ticketId: { type: 'string', description: 'The ticket code such as AUTH-001-BE-2, the key, or the id.' } }, ['ticketId'], 'Read a ticket with everything needed to start: its fields, readiness, the acceptance criteria it delivers, its sub-tasks, and the contract of its epic.', (db, p, a) => readMcpTicket(db, p, a.workspaceId, a.ticketId)),
+  ticket_readiness: inWorkspace('Check a ticket against the Definition of Ready', { ticketId: text }, ['ticketId'], 'Check a ticket against the nine items of the Definition of Ready. Returns ready, and each failing item with its rule and reason.', (db, p, a) => readMcpReadiness(db, p, a.workspaceId, a.ticketId)),
+  ticket_draft: inWorkspace(
+    'Draft a ticket',
+    { epicId: text, title: text, priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] }, assigneeId: text, ...ticketProperties, clientRequestId },
+    ['epicId', 'title', 'role'],
+    'Draft one ticket under an epic (tech lead), following the ticket rules of planning_guide: the task, its ticket fields, the acceptance criteria it delivers, and what it depends on. The answer carries the ticket code and its readiness. A person publishes it.',
+    (db, p, a) => draftMcpTicket(db, p, a.workspaceId, a),
+  ),
+  ticket_update: inWorkspace(
+    'Update a ticket',
+    { ticketId: text, ...ticketProperties },
+    ['ticketId'],
+    'Update the fields, criteria or dependencies of a ticket (tech lead). Fields left out keep their value. The answer carries its readiness.',
+    (db, p, a) => updateMcpTicket(db, p, a.workspaceId, a),
+  ),
+  subtask_add: inWorkspace('Add a sub-task to a ticket', { ticketId: text, title: text, description: text, clientRequestId }, ['ticketId', 'title'], 'Add a step to a ticket you work on. It is assigned to you and shows right away. Move it with subtask_update_status. Sub-tasks never change the ticket scope.', (db, p, a) => addMcpSubtask(db, p, a.workspaceId, a)),
   notifications_mark_read: {
     title: 'Mark notifications read',
     description: 'Mark notifications as read, by id or all at once, after you handled them.',
@@ -375,7 +515,8 @@ async function callTool(ctx: AppContext, principal: McpPrincipal, id: RpcRequest
       broadcastPlanningChange(ctx, args.workspaceId, write.scope, principal.userId, await planningAudience(ctx.db, args.workspaceId, write.target(args)))
     return ok(result)
   } catch (error) {
-    if (error instanceof AppError) return refused({ code: error.code, error: error.message })
+    // The details name what to fix: missing sections, the approval a step waits for, failing readiness items.
+    if (error instanceof AppError) return refused({ code: error.code, error: error.message, ...(error.details === undefined ? {} : { details: error.details }) })
     throw error
   }
 }

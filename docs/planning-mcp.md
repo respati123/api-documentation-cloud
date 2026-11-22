@@ -2,7 +2,30 @@
 
 Satu workspace adalah satu project. PM mengunggah BRD di tab **Documents** (`PDF`, `DOCX`, `MD`, atau `TXT`, maksimal 10 MB). Server mengekstrak teks untuk agent dan menyimpan file asli. PDF berbasis gambar yang tidak memiliki lapisan teks belum dapat diproses; lakukan OCR sebelum diunggah.
 
-## Alur PM dan agent
+## Alur standar tim
+
+Standar artefak tim (CLOUD-001) memakai Scrum: epic adalah fitur dengan kode seperti `AUTH-001`, task di bawah epic adalah tiket satu role dengan kode seperti `AUTH-001-BE-2`, dan subtask adalah langkah yang ditambahkan engineer. Grilling dan discovery PM tetap di repo produk lokal; yang masuk ke cloud hanya spec beserta keputusannya.
+
+| Langkah | Role | Tool MCP | Disetujui oleh |
+|---|---|---|---|
+| Epic | PM | `issue_draft` type `epic` dengan `featurePrefix` (misalnya `AUTH`) | PM mem-publish di portal |
+| Spec | PM | `epic_document_draft` kind `spec`, semua bagian wajib diisi | PM di portal |
+| Acceptance criteria | PM | `acceptance_criterion_add` (Given / When / Then), `acceptance_criterion_update`, `acceptance_criterion_strike` | bersama spec; spec tanpa AC aktif tidak bisa disetujui |
+| Desain teknis | Tech lead | `epic_document_draft` kind `design`, lalu `acceptance_criterion_map` per AC | tech lead di portal, setelah spec disetujui |
+| Kontrak API | Tech lead | `epic_document_draft` kind `contract` | tech lead di portal, setelah desain disetujui |
+| Tiket | Tech lead | `ticket_draft` (field tiket, `acNumbers`, `dependsOn`), `ticket_update`, `ticket_readiness` | PM atau tech lead mem-publish; tiket masuk sprint hanya kalau lolos Definition of Ready |
+| Pengerjaan | Engineer | `ticket_read`, `subtask_add`, `subtask_update_status` | — |
+| Test case | QA | `criterion_test_case_write` per AC | — |
+
+- Semua role bisa membaca `epic_documents_read`, `acceptance_criteria_list`, `ticket_read`, dan `ticket_readiness`.
+- Spec, desain, dan kontrak bisa direvisi dengan `epic_document_revise`; revisi mengembalikan dokumen ke draft. Desain yang dibangun di atas spec lama ditandai `stale`.
+- Key agent tidak pernah menyetujui dokumen; persetujuan selalu oleh orang di portal.
+- Memecah pekerjaan menjadi task sekarang tugas tech lead. Key PM tidak lagi punya `planning_draft_task` maupun tool tiket.
+- Prompt MCP: PM mendapat `pm_spec_to_epic`; tech lead mendapat `tl_design_epic` dan `tl_split_tickets`.
+
+## Alur lama BRD dan PRD
+
+Alur ini tetap berjalan untuk pekerjaan lama. Pekerjaan baru mengikuti alur standar di atas.
 
 1. Owner workspace memberi PM role proyek `pm` di tab **Tim**. PM membuat API key sendiri di **Pengaturan → Akses MCP** (`/settings/mcp`) dengan nama dan masa berlaku 30, 90, atau 365 hari, atau tanpa kedaluwarsa. Nilai key hanya muncul sekali saat dibuat; daftar key hanya menampilkan 4 karakter terakhir. Satu anggota boleh punya maksimal 10 key aktif dan bisa mencabutnya sendiri.
 2. Agent PM terhubung ke `/api/mcp` dengan `Authorization: Bearer <key>`. Halaman `/settings/mcp` menampilkan perintah setup untuk Claude Code dan Codex.
@@ -10,16 +33,16 @@ Satu workspace adalah satu project. PM mengunggah BRD di tab **Documents** (`PDF
 4. Agent menulis isi PRD dan memanggil `planning_draft_prd` dengan `sourceDocumentId` BRD, `title`, dan `content`. Cloud menyimpan draf; cloud tidak menjalankan model AI.
 5. PM dan tim membahas PRD di **Documents**. PM memindahkan status `Draft → Review PM → Review tim`, lalu PM, tech lead, atau owner menyetujui ke `Approved`. Setiap revisi membuat versi baru. Perubahan BRD setelah PRD dibuat ditandai untuk ditinjau.
 6. Agent memanggil `planning_draft_item` untuk Epic dari PRD Approved, lalu untuk Story dengan `parentId` Epic. Isi `acceptanceCriteria`, `sourceSection`, dan `participantIds` pada Story. `sourceSection` harus berupa kutipan teks yang benar-benar ada dalam PRD.
-7. Agent memanggil `planning_draft_task` untuk setiap pekerjaan per anggota, dengan `storyId`, `title`, dan `assigneeId`.
+7. Agent tech lead memanggil `planning_draft_task` untuk setiap pekerjaan per anggota, dengan `storyId`, `title`, dan `assigneeId`. Key PM tidak lagi punya tool ini.
 8. PM dan tim melakukan refinement pada Story. PM atau tech lead memindahkan Story dan Epic ke `Ready`, lalu menekan **Publish epic & tasks**. Publish hanya berhasil jika Epic punya Story, setiap Story punya Task, dan seluruh Story sudah `Ready`. Task baru muncul pada board setelah publish.
 
 ## Panduan wajib agent
 
-- Saat `initialize`, server mengirim `instructions` yang meminta agent memanggil `planning_guide` lebih dulu. Panduan disusun dari semua role proyek anggota: PM mendapat playbook lengkap BRD → PRD → Epic → Story → Task, role lain mendapat panduan singkat untuk tugasnya. Anggota dengan beberapa role (misalnya backend dan QA) mendapat panduan tiap role. Anggota tanpa role mendapat panduan dasar. `planning_guide` selalu tersedia.
+- Saat `initialize`, server mengirim `instructions` yang meminta agent memanggil `planning_guide` lebih dulu. Panduan disusun dari semua role proyek anggota: PM mendapat playbook alur standar (epic, spec, acceptance criteria) ditambah alur lama BRD → PRD, tech lead mendapat playbook desain, kontrak, tiket, Definition of Ready, dan usulan penugasan, dan engineer mendapat panduan membaca tiket dan menambah subtask. Anggota dengan beberapa role (misalnya backend dan QA) mendapat panduan tiap role. Anggota tanpa role mendapat panduan dasar. `planning_guide` selalu tersedia.
 - Semua tool tulis ditolak dengan `MCP_GUIDE_REQUIRED` (409) sampai agent membaca panduan versi terbaru dalam 12 jam terakhir. Penolakan itu sudah memuat panduannya di field `guide` dan dihitung sebagai sudah dibaca, jadi agent bisa langsung mengulang panggilannya. Saat versi panduan naik, agent harus membacanya lagi.
 - Server juga memeriksa hasil yang wajib dari panduan dan menolak dengan `MCP_DRAFT_INCOMPLETE` (400) jika: PRD punya kurang dari 6 bagian `## `; Epic atau Story tanpa `sourceSection`; Story tanpa `acceptanceCriteria`; Task tanpa `role`; atau `story_write_details` tidak berisi user story, flow, dan Definition of Done.
 - Playbook PM menulis PRD tanpa mewawancarai orang: agent merangkum BRD, isi percakapan, serta epic, story, dan API yang sudah ada di workspace. Strukturnya mengikuti template Product Requirements di Confluence: Product overview (target date, anggota tim sebagai `@handle (role)` dari `team_members_list`, link desain, Loom, dan work tracker), Objective, Success metrics (tabel Goal | Metric), Assumptions, Milestones, Requirements (tabel ID | Requirement | User story | Importance | Jira issue | Notes, dengan ID `R1`, `R2`, …), Out of scope, Design, Technical decisions, Open questions (tabel Question | Answer | Date answered), dan Reference links. Technical decisions adalah tambahan di luar template: keputusan implementasi (hanya yang sudah diputuskan, tanpa path file atau kode) dan keputusan pengujian (sesedikit mungkin titik uji, di level tertinggi), diadaptasi dari skill `to-spec` di mattpocock/skills. Tech lead memeriksa bagian ini saat review. Epic mengutip awal baris requirement, misalnya `R1 | Owner mengundang anggota lewat email`.
-- Agent PM bisa memakai prompt MCP `pm_brd_to_prd`, `pm_prd_to_epics`, `pm_epic_to_stories`, dan `pm_story_to_tasks` (tech lead mendapat `pm_story_to_tasks`).
+- Agent PM bisa memakai prompt MCP `pm_spec_to_epic`, `pm_brd_to_prd`, `pm_prd_to_epics`, dan `pm_epic_to_stories`. Tech lead mendapat `tl_design_epic`, `tl_split_tickets`, dan `pm_story_to_tasks`.
 - Anggota melihat panduan untuk role-nya di `/settings/mcp`, bagian **Panduan wajib agent**.
 
 ## Kolaborasi dan akses
@@ -86,5 +109,5 @@ Setelah meninjau perubahan PRD pada draf yang belum diterbitkan, PM dapat meneka
 - Hasil tool dikirim sebagai teks JSON dan juga `structuredContent`. Daftar dibungkus menjadi `{ "items": [...] }`.
 - Tool tulis yang menambah sesuatu menerima `clientRequestId` opsional. Panggilan ulang dengan ID yang sama dalam 24 jam mengembalikan hasil pertama, jadi retry setelah timeout tidak membuat draf ganda. Selama panggilan pertama masih berjalan, panggilan kedua mendapat `MCP_REQUEST_IN_PROGRESS`.
 - BRD dan PRD yang boleh dibaca key juga tersedia sebagai MCP resource (`apidocs://workspaces/{workspaceId}/documents/{documentId}`), sehingga pengguna bisa melampirkannya ke konteks agent.
-- Tool lama yang digantikan tool lain sudah dihapus dan kini dijawab sebagai tool yang tidak dikenal: `projects_list` (satu project per workspace), `stories_read_participating` (`story_read`), `planning_read_document` (`documents_read`), `tasks_get_assigned` (`issue_read`), `tasks_update_assigned_status` (`subtask_update_status`), `tasks_comment_assigned` dan `stories_comment_participating` (`issue_comment`), `subtasks_list` (`issue_read`), `subtask_add` (`checklist_add`), `subtask_set_done` (`checklist_set_done`), `tasks_list_assigned` (`issues_list` dengan `involvement: assigned`), `stories_list_participating` (`issues_list` dengan `involvement: participating`), `tasks_list_ready` (`issues_list` dengan `ready: true`), `project_items_list` dan `project_tasks_list` (`issues_list` dengan `type`). Dua tool lama tetap ada karena menegakkan aturan PRD pada jalur Discovery: `planning_draft_item` dan `planning_draft_task`.
+- Tool lama yang digantikan tool lain sudah dihapus dan kini dijawab sebagai tool yang tidak dikenal: `projects_list` (satu project per workspace), `stories_read_participating` (`story_read`), `planning_read_document` (`documents_read`), `tasks_get_assigned` (`issue_read`), `tasks_update_assigned_status` (`subtask_update_status`), `tasks_comment_assigned` dan `stories_comment_participating` (`issue_comment`), `subtasks_list` (`issue_read`), `subtask_set_done` (`checklist_set_done`), `tasks_list_assigned` (`issues_list` dengan `involvement: assigned`), `stories_list_participating` (`issues_list` dengan `involvement: participating`), `tasks_list_ready` (`issues_list` dengan `ready: true`), `project_items_list` dan `project_tasks_list` (`issues_list` dengan `type`). Dua tool lama tetap ada karena menegakkan aturan PRD pada jalur lama: `planning_draft_item` dan `planning_draft_task`. Nama `subtask_add` dipakai lagi untuk tool baru: menambah subtask ke tiket.
 - `issues_list` menampilkan issue project menurut nomornya, satu halaman sekali (`limit` 1 sampai 100, `cursor` dari `nextCursor`). Filternya `type`, `involvement` (`assigned` atau `participating`), `parentId`, dan `ready`. Draf hanya terlihat oleh PM dan tech lead.

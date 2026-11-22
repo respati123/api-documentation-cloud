@@ -62,7 +62,7 @@ const workspaceRoles = new WeakMap<McpPrincipal, Map<string, string[]>>()
 
 // Every tool except workspaces_list names a workspace. The member must belong to it, one of the member's roles
 // there must grant the tool, and a viewer only reads, at the time of the call.
-async function requireWorkspace(db: SQL, principal: McpPrincipal, tool: McpTool, workspaceId: unknown): Promise<string> {
+export async function requireWorkspace(db: SQL, principal: McpPrincipal, tool: McpTool, workspaceId: unknown): Promise<string> {
   requireTool(principal, tool)
   if (typeof workspaceId !== 'string') throw new AppError('WORKSPACE_NOT_FOUND')
   const membership = await findRole(db, workspaceId, principal.userId)
@@ -292,16 +292,16 @@ export async function readMcpDocumentResource(db: SQL, principal: McpPrincipal, 
 
 // The issue tools work in the one project of the workspace, as the member who owns the key. A key only drafts and moves
 // its owner's own sub-tasks, and the issue service holds it to that.
-const asAgent = (principal: McpPrincipal) => ({ userId: principal.userId, apiKeyId: principal.keyId })
+export const asAgent = (principal: McpPrincipal) => ({ userId: principal.userId, apiKeyId: principal.keyId })
 
 // The oldest project, as everywhere else that takes the one project of a workspace. The list is ordered by the last change.
-async function issueScope(db: SQL, workspaceId: string) {
+export async function issueScope(db: SQL, workspaceId: string) {
   const [project] = (await listProjects(db, workspaceId)).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
   if (!project) throw new AppError('PROJECT_NOT_FOUND')
   return { workspaceId, projectId: project.id }
 }
 
-const issueRef = (value: unknown): string => {
+export const issueRef = (value: unknown): string => {
   if (typeof value !== 'string' || value.length === 0 || value.length > 100) throw new AppError('ISSUE_INPUT_INVALID')
   return value
 }
