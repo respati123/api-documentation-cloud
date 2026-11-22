@@ -107,6 +107,8 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
           key: ARTIFACT_STANDARD_ENABLED ? displayCode(current) : current.key,
           title: current.title,
           typeLabel: say(BACKLOG_TEXT.type[current.type]),
+          // CLOUD-001: an epic opens its own space for the spec, design, contract and tickets.
+          opensEpicSpace: ARTIFACT_STANDARD_ENABLED && current.type === 'epic',
           description: current.description,
           acceptance: current.acceptanceCriteria,
           statusValue: current.status ?? '',

@@ -5,6 +5,7 @@ import type { useProjectsViewModel } from '@/features/projects/viewmodels/use-pr
 import { BacklogView } from '@/features/projects/views/backlog.view'
 import { DocumentDetailView } from '@/features/projects/views/document-detail.view'
 import { DocumentsListView } from '@/features/projects/views/documents-list.view'
+import { EpicWorkspaceView } from '@/features/projects/views/epic-workspace.view'
 import { EpicsListView } from '@/features/projects/views/epics-list.view'
 import { FlowView } from '@/features/projects/views/flow.view'
 import { IssueDetailView } from '@/features/projects/views/issue-detail.view'
@@ -20,7 +21,7 @@ import { TimelineView } from '@/features/projects/views/timeline.view'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Button } from '@/shared/components/primitives/button'
 import { Skeleton } from '@/shared/components/primitives/skeleton'
-import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
+import { AGILE_PROJECT_ENABLED, ARTIFACT_STANDARD_ENABLED } from '@/shared/config/features'
 
 export type ProjectsViewProps = ReturnType<typeof useProjectsViewModel> & { onManageTeam: () => void }
 
@@ -89,7 +90,11 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
                 canWritePrd={planning.dialogs.write.canWritePrd}
               />
             ))}
+          {planning.section === 'epics' && AGILE_PROJECT_ENABLED && ARTIFACT_STANDARD_ENABLED && (
+            <EpicWorkspaceView vm={vm.epicWorkspace} />
+          )}
           {planning.section === 'epics' &&
+            !AGILE_PROJECT_ENABLED &&
             (planning.detail === 'item' ? (
               <ItemDetailView
                 planning={planning}
@@ -122,7 +127,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
         </>
       )}
 
-      {AGILE_PROJECT_ENABLED && <IssueDetailView vm={vm.issueDetail} extras={vm.issueStory} />}
+      {AGILE_PROJECT_ENABLED && <IssueDetailView vm={vm.issueDetail} extras={vm.issueStory} onOpenEpic={vm.openEpic} />}
       <PlanningDialogsView dialogs={planning.dialogs} />
     </div>
   )

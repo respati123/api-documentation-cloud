@@ -123,6 +123,7 @@ jobs:
           build-args: |
             APP_VERSION=${{ steps.ver.outputs.app }}
             VITE_AGILE_PROJECT=true
+            VITE_ARTIFACT_STANDARD=true
           tags: |
             ${{ env.IMAGE }}:${{ github.ref_name }}
             ${{ env.IMAGE }}:sha-${{ github.sha }}

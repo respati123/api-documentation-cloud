@@ -4,7 +4,7 @@ export const PLANNING_TEXT = {
     label: 'planning:nav.label',
     flow: 'planning:nav.flow',
     overview: 'planning:nav.overview',
-    discovery: 'planning:nav.discovery',
+    agileEpics: 'planning:nav.agileEpics',
     agileBoard: 'planning:nav.agileBoard',
     documents: 'planning:nav.documents',
     epics: 'planning:nav.epics',

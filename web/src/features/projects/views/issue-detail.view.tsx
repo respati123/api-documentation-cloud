@@ -1,7 +1,8 @@
-import { Trash2 } from 'lucide-react'
+import { Layers, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ISSUE_DETAIL_TEXT } from '@/features/projects/constants/backlog-text.constants'
+import { EPIC_TEXT } from '@/features/projects/constants/epic-text.constants'
 import type { useIssueDetailViewModel } from '@/features/projects/viewmodels/use-issue-detail.viewmodel'
 import type { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
 import { CodeChip, Notice } from '@/features/projects/views/planning-marks.view'
@@ -21,7 +22,15 @@ export type IssueDetailProps = ReturnType<typeof useIssueDetailViewModel>
 type StoryExtras = ReturnType<typeof useStoryExtrasViewModel>
 
 // The detail of one issue, whatever its type, in a sheet that opens from the backlog and the board.
-export function IssueDetailView({ vm, extras }: { vm: IssueDetailProps; extras?: StoryExtras }) {
+export function IssueDetailView({
+  vm,
+  extras,
+  onOpenEpic,
+}: {
+  vm: IssueDetailProps
+  extras?: StoryExtras
+  onOpenEpic?: (id: string) => void
+}) {
   const { t } = useTranslation('planning')
   const issue = vm.issue
   return (
@@ -55,6 +64,18 @@ export function IssueDetailView({ vm, extras }: { vm: IssueDetailProps; extras?:
         {vm.status === 'ready' && issue && (
           <div className="grid gap-5 p-5">
             {issue.outdated && <OutdatedNotice level={issue.outdated} canReview={issue.canReview} onReview={issue.markReviewed} />}
+            {issue.opensEpicSpace && onOpenEpic && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-self-start"
+                data-testid="issue-detail-open-epic"
+                onClick={() => onOpenEpic(issue.id)}
+              >
+                <Layers data-icon="inline-start" />
+                {t(EPIC_TEXT.open)}
+              </Button>
+            )}
             {vm.actionError && (
               <Alert variant="destructive" data-testid="issue-detail-action-error">
                 <AlertDescription>{vm.actionError}</AlertDescription>
@@ -411,7 +432,7 @@ function TicketSections({ ticket }: { ticket: TicketPanel }) {
   )
 }
 
-function GivenWhenThen({ given, when, outcomes, testId }: { given: string; when: string; outcomes: string[]; testId: string }) {
+export function GivenWhenThen({ given, when, outcomes, testId }: { given: string; when: string; outcomes: string[]; testId: string }) {
   const { t } = useTranslation('planning')
   return (
     <dl className="grid grid-cols-[56px_1fr] gap-x-3 gap-y-1 rounded-lg border border-border px-3 py-2 text-sm" data-testid={testId}>

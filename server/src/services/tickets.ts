@@ -4,9 +4,9 @@ import { AppError } from '@/lib/errors/app-error'
 import type { IssueRow } from '@/models/issue'
 import { EMPTY_DETAILS, isTicketRole, mergeDetails, READINESS_ITEMS, type ReadinessItem, readinessMisses, ROLE_CODES, SIZE_POINTS, type TicketDetails } from '@/models/ticket'
 import { listIssueCriteria, lockEpic } from '@/repositories/acceptance-criteria.repository'
-import { blocksReach, findIssue, insertLinkRow, updateIssueFields } from '@/repositories/issues.repository'
+import { blocksReach, findIssue, insertLinkRow, listIssuesByNumber, updateIssueFields } from '@/repositories/issues.repository'
 import { listEpicDocumentRows } from '@/repositories/planning-documents.repository'
-import { deleteBlockersOf, findTicketDetails, listBlockerIds, nextTicketSeq, saveTicketDetails } from '@/repositories/ticket-details.repository'
+import { deleteBlockersOf, findTicketDetails, listBlockerIds, nextTicketSeq, openPointsByAssignee, saveTicketDetails } from '@/repositories/ticket-details.repository'
 import { type Actor, invalid, type IssueScope, loadVisible, logEvent } from '@/services/issues'
 import { resolveProjectRoles } from '@/services/project-roles'
 
@@ -112,4 +112,39 @@ export async function setTicketDependencies(db: SQL, scope: IssueScope, actor: A
     await logEvent(tx, scope, actor, issue.id, 'issue.dependencies_set', { dependsOn: blockers.map((blocker) => blocker.key) })
   })
   return listBlockerIds(db, issue.id)
+}
+
+export interface EpicTicket extends Ticket {
+  // The tasks it waits for, by id: blocks links into it.
+  dependsOn: string[]
+}
+
+export interface EpicTickets {
+  tickets: EpicTicket[]
+  // The points each member carries in open work across the project, for the assignment proposal.
+  load: Array<{ userId: string; points: number; count: number }>
+}
+
+const EPIC_TICKET_LIMIT = 200
+
+// The split of an epic in one read: every task under it with its ticket fields, readiness and what it waits for.
+// Drafts show to the PM and the tech lead, as everywhere else.
+export async function listEpicTickets(db: SQL, scope: IssueScope, actor: Actor, epicRef: string): Promise<EpicTickets> {
+  const roles = await resolveProjectRoles(db, scope.workspaceId, scope.projectId, actor.userId)
+  const epic = await loadVisible(db, scope, actor, roles, epicRef)
+  if (epic.type !== 'epic') throw new AppError('ISSUE_NOT_FOUND')
+  const tasks = await listIssuesByNumber(db, scope.projectId, {
+    type: 'task',
+    parentId: epic.id,
+    includeDrafts: roles.isApprover,
+    viewerId: actor.userId,
+    limit: EPIC_TICKET_LIMIT,
+    afterNumber: null,
+  })
+  const tickets: EpicTicket[] = []
+  for (const task of tasks) {
+    const stored = await findTicketDetails(db, task.id)
+    tickets.push({ issue: task, details: stored ?? EMPTY_DETAILS, readiness: await readinessOf(db, task), dependsOn: await listBlockerIds(db, task.id) })
+  }
+  return { tickets, load: await openPointsByAssignee(db, scope.projectId) }
 }
