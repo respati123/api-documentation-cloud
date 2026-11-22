@@ -149,6 +149,44 @@ describe('IssueDetailView', () => {
     expect(screen.getByTestId('issue-detail-action-error')).toHaveTextContent('A sub-task is not done.')
   })
 
+  test('a ticket shows its readiness, fields, checks, tests, delivered criteria and a sub-task form', () => {
+    const add = vi.fn()
+    const vm = props({
+      ticket: {
+        code: 'AUTH-001-BE-1',
+        fields: [{ id: 'goal', label: 'Goal', value: 'Sign up with email.' }],
+        checks: [{ id: '0', given: 'a new email', when: 'POST /v1/auth/register', outcomes: ['201 with tokens'] }],
+        tests: [{ id: '0', label: 'duplicate email returns 409', unhappy: true }],
+        ready: false,
+        readyLabel: 'Not Ready',
+        failing: [{ id: '8', label: 'Item 8: size L, split the ticket', rule: 'The estimate is S or M' }],
+        criteria: [
+          {
+            id: 'c1',
+            code: 'AC1',
+            title: 'Signs up',
+            given: 'a new email',
+            when: 'the user signs up',
+            outcomes: ['the home page opens'],
+            struck: false,
+          },
+          { id: 'c2', code: 'AC2', title: 'Phone sign up', given: '', when: '', outcomes: [], struck: true },
+        ],
+      },
+      subtaskForm: { value: 'Write the migration', setValue: vi.fn(), canAdd: true, add },
+    })
+    render(<IssueDetailView vm={vm} />)
+    expect(screen.getByTestId('issue-detail-readiness')).toHaveTextContent('Not Ready')
+    expect(screen.getByTestId('issue-detail-readiness-8')).toHaveTextContent('Item 8: size L, split the ticket')
+    expect(screen.getByTestId('issue-detail-ticket')).toHaveTextContent('Sign up with email.')
+    expect(screen.getByTestId('issue-detail-check-0')).toHaveTextContent('201 with tokens')
+    expect(screen.getByTestId('issue-detail-test-0')).toHaveTextContent('Unhappy path')
+    expect(screen.getByTestId('issue-detail-gwt-c1')).toHaveTextContent('the home page opens')
+    expect(screen.getByTestId('issue-detail-criterion-c2')).toHaveTextContent('Struck')
+    fireEvent.click(screen.getByTestId('issue-detail-subtask-add'))
+    expect(add).toHaveBeenCalled()
+  })
+
   test('is not shown while closed', () => {
     render(<IssueDetailView vm={props({ isOpen: false })} />)
     expect(screen.queryByTestId('issue-detail')).toBeNull()

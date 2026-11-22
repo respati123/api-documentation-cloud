@@ -64,6 +64,12 @@ export const issueSchema = z.object({
   designApprovedBy: z.nullable(z.string()),
   designApprovedAt: z.nullable(z.string()),
   testCaseId: z.nullable(z.string()),
+  // CLOUD-001: the feature code of an epic (AUTH-001), and the ticket code (AUTH-001-BE-2) and size of a ticket.
+  // Optional so an older server and the sample workspace still parse.
+  featureCode: z.optional(z.nullable(z.string())),
+  ticketCode: z.optional(z.nullable(z.string())),
+  size: z.optional(z.nullable(z.enum(['S', 'M', 'L']))),
+  isTicket: z.optional(z.boolean()),
   publishedAt: z.nullable(z.string()),
   createdBy: z.string(),
   createdAt: z.string(),
@@ -190,3 +196,88 @@ export type SprintReport = z.infer<typeof sprintReportSchema>
 export type Velocity = z.infer<typeof velocitySchema>
 export type FlowMetrics = z.infer<typeof flowSchema>
 export type WipLimit = { status: string; limit: number }
+
+// CLOUD-001: the ticket fields of a task and its Definition of Ready.
+export const READINESS_ITEMS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+
+export const readinessSchema = z.object({
+  ready: z.boolean(),
+  failing: z.array(z.object({ item: z.number(), rule: z.string(), reason: z.string() })),
+})
+
+// The server writes Given / When / Then with a "then" list. A data object with a "then" key looks like a promise to
+// await, so the list is read from the raw object and kept as "outcomes".
+const outcomesOf = (raw: Record<string, unknown>) => z.parse(z.array(z.string()), raw.then)
+const givenWhenThenSchema = z.pipe(
+  z.looseObject({ given: z.string(), when: z.string() }),
+  z.transform((raw) => ({ given: raw.given, when: raw.when, outcomes: outcomesOf(raw) })),
+)
+
+export const ticketDetailsSchema = z.object({
+  repo: z.string(),
+  goal: z.string(),
+  scope: z.string(),
+  designNotes: z.string(),
+  codeFollow: z.string(),
+  codeTouch: z.string(),
+  ticketAcs: z.array(givenWhenThenSchema),
+  requiredTests: z.array(z.object({ case: z.string(), unhappy: z.boolean() })),
+  outOfScope: z.string(),
+  skills: z.array(z.string()),
+  size: z.nullable(z.enum(['S', 'M', 'L'])),
+  usesApi: z.boolean(),
+  openQuestions: z.string(),
+})
+
+export const ticketSchema = z.object({ issue: issueSchema, details: ticketDetailsSchema, readiness: readinessSchema })
+
+export const deliveredCriterionSchema = z.pipe(
+  z.looseObject({
+    id: z.string(),
+    number: z.number(),
+    code: z.string(),
+    ref: z.string(),
+    flow: z.string(),
+    title: z.string(),
+    given: z.string(),
+    when: z.string(),
+    status: z.enum(['active', 'struck']),
+    struckReason: z.nullable(z.string()),
+  }),
+  z.transform((raw) => ({
+    id: raw.id,
+    number: raw.number,
+    code: raw.code,
+    ref: raw.ref,
+    flow: raw.flow,
+    title: raw.title,
+    given: raw.given,
+    when: raw.when,
+    outcomes: outcomesOf(raw),
+    status: raw.status,
+    struckReason: raw.struckReason,
+  })),
+)
+
+export type Readiness = z.infer<typeof readinessSchema>
+export type TicketDetails = z.output<typeof ticketDetailsSchema>
+export type Ticket = z.output<typeof ticketSchema>
+export type DeliveredCriterion = z.output<typeof deliveredCriterionSchema>
+
+// The code people use for an issue: the ticket code of a ticket, the feature code of an epic, else the key.
+export const displayCode = (issue: Pick<Issue, 'key' | 'ticketCode' | 'featureCode'>) => issue.ticketCode ?? issue.featureCode ?? issue.key
+
+// The failing readiness items a refused sprint move carries, if any.
+export function readinessFailures(details: unknown): Array<{ item: number; reason: string }> {
+  if (!details || typeof details !== 'object') return []
+  const failing = (details as { failing?: unknown }).failing
+  if (!Array.isArray(failing)) return []
+  return failing.flatMap((miss) =>
+    miss &&
+    typeof miss === 'object' &&
+    typeof (miss as { item?: unknown }).item === 'number' &&
+    typeof (miss as { reason?: unknown }).reason === 'string'
+      ? [{ item: (miss as { item: number }).item, reason: (miss as { reason: string }).reason }]
+      : [],
+  )
+}

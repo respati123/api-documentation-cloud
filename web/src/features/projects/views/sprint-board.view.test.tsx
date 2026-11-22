@@ -7,6 +7,9 @@ import { type SprintBoardProps, SprintBoardView } from '@/features/projects/view
 const card = (id: string, over: Record<string, unknown> = {}) => ({
   id,
   key: `PARI-${id}`,
+  code: `PARI-${id}`,
+  size: null,
+  subtasks: null,
   title: `Card ${id}`,
   typeLabel: 'Sub-task',
   statusValue: 'todo',
@@ -115,6 +118,16 @@ describe('SprintBoardView', () => {
     expect(screen.getByTestId('sprint-board-no-match')).toHaveTextContent('No card matches these filters.')
     rerender(<SprintBoardView vm={props({ lanes: [], filtering: false })} onOpenBacklog={vi.fn()} />)
     expect(screen.getByTestId('sprint-board-no-match')).toHaveTextContent('No items in this sprint yet.')
+  })
+
+  test('a card shows its ticket code, size and sub-task progress when it has them', () => {
+    const vm = props()
+    vm.lanes[0].columns[0].cards = [card('t', { code: 'AUTH-001-BE-1', size: 'M', points: 3, subtasks: 'Sub-tasks 2/5' })]
+    render(<SprintBoardView vm={vm} onOpenBacklog={vi.fn()} />)
+    const shown = screen.getByTestId('sprint-board-card-t')
+    expect(shown).toHaveTextContent('AUTH-001-BE-1')
+    expect(shown).toHaveTextContent('M')
+    expect(screen.getByTestId('sprint-board-subtasks-t')).toHaveTextContent('Sub-tasks 2/5')
   })
 
   test('an editor sees a status selector, anyone else a plain badge', () => {

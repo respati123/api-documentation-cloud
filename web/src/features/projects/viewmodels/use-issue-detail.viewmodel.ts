@@ -3,10 +3,12 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
 import { BACKLOG_TEXT, ISSUE_DETAIL_TEXT, statusTextKey } from '@/features/projects/constants/backlog-text.constants'
-import { type Issue, POINT_VALUES, STORY_STATUSES, WORK_STATUSES } from '@/features/projects/models/issue.model'
+import { displayCode, type Issue, POINT_VALUES, STORY_STATUSES, WORK_STATUSES } from '@/features/projects/models/issue.model'
 import { issuesService } from '@/features/projects/services/issues.service'
+import { isSampleWorkspace } from '@/features/projects/services/workspace-transport'
 import { issueKeys } from '@/features/projects/viewmodels/issue-keys'
 import type { BacklogAccess } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
+import { ARTIFACT_STANDARD_ENABLED } from '@/shared/config/features'
 import { usePageList } from '@/shared/hooks/use-page-list'
 import { readErrorMessage } from '@/shared/utils/error-message'
 
@@ -21,6 +23,7 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
   const queryClient = useQueryClient()
   const [ref, setRef] = useState<string | null>(null)
   const [newItem, setNewItem] = useState('')
+  const [newSubtask, setNewSubtask] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
   const project = projectId ?? ''
   const active = signedIn && Boolean(projectId) && ref !== null
@@ -52,6 +55,18 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
     queryKey: issueKeys.links(workspaceId, project, id),
     queryFn: () => issuesService.links(token, workspaceId, project, id),
     enabled: active && Boolean(current),
+  })
+  // CLOUD-001: a task shows its ticket fields, readiness and the criteria it delivers. The sample workspace has none.
+  const showTicket = ARTIFACT_STANDARD_ENABLED && active && current?.type === 'task' && !isSampleWorkspace(workspaceId)
+  const ticket = useQuery({
+    queryKey: issueKeys.ticket(workspaceId, project, id),
+    queryFn: () => issuesService.ticket(token, workspaceId, project, id),
+    enabled: showTicket,
+  })
+  const delivered = useQuery({
+    queryKey: issueKeys.delivered(workspaceId, project, id),
+    queryFn: () => issuesService.delivered(token, workspaceId, project, id),
+    enabled: showTicket,
   })
   // Only an issue with an outdated source needs to know whether its sprint is running.
   const sprints = useQuery({
@@ -89,7 +104,7 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
     issue: current
       ? {
           id: current.id,
-          key: current.key,
+          key: ARTIFACT_STANDARD_ENABLED ? displayCode(current) : current.key,
           title: current.title,
           typeLabel: say(BACKLOG_TEXT.type[current.type]),
           description: current.description,
@@ -116,7 +131,9 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
             ),
           priorityLabel: say(BACKLOG_TEXT.priority[current.priority]),
           assignee: current.assigneeEmail?.split('@')[0] ?? say(BACKLOG_TEXT.unassigned),
-          parent: parent.data ? { key: parent.data.key, title: parent.data.title } : null,
+          parent: parent.data
+            ? { key: ARTIFACT_STANDARD_ENABLED ? displayCode(parent.data) : parent.data.key, title: parent.data.title }
+            : null,
           sprintLabel: current.sprintId ? say(ISSUE_DETAIL_TEXT.inSprint) : say(ISSUE_DETAIL_TEXT.notInSprint),
           outdated: current.sourceOutdated ? (inRunningSprint ? ('sprint' as const) : ('plain' as const)) : null,
           canReview: access.canManage,
@@ -130,7 +147,7 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
     children: {
       rows: children.items.map((child) => ({
         id: child.id,
-        key: child.key,
+        key: ARTIFACT_STANDARD_ENABLED ? displayCode(child) : child.key,
         title: child.title,
         typeLabel: say(BACKLOG_TEXT.type[child.type]),
         statusLabel: child.status ? say(statusTextKey(child.status)) : '',
@@ -157,6 +174,62 @@ export function useIssueDetailViewModel(workspaceId: string, projectId: string |
         act.mutate(() => issuesService.setChecklistItemDone(token, workspaceId, project, id, itemId, done)),
       remove: (itemId: string) => act.mutate(() => issuesService.deleteChecklistItem(token, workspaceId, project, id, itemId)),
     },
+    ticket:
+      showTicket && ticket.data
+        ? {
+            code: displayCode(ticket.data.issue),
+            fields: (['repo', 'goal', 'scope', 'outOfScope', 'designNotes', 'codeFollow', 'codeTouch', 'openQuestions'] as const)
+              .filter((name) => name !== 'openQuestions' || ticket.data.details.openQuestions !== '')
+              .map((name): { id: string; label: string; value: string } => ({
+                id: name,
+                label: say(ISSUE_DETAIL_TEXT.ticketField[name]),
+                value: ticket.data.details[name] || say(ISSUE_DETAIL_TEXT.ticketEmpty),
+              }))
+              .concat({
+                id: 'skills',
+                label: say(ISSUE_DETAIL_TEXT.ticketField.skills),
+                value: ticket.data.details.skills.join(', ') || say(ISSUE_DETAIL_TEXT.ticketEmpty),
+              }),
+            checks: ticket.data.details.ticketAcs.map((check, index) => ({
+              id: String(index),
+              given: check.given,
+              when: check.when,
+              outcomes: check.outcomes,
+            })),
+            tests: ticket.data.details.requiredTests.map((test, index) => ({ id: String(index), label: test.case, unhappy: test.unhappy })),
+            ready: ticket.data.readiness.ready,
+            readyLabel: say(ticket.data.readiness.ready ? ISSUE_DETAIL_TEXT.ready : ISSUE_DETAIL_TEXT.notReady),
+            failing: ticket.data.readiness.failing.map((miss) => ({
+              id: String(miss.item),
+              label: say(ISSUE_DETAIL_TEXT.readinessItem, { item: miss.item, reason: miss.reason }),
+              rule: miss.rule,
+            })),
+            criteria: (delivered.data ?? []).map((criterion) => ({
+              id: criterion.id,
+              code: criterion.code,
+              title: criterion.title,
+              given: criterion.given,
+              when: criterion.when,
+              outcomes: criterion.outcomes,
+              struck: criterion.status === 'struck',
+            })),
+          }
+        : null,
+    // A ticket's engineer adds their own steps as sub-tasks.
+    subtaskForm:
+      ARTIFACT_STANDARD_ENABLED && current?.type === 'task' && access.canEdit
+        ? {
+            value: newSubtask,
+            setValue: setNewSubtask,
+            canAdd: newSubtask.trim() !== '' && !act.isPending,
+            add: () => {
+              const title = newSubtask.trim()
+              if (title === '') return
+              setNewSubtask('')
+              act.mutate(() => issuesService.create(token, workspaceId, project, { type: 'subtask', title, parentId: id }))
+            },
+          }
+        : null,
     links: (links.data ?? []).map((link) => ({
       id: link.id,
       label: say(ISSUE_DETAIL_TEXT.link[link.direction][link.kind]),

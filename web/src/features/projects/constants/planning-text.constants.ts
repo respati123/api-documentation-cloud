@@ -11,6 +11,7 @@ export const PLANNING_TEXT = {
     backlog: 'planning:nav.backlog',
     reports: 'planning:nav.reports',
     board: 'planning:nav.board',
+    timeline: 'planning:nav.timeline',
   },
   kind: {
     brd: 'planning:kind.brd',

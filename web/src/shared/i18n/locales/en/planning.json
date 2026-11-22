@@ -9,7 +9,8 @@
     "reports": "Reports",
     "overview": "Overview",
     "discovery": "Discovery",
-    "agileBoard": "Board"
+    "agileBoard": "Board",
+    "timeline": "Timeline"
   },
   "kind": {
     "brd": "BRD",
@@ -559,7 +560,8 @@
       "label": "Way of working",
       "scrum": "Scrum",
       "kanban": "Kanban"
-    }
+    },
+    "ticketNotReady": "This ticket is not Ready, so it cannot enter a sprint yet. Failing Definition of Ready items: {{items}}."
   },
   "reports": {
     "title": "Reports",
@@ -655,7 +657,17 @@
     "openBacklog": "Go to the backlog",
     "noMatch": "No card matches these filters.",
     "retry": "Try again",
-    "error": "The board could not be loaded."
+    "error": "The board could not be loaded.",
+    "groupRole": "Role",
+    "role": {
+      "ui_ux": "UI/UX",
+      "backend": "Backend",
+      "frontend": "Frontend",
+      "mobile": "Mobile",
+      "qa": "QA",
+      "none": "No role"
+    },
+    "subtasks": "Sub-tasks {{done}}/{{total}}"
   },
   "issueDetail": {
     "description": "Description",
@@ -704,7 +716,35 @@
     "loading": "Loading the issue",
     "error": "The issue could not be loaded.",
     "retry": "Try again",
-    "moreChildren": "Show more"
+    "moreChildren": "Show more",
+    "ticket": "Ticket",
+    "ticketField": {
+      "repo": "Repo",
+      "goal": "Goal",
+      "scope": "Scope",
+      "outOfScope": "Out of this ticket",
+      "designNotes": "Design decisions",
+      "codeFollow": "Follow this pattern",
+      "codeTouch": "Code areas",
+      "skills": "Engineering skills",
+      "openQuestions": "Blocking question"
+    },
+    "ticketEmpty": "Not filled in",
+    "ticketChecks": "Technical checks",
+    "requiredTests": "Required tests",
+    "unhappy": "Unhappy path",
+    "readiness": "Definition of Ready",
+    "ready": "Ready",
+    "notReady": "Not Ready",
+    "readinessItem": "Item {{item}}: {{reason}}",
+    "delivers": "Acceptance criteria it delivers",
+    "noCriteria": "No acceptance criterion linked yet.",
+    "struck": "Struck",
+    "given": "Given",
+    "when": "When",
+    "then": "Then",
+    "subtaskAdd": "A new step for this ticket",
+    "subtaskAddButton": "Add sub-task"
   },
   "sprintOverview": {
     "title": "Active sprint",
@@ -738,6 +778,27 @@
       "save": "Save the limit",
       "clear": "Remove the limit",
       "cancel": "Cancel"
+    }
+  },
+  "timeline": {
+    "title": "Timeline",
+    "subtitle": "Epics down the side, sprints across. Open an epic to see where each of its tickets sits.",
+    "epic": "Epic",
+    "noSprint": "Not in a sprint yet",
+    "progress": "{{done}} of {{total}} tickets done",
+    "expand": "Open {{code}}",
+    "collapse": "Close {{code}}",
+    "active": "Active",
+    "emptyTitle": "The timeline is empty",
+    "emptyDetail": "Create sprints and epics with tickets, and the timeline fills in here.",
+    "loading": "Loading the timeline",
+    "error": "The timeline could not be loaded.",
+    "retry": "Try again",
+    "loadMore": "Load more",
+    "category": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "done": "Done"
     }
   }
 }

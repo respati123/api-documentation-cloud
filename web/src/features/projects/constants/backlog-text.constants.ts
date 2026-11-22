@@ -1,5 +1,6 @@
 // Locale keys for the backlog screen. The words live in shared/i18n/locales/*/planning.json, under "backlog".
 export const BACKLOG_TEXT = {
+  ticketNotReady: 'planning:backlog.ticketNotReady',
   title: 'planning:backlog.title',
   subtitle: 'planning:backlog.subtitle',
   productGoal: 'planning:backlog.productGoal',
@@ -135,6 +136,16 @@ export const SPRINT_BOARD_TEXT = {
   groupLabel: 'planning:sprintBoard.groupLabel',
   groupItem: 'planning:sprintBoard.groupItem',
   groupEpic: 'planning:sprintBoard.groupEpic',
+  groupRole: 'planning:sprintBoard.groupRole',
+  role: {
+    ui_ux: 'planning:sprintBoard.role.ui_ux',
+    backend: 'planning:sprintBoard.role.backend',
+    frontend: 'planning:sprintBoard.role.frontend',
+    mobile: 'planning:sprintBoard.role.mobile',
+    qa: 'planning:sprintBoard.role.qa',
+    none: 'planning:sprintBoard.role.none',
+  },
+  subtasks: 'planning:sprintBoard.subtasks',
   columns: {
     todo: 'planning:sprintBoard.columns.todo',
     in_progress: 'planning:sprintBoard.columns.in_progress',
@@ -153,6 +164,34 @@ export const SPRINT_BOARD_TEXT = {
 
 // Locale keys for the issue detail sheet. The words live in planning.json, under "issueDetail".
 export const ISSUE_DETAIL_TEXT = {
+  ticket: 'planning:issueDetail.ticket',
+  ticketField: {
+    repo: 'planning:issueDetail.ticketField.repo',
+    goal: 'planning:issueDetail.ticketField.goal',
+    scope: 'planning:issueDetail.ticketField.scope',
+    outOfScope: 'planning:issueDetail.ticketField.outOfScope',
+    designNotes: 'planning:issueDetail.ticketField.designNotes',
+    codeFollow: 'planning:issueDetail.ticketField.codeFollow',
+    codeTouch: 'planning:issueDetail.ticketField.codeTouch',
+    skills: 'planning:issueDetail.ticketField.skills',
+    openQuestions: 'planning:issueDetail.ticketField.openQuestions',
+  },
+  ticketEmpty: 'planning:issueDetail.ticketEmpty',
+  ticketChecks: 'planning:issueDetail.ticketChecks',
+  requiredTests: 'planning:issueDetail.requiredTests',
+  unhappy: 'planning:issueDetail.unhappy',
+  readiness: 'planning:issueDetail.readiness',
+  ready: 'planning:issueDetail.ready',
+  notReady: 'planning:issueDetail.notReady',
+  readinessItem: 'planning:issueDetail.readinessItem',
+  delivers: 'planning:issueDetail.delivers',
+  noCriteria: 'planning:issueDetail.noCriteria',
+  struck: 'planning:issueDetail.struck',
+  given: 'planning:issueDetail.given',
+  when: 'planning:issueDetail.when',
+  thenLabel: 'planning:issueDetail.then',
+  subtaskAdd: 'planning:issueDetail.subtaskAdd',
+  subtaskAddButton: 'planning:issueDetail.subtaskAddButton',
   description: 'planning:issueDetail.description',
   noDescription: 'planning:issueDetail.noDescription',
   acceptance: 'planning:issueDetail.acceptance',

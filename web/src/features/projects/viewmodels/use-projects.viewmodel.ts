@@ -19,6 +19,7 @@ import { useSprintBoardViewModel } from '@/features/projects/viewmodels/use-spri
 import { useSprintSummaryViewModel } from '@/features/projects/viewmodels/use-sprint-summary.viewmodel'
 import { useStoryExtrasViewModel } from '@/features/projects/viewmodels/use-story-extras.viewmodel'
 import { useTaskExtrasViewModel } from '@/features/projects/viewmodels/use-task-extras.viewmodel'
+import { useTimelineViewModel } from '@/features/projects/viewmodels/use-timeline.viewmodel'
 import { AGILE_PROJECT_ENABLED } from '@/shared/config/features'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
@@ -184,6 +185,12 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     planning.go('backlog'),
   )
 
+  const timeline = useTimelineViewModel(
+    workspaceId,
+    selectedProject?.id,
+    enabled && AGILE_PROJECT_ENABLED && planning.section === 'timeline',
+  )
+
   const reports = useReportsViewModel(
     workspaceId,
     selectedProject?.id,
@@ -203,6 +210,7 @@ export function useProjectsViewModel(workspaceId: string, workspaceName: string,
     planning,
     backlog,
     sprintBoard,
+    timeline,
     kanbanBoard,
     mode,
     issueDetail,
