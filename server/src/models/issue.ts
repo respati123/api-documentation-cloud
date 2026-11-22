@@ -101,6 +101,10 @@ export interface IssueRow {
   designApprovedBy: string | null
   designApprovedAt: Date | null
   testCaseId: string | null
+  // Epics only: the feature code, such as AUTH-001, and its two parts. Null for every other type.
+  featurePrefix: string | null
+  featureNumber: number | null
+  featureCode: string | null
   publishedAt: Date | null
   createdBy: string
   createdAt: Date

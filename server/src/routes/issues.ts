@@ -10,6 +10,8 @@ import {
   checklistDoneBody,
   createIssueBody,
   draftBacklogBody,
+  epicDocumentBody,
+  epicDocumentReviseBody,
   issueListQuery,
   linkAddBody,
   rankBody,
@@ -27,6 +29,7 @@ import {
   setChecklistItemDone,
 } from '@/services/issue-details'
 import { draftBacklogFromPrd, markSourceReviewed } from '@/services/issue-import'
+import { approveEpicDocument, createEpicDocument, discardEpicDocument, getEpicDocument, listEpicDocuments, reviseEpicDocument } from '@/services/epic-documents'
 import { createIssue, getIssue, listIssuePage, updateIssue } from '@/services/issues'
 
 async function bodyAs<T extends z.ZodType>(request: Request, schema: T): Promise<z.output<T>> {
@@ -50,6 +53,21 @@ export async function handleIssueRoutes(
     const body = request.body === null ? {} : await bodyAs(request, draftBacklogBody)
     const issues = await draftBacklogFromPrd(ctx.db, { workspaceId, projectId: draft[1] }, { userId: user.id }, draft[2], 'epics' in body && body.epics ? { epics: body.epics } : undefined)
     return issues.length > 0 ? created({ issues }) : ok({ issues })
+  }
+
+  // The spec, design and contract of an epic.
+  const documents = action.match(/^projects\/([\w-]+)\/issues\/([\w-]+)\/documents(?:\/([\w-]+)(?:\/(approve|discard))?)?$/)
+  if (documents) {
+    const scope = { workspaceId, projectId: documents[1] }
+    const actor = { userId: user.id }
+    const [, , epicRef, documentId, step] = documents
+    if (!documentId && method === 'GET') return ok(await listEpicDocuments(ctx.db, scope, actor, epicRef))
+    if (!documentId && method === 'POST') return created({ document: await createEpicDocument(ctx.db, scope, actor, epicRef, await bodyAs(request, epicDocumentBody)) })
+    if (documentId && !step && method === 'GET') return ok({ document: await getEpicDocument(ctx.db, scope, actor, epicRef, documentId) })
+    if (documentId && !step && method === 'PATCH') return ok({ document: await reviseEpicDocument(ctx.db, scope, actor, epicRef, documentId, await bodyAs(request, epicDocumentReviseBody)) })
+    if (step === 'approve' && method === 'POST') return ok({ document: await approveEpicDocument(ctx.db, scope, actor, epicRef, documentId) })
+    if (step === 'discard' && method === 'POST') return ok({ document: await discardEpicDocument(ctx.db, scope, actor, epicRef, documentId) })
+    throw new AppError('ROUTE_NOT_FOUND')
   }
 
   const route = action.match(/^projects\/([\w-]+)\/(backlog|issues(?:\/([\w-]+)(?:\/(rank|publish|source-reviewed|checklist|links)(?:\/([\w-]+))?)?)?)$/)

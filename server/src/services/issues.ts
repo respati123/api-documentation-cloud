@@ -15,9 +15,11 @@ import {
   type IssueType,
   RANK_STEP,
 } from '@/models/issue'
+import { isFeaturePrefix, parseFeatureCode } from '@/models/feature-code'
 import { isWorkRole } from '@/models/story'
 import {
   allocateIssueNumber,
+  findEpicByFeatureCode,
   findIssue,
   findIssueByNumber,
   insertIssue,
@@ -27,6 +29,7 @@ import {
   listChildren,
   listIssues,
   listIssuesByNumber,
+  nextFeatureNumber,
   updateIssueFields,
 } from '@/repositories/issues.repository'
 import { insertPlanningEvent } from '@/repositories/planning-events.repository'
@@ -60,6 +63,8 @@ export interface CreateIssueInput {
   sourceDocumentId?: string | null
   sourceVersion?: number | null
   sourceSection?: string | null
+  // Epics only: the product area of the feature code, such as AUTH. Without one, the project key is used.
+  featurePrefix?: string | null
 }
 
 export interface UpdateIssueInput {
@@ -72,6 +77,8 @@ export interface UpdateIssueInput {
   parentId?: string | null
   assigneeId?: string | null
   dueDate?: string | null
+  // Epics only. A new prefix gives the epic the next free number for it.
+  featurePrefix?: string
 }
 
 export const invalid = () => new AppError('ISSUE_INPUT_INVALID')
@@ -123,6 +130,7 @@ export async function insertNewIssue(tx: SQL, scope: IssueScope, actor: Actor, i
     // Epics and stories wait for an approver to publish them. Agents only draft.
     published: !isAgent(actor) && (input.type === 'task' || input.type === 'bug' || input.type === 'subtask'),
     createdBy: actor.userId,
+    featurePrefix: fields.featurePrefix,
   })
   await logEvent(tx, scope, actor, issueId, 'issue.created', { type: input.type })
   return issueId
@@ -183,7 +191,10 @@ export async function updateIssue(db: SQL, scope: IssueScope, actor: Actor, ref:
   if (patch.status !== undefined && patch.status !== issue.status) await checkStatusRules(db, issue, patch)
 
   await db.begin(async (tx) => {
-    await updateIssueFields(tx, scope.projectId, issue.id, fields)
+    // A new prefix takes the next free number for it. The issue number lock keeps two renames from sharing one.
+    const renamed = patch.featurePrefix !== undefined && patch.featurePrefix !== issue.featurePrefix
+    const code = renamed ? { featurePrefix: patch.featurePrefix, featureNumber: await nextFeatureNumber(tx, scope.projectId, patch.featurePrefix as string) } : {}
+    await updateIssueFields(tx, scope.projectId, issue.id, { ...fields, ...code })
     await recordPointsChange(tx, scope, actor, issue, patch.points)
     if (patch.status !== undefined && patch.status !== issue.status) {
       await recordStatus(tx, actor, issue.id, issue.status, patch.status)
@@ -196,8 +207,11 @@ export async function updateIssue(db: SQL, scope: IssueScope, actor: Actor, ref:
 
 // An issue is found by its id or by its key, such as PARI-12. A draft is hidden from members who may not see it.
 export async function loadVisible(db: SQL, scope: IssueScope, actor: Actor, roles: ProjectRoles, ref: string): Promise<IssueRow> {
-  const keyed = /^([A-Za-z]+)-(\d+)$/.exec(ref)
-  const issue = keyed ? await findIssueByNumber(db, scope.projectId, Number(keyed[2])) : await findIssue(db, scope.projectId, ref)
+  // An epic also opens by its feature code, such as AUTH-001. A code that names no epic is read as an issue key.
+  const code = parseFeatureCode(ref)
+  const epic = code ? await findEpicByFeatureCode(db, scope.projectId, code.prefix, code.number) : undefined
+  const keyed = epic ? null : /^([A-Za-z]+)-(\d+)$/.exec(ref)
+  const issue = epic ?? (keyed ? await findIssueByNumber(db, scope.projectId, Number(keyed[2])) : await findIssue(db, scope.projectId, ref))
   if (!issue) throw new AppError('ISSUE_NOT_FOUND')
   // A key the project had before still opens its issues.
   if (keyed && issue.key.toLowerCase() !== ref.toLowerCase() && (await keyOwner(db, scope.workspaceId, keyed[1].toUpperCase())) !== scope.projectId) {
@@ -222,7 +236,9 @@ async function validatedFields(db: SQL, scope: IssueScope, input: CreateIssueInp
   if (input.type === 'subtask' ? !isWorkRole(role) : role !== null) throw invalid()
   const parentId = input.parentId ?? null
   await checkParent(db, scope, input.type, parentId)
-  return { title, description, acceptanceCriteria, priority, points, dueDate, assigneeId, role, parentId }
+  const featurePrefix = input.featurePrefix ?? null
+  if (featurePrefix !== null && (input.type !== 'epic' || !isFeaturePrefix(featurePrefix))) throw invalid()
+  return { title, description, acceptanceCriteria, priority, points, dueDate, assigneeId, role, parentId, featurePrefix }
 }
 
 // Story, task, and bug hang under an epic or stand alone. A sub-task needs a story, task, or bug. An epic has no parent.
@@ -245,6 +261,7 @@ async function validatedPatch(db: SQL, scope: IssueScope, issue: IssueRow, patch
     await checkParent(db, scope, issue.type, patch.parentId)
   }
   if (patch.assigneeId && !(await ensureAssigneeInProject(db, scope.workspaceId, scope.projectId, patch.assigneeId))) throw invalid()
+  if (patch.featurePrefix !== undefined && (issue.type !== 'epic' || !isFeaturePrefix(patch.featurePrefix))) throw invalid()
   return {
     title: patch.title === undefined ? undefined : text(patch.title, 1, 180),
     description: patch.description === undefined ? undefined : text(patch.description, 0, 8000),
@@ -263,6 +280,8 @@ function checkPermissions(issue: IssueRow, roles: ProjectRoles, actor: Actor, pa
   const matchingSubtask = issue.type === 'subtask' && hasDiscipline(roles, issue.role)
   const editsContent = roles.isApprover || (issue.type === 'bug' && issue.createdBy === actor.userId) || matchingSubtask
 
+  // The PM owns the product areas, so only the PM renames the code of a feature.
+  if (patch.featurePrefix !== undefined && (!roles.isPm || isAgent(actor))) throw new AppError('ROLE_NOT_ALLOWED')
   if (patch.status !== undefined) {
     // An agent key moves only a sub-task assigned to its owner.
     if (isAgent(actor) && !(issue.type === 'subtask' && mine)) throw new AppError('ISSUE_AGENT_FORBIDDEN')

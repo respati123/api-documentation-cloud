@@ -109,5 +109,7 @@ export const en = {
   SPRINT_ITEM_NOT_READY: 'Only a Ready story with points, or a task or bug with points, can enter a sprint. A PM can override this with a reason.',
   PROJECT_KEY_TAKEN: 'Another project in this workspace already uses that key, now or before.',
   SPRINT_NOT_AVAILABLE: 'Sprints are only used in Scrum mode. This project works in Kanban mode.',
+  EPIC_DOCUMENT_INCOMPLETE: 'This document is missing sections. Fill in every section listed in the details.',
+  EPIC_DOCUMENT_BLOCKED: 'This step is waiting for an earlier one. The details name the approval it needs.',
   INTERNAL_ERROR: 'Something went wrong. Try again.',
 } satisfies Record<ErrorCode, MessageEntry>

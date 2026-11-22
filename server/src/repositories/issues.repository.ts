@@ -1,7 +1,7 @@
 import type { SQL } from 'bun'
 import type { IssueRow, IssueType } from '@/models/issue'
 
-const columns = `i.id, i.project_id AS "projectId", i.number, p.key || '-' || i.number AS key, i.type, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.status, i.points, i.priority, i.rank::float8 AS rank, i.sprint_id AS "sprintId", i.role, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", i.source_reviewed_version AS "sourceReviewedVersion", (src.current_version > i.source_version AND coalesce(i.source_reviewed_version, i.source_version) < src.current_version) AS "sourceOutdated", i.design_approved_by AS "designApprovedBy", i.design_approved_at AS "designApprovedAt", i.test_case_id AS "testCaseId", i.published_at AS "publishedAt", i.created_by AS "createdBy", i.created_at AS "createdAt", i.updated_at AS "updatedAt"`
+const columns = `i.id, i.project_id AS "projectId", i.number, p.key || '-' || i.number AS key, i.type, i.parent_id AS "parentId", i.title, i.description, i.acceptance_criteria AS "acceptanceCriteria", i.user_story_role AS "userStoryRole", i.user_story_action AS "userStoryAction", i.user_story_benefit AS "userStoryBenefit", i.flow, i.status, i.points, i.priority, i.rank::float8 AS rank, i.sprint_id AS "sprintId", i.role, i.assignee_id AS "assigneeId", u.email AS "assigneeEmail", i.due_date::text AS "dueDate", i.source_document_id AS "sourceDocumentId", i.source_version AS "sourceVersion", i.source_section AS "sourceSection", i.source_reviewed_version AS "sourceReviewedVersion", (src.current_version > i.source_version AND coalesce(i.source_reviewed_version, i.source_version) < src.current_version) AS "sourceOutdated", i.design_approved_by AS "designApprovedBy", i.design_approved_at AS "designApprovedAt", i.test_case_id AS "testCaseId", i.feature_prefix AS "featurePrefix", i.feature_number AS "featureNumber", CASE WHEN i.feature_prefix IS NOT NULL THEN i.feature_prefix || '-' || lpad(i.feature_number::text, 3, '0') END AS "featureCode", i.published_at AS "publishedAt", i.created_by AS "createdBy", i.created_at AS "createdAt", i.updated_at AS "updatedAt"`
 const tables = 'FROM issues i JOIN projects p ON p.id = i.project_id LEFT JOIN users u ON u.id = i.assignee_id LEFT JOIN planning_documents src ON src.id = i.source_document_id'
 
 export interface NewIssue {
@@ -25,6 +25,8 @@ export interface NewIssue {
   sourceSection: string | null
   published: boolean
   createdBy: string
+  // Epics only. Without one, the epic takes the project key cut to eight letters.
+  featurePrefix?: string | null
 }
 
 // The columns a patch may change, with the column each one writes to. Anything else in a patch is ignored.
@@ -42,6 +44,8 @@ const patchColumns = {
   sprintId: 'sprint_id',
   rank: 'rank',
   sourceReviewedVersion: 'source_reviewed_version',
+  featurePrefix: 'feature_prefix',
+  featureNumber: 'feature_number',
 } as const
 export type IssuePatch = { [Key in keyof typeof patchColumns]?: unknown }
 
@@ -57,8 +61,29 @@ export async function lastRank(db: SQL, projectId: string): Promise<number | nul
 }
 
 export async function insertIssue(db: SQL, issue: NewIssue): Promise<void> {
-  await db`INSERT INTO issues (id, project_id, number, type, parent_id, title, description, acceptance_criteria, status, points, priority, rank, role, assignee_id, due_date, source_document_id, source_version, source_section, published_at, created_by)
-    VALUES (${issue.id}, ${issue.projectId}, ${issue.number}, ${issue.type}, ${issue.parentId}, ${issue.title}, ${issue.description}, ${issue.acceptanceCriteria}, ${issue.status}, ${issue.points}, ${issue.priority}, ${issue.rank}, ${issue.role}, ${issue.assigneeId}, ${issue.dueDate}, ${issue.sourceDocumentId}, ${issue.sourceVersion}, ${issue.sourceSection}, CASE WHEN ${issue.published}::boolean THEN now() END, ${issue.createdBy})`
+  const prefix = issue.type === 'epic' ? await epicPrefix(db, issue.projectId, issue.featurePrefix ?? null) : null
+  const number = prefix === null ? null : await nextFeatureNumber(db, issue.projectId, prefix)
+  await db`INSERT INTO issues (id, project_id, number, type, parent_id, title, description, acceptance_criteria, status, points, priority, rank, role, assignee_id, due_date, source_document_id, source_version, source_section, published_at, created_by, feature_prefix, feature_number)
+    VALUES (${issue.id}, ${issue.projectId}, ${issue.number}, ${issue.type}, ${issue.parentId}, ${issue.title}, ${issue.description}, ${issue.acceptanceCriteria}, ${issue.status}, ${issue.points}, ${issue.priority}, ${issue.rank}, ${issue.role}, ${issue.assigneeId}, ${issue.dueDate}, ${issue.sourceDocumentId}, ${issue.sourceVersion}, ${issue.sourceSection}, CASE WHEN ${issue.published}::boolean THEN now() END, ${issue.createdBy}, ${prefix}, ${number})`
+}
+
+// The prefix a new epic takes: the one asked for, or the project key cut to eight letters, the same rule as migration 0030.
+async function epicPrefix(db: SQL, projectId: string, asked: string | null): Promise<string> {
+  if (asked !== null) return asked
+  const [row] = await db`SELECT left(key, 8) AS prefix FROM projects WHERE id = ${projectId}`
+  return String(row.prefix)
+}
+
+// The next free number for a prefix in a project. The caller has locked the project row by allocating an issue number,
+// so two epics made at the same time never share one.
+export async function nextFeatureNumber(db: SQL, projectId: string, prefix: string): Promise<number> {
+  const [row] = await db`SELECT coalesce(max(feature_number), 0) + 1 AS number FROM issues WHERE project_id = ${projectId} AND feature_prefix = ${prefix}`
+  return Number(row.number)
+}
+
+export async function findEpicByFeatureCode(db: SQL, projectId: string, prefix: string, number: number): Promise<IssueRow | undefined> {
+  const [row] = await db`SELECT ${db.unsafe(columns)} ${db.unsafe(tables)} WHERE i.project_id = ${projectId} AND i.feature_prefix = ${prefix} AND i.feature_number = ${number}`
+  return row
 }
 
 export async function findIssue(db: SQL, projectId: string, id: string): Promise<IssueRow | undefined> {

@@ -19,13 +19,14 @@ export type PlanningDocumentRow = {
   sourceOutdated: boolean | null
 }
 
+// BRD and PRD documents of the workspace. The spec, design and contract of an epic are read through the epic below.
 export async function findPlanningDocument(db: SQL, workspaceId: string, documentId: string): Promise<PlanningDocumentRow | undefined> {
-  const [row] = await db`SELECT d.id, d.workspace_id AS "workspaceId", d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_by AS "approvedBy", d.approved_at AS "approvedAt", d.created_at AS "createdAt", d.updated_at AS "updatedAt", v.content, v.file_name AS "fileName", v.mime_type AS "mimeType", v.source_version AS "sourceVersion", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.id = ${documentId} AND d.workspace_id = ${workspaceId}`
+  const [row] = await db`SELECT d.id, d.workspace_id AS "workspaceId", d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_by AS "approvedBy", d.approved_at AS "approvedAt", d.created_at AS "createdAt", d.updated_at AS "updatedAt", v.content, v.file_name AS "fileName", v.mime_type AS "mimeType", v.source_version AS "sourceVersion", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.id = ${documentId} AND d.workspace_id = ${workspaceId} AND d.epic_id IS NULL`
   return row
 }
 
 export async function listPlanningDocumentRows(db: SQL, workspaceId: string): Promise<Array<{ kind: string; status: string } & Record<string, unknown>>> {
-  return db`SELECT d.id, d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_at AS "approvedAt", d.updated_at AS "updatedAt", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.workspace_id = ${workspaceId} ORDER BY d.updated_at DESC LIMIT 100`
+  return db`SELECT d.id, d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", d.approved_at AS "approvedAt", d.updated_at AS "updatedAt", (s.current_version > v.source_version) AS "sourceOutdated" FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id WHERE d.workspace_id = ${workspaceId} AND d.epic_id IS NULL ORDER BY d.updated_at DESC LIMIT 100`
 }
 
 export async function listPlanningDocumentVersions(db: SQL, documentId: string) {
@@ -78,4 +79,43 @@ export async function countDocumentDependents(db: SQL, workspaceId: string, docu
 export async function deletePlanningDocumentRows(db: SQL, workspaceId: string, documentId: string): Promise<void> {
   await db`DELETE FROM planning_comments WHERE workspace_id = ${workspaceId} AND target_kind = 'document' AND target_id = ${documentId}`
   await db`DELETE FROM planning_documents WHERE id = ${documentId} AND workspace_id = ${workspaceId}`
+}
+
+export type EpicDocumentRow = {
+  id: string
+  epicId: string
+  kind: string
+  title: string
+  status: string
+  currentVersion: number
+  sourceDocumentId: string | null
+  sourceVersion: number | null
+  // True when the document it was built from has moved to a newer version since.
+  stale: boolean
+  approvedBy: string | null
+  approvedAt: Date | null
+  content: string
+  createdBy: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+const epicDocumentColumns = `d.id, d.epic_id AS "epicId", d.kind, d.title, d.status, d.current_version AS "currentVersion", d.source_document_id AS "sourceDocumentId", v.source_version AS "sourceVersion", coalesce(s.current_version > v.source_version, false) AS stale, d.approved_by AS "approvedBy", d.approved_at AS "approvedAt", v.content, d.created_by AS "createdBy", d.created_at AS "createdAt", d.updated_at AS "updatedAt"`
+const epicDocumentTables = 'FROM planning_documents d JOIN planning_document_versions v ON v.document_id = d.id AND v.version = d.current_version LEFT JOIN planning_documents s ON s.id = d.source_document_id'
+
+// The live spec, design and contract of an epic. A superseded or discarded one is history.
+export async function listEpicDocumentRows(db: SQL, epicId: string): Promise<EpicDocumentRow[]> {
+  return db`SELECT ${db.unsafe(epicDocumentColumns)} ${db.unsafe(epicDocumentTables)} WHERE d.epic_id = ${epicId} AND d.status NOT IN ('superseded', 'discarded') ORDER BY d.created_at`
+}
+
+export async function findEpicDocument(db: SQL, epicId: string, documentId: string): Promise<EpicDocumentRow | undefined> {
+  const [row] = await db`SELECT ${db.unsafe(epicDocumentColumns)} ${db.unsafe(epicDocumentTables)} WHERE d.epic_id = ${epicId} AND d.id = ${documentId}`
+  return row
+}
+
+export async function insertEpicDocument(
+  db: SQL,
+  row: { id: string; workspaceId: string; projectId: string; epicId: string; kind: string; title: string; sourceDocumentId: string | null; createdBy: string },
+): Promise<void> {
+  await db`INSERT INTO planning_documents (id, workspace_id, project_id, epic_id, kind, title, status, source_document_id, created_by) VALUES (${row.id}, ${row.workspaceId}, ${row.projectId}, ${row.epicId}, ${row.kind}, ${row.title}, 'draft', ${row.sourceDocumentId}, ${row.createdBy})`
 }

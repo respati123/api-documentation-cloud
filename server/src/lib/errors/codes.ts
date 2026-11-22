@@ -106,6 +106,8 @@ export const errorDefinitions = {
   SPRINT_ITEM_NOT_READY: { status: 409 },
   PROJECT_KEY_TAKEN: { status: 409 },
   SPRINT_NOT_AVAILABLE: { status: 409 },
+  EPIC_DOCUMENT_INCOMPLETE: { status: 400 },
+  EPIC_DOCUMENT_BLOCKED: { status: 409 },
   INTERNAL_ERROR: { status: 500 },
 } satisfies Record<string, { status: number }>
 
