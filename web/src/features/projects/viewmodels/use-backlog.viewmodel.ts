@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
 import { BACKLOG_TEXT, MODE_TEXT, statusTextKey } from '@/features/projects/constants/backlog-text.constants'
-import { type Issue, type IssueType, type StatusCategory, statusCategory } from '@/features/projects/models/issue.model'
+import { displayCode, type Issue, type IssueType, type StatusCategory, statusCategory } from '@/features/projects/models/issue.model'
 import { issuesService } from '@/features/projects/services/issues.service'
 import { daysLeft, epicCounts, filterByEpic, type ReadyGap, readyGaps, sprintTotals } from '@/features/projects/utils/backlog'
 import { issueKeys } from '@/features/projects/viewmodels/issue-keys'
 import { BACKLOG_GROUP, type BacklogAccess, useBacklogActionsViewModel } from '@/features/projects/viewmodels/use-backlog-actions.viewmodel'
 import { useBacklogData } from '@/features/projects/viewmodels/use-backlog-data'
 import { useBacklogDrag } from '@/features/projects/viewmodels/use-backlog-drag'
+import { ARTIFACT_STANDARD_ENABLED } from '@/shared/config/features'
 import { usePageList } from '@/shared/hooks/use-page-list'
 import { readErrorMessage } from '@/shared/utils/error-message'
 import { formatDate } from '@/shared/utils/format'
@@ -79,7 +80,7 @@ export function useBacklogViewModel(
     })),
     productGoal,
   })
-  const epicKeyOf = new Map(epics.items.map((epic) => [epic.id, epic.key]))
+  const epicKeyOf = new Map(epics.items.map((epic) => [epic.id, ARTIFACT_STANDARD_ENABLED ? displayCode(epic) : epic.key]))
   const everything = [...sprintList.flatMap((sprint) => sprint.issues), ...looseItems]
   const counts = epicCounts(epics.items, everything)
   const toRow = (issue: Issue) => rowOf(issue, t as Text, epicKeyOf, access)
@@ -123,7 +124,7 @@ export function useBacklogViewModel(
     epics: {
       items: epics.items.map((epic) => ({
         id: epic.id,
-        key: epic.key,
+        key: ARTIFACT_STANDARD_ENABLED ? displayCode(epic) : epic.key,
         title: epic.title,
         count: counts.byEpic[epic.id] ?? 0,
         selected: epicFilter === epic.id,
@@ -173,7 +174,7 @@ function rowOf(issue: Issue, t: Text, epicKeyOf: Map<string, string>, access: Ba
   const gaps = readyGaps(issue)
   return {
     id: issue.id,
-    key: issue.key,
+    key: ARTIFACT_STANDARD_ENABLED ? displayCode(issue) : issue.key,
     title: issue.title,
     type: issue.type,
     typeLabel: t(BACKLOG_TEXT.type[issue.type]),

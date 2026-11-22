@@ -127,6 +127,8 @@ export function IssueDetailView({ vm, extras }: { vm: IssueDetailProps; extras?:
               </>
             )}
 
+            {vm.ticket && <TicketSections ticket={vm.ticket} />}
+
             {vm.showChildren && (
               <Section title={vm.childrenHeading}>
                 {vm.children.rows.length === 0 ? (
@@ -154,6 +156,26 @@ export function IssueDetailView({ vm, extras }: { vm: IssueDetailProps; extras?:
                       </li>
                     ))}
                   </ul>
+                )}
+                {vm.subtaskForm && (
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      vm.subtaskForm?.add()
+                    }}
+                  >
+                    <Input
+                      data-testid="issue-detail-subtask-new"
+                      aria-label={t(ISSUE_DETAIL_TEXT.subtaskAdd)}
+                      placeholder={t(ISSUE_DETAIL_TEXT.subtaskAdd)}
+                      value={vm.subtaskForm.value}
+                      onChange={(event) => vm.subtaskForm?.setValue(event.target.value)}
+                    />
+                    <Button type="submit" size="sm" data-testid="issue-detail-subtask-add" disabled={!vm.subtaskForm.canAdd}>
+                      {t(ISSUE_DETAIL_TEXT.subtaskAddButton)}
+                    </Button>
+                  </form>
                 )}
                 <LoadMoreButton
                   hasMore={vm.children.hasMore}
@@ -296,5 +318,115 @@ function Text({ value, empty, testId }: { value: string; empty: string; testId: 
     <p className="max-w-[68ch] whitespace-pre-wrap text-sm leading-7" data-testid={testId}>
       {value}
     </p>
+  )
+}
+
+type TicketPanel = NonNullable<IssueDetailProps['ticket']>
+
+// CLOUD-001: the ticket fields, its Definition of Ready, and the acceptance criteria it delivers.
+function TicketSections({ ticket }: { ticket: TicketPanel }) {
+  const { t } = useTranslation('planning')
+  return (
+    <>
+      <Section title={t(ISSUE_DETAIL_TEXT.readiness)} aside={ticket.readyLabel}>
+        <div className="grid gap-2" data-testid="issue-detail-readiness">
+          <Badge variant={ticket.ready ? 'success' : 'warning'}>{ticket.readyLabel}</Badge>
+          {ticket.failing.length > 0 && (
+            <ul className="grid gap-1 text-sm">
+              {ticket.failing.map((miss) => (
+                <li key={miss.id} className="grid gap-0.5" data-testid={`issue-detail-readiness-${miss.id}`}>
+                  <span className="font-medium text-warning">{miss.label}</span>
+                  <span className="text-xs text-muted-foreground">{miss.rule}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Section>
+
+      <Section title={t(ISSUE_DETAIL_TEXT.ticket)} aside={ticket.code}>
+        <dl className="grid gap-2 text-sm" data-testid="issue-detail-ticket">
+          {ticket.fields.map((field) => (
+            <div key={field.id} className="grid gap-0.5">
+              <dt className="text-xs text-muted-foreground">{field.label}</dt>
+              <dd className="whitespace-pre-wrap">{field.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {ticket.checks.length > 0 && (
+          <div className="grid gap-2">
+            <h4 className="text-xs font-medium text-muted-foreground">{t(ISSUE_DETAIL_TEXT.ticketChecks)}</h4>
+            {ticket.checks.map((check) => (
+              <GivenWhenThen
+                key={check.id}
+                given={check.given}
+                when={check.when}
+                outcomes={check.outcomes}
+                testId={`issue-detail-check-${check.id}`}
+              />
+            ))}
+          </div>
+        )}
+        {ticket.tests.length > 0 && (
+          <div className="grid gap-1">
+            <h4 className="text-xs font-medium text-muted-foreground">{t(ISSUE_DETAIL_TEXT.requiredTests)}</h4>
+            <ul className="grid gap-1 text-sm">
+              {ticket.tests.map((test) => (
+                <li key={test.id} className="flex items-center gap-2" data-testid={`issue-detail-test-${test.id}`}>
+                  <span>{test.label}</span>
+                  {test.unhappy && <Badge variant="warning">{t(ISSUE_DETAIL_TEXT.unhappy)}</Badge>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Section>
+
+      <Section title={t(ISSUE_DETAIL_TEXT.delivers)}>
+        {ticket.criteria.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t(ISSUE_DETAIL_TEXT.noCriteria)}</p>
+        ) : (
+          <div className="grid gap-2">
+            {ticket.criteria.map((criterion) => (
+              <div key={criterion.id} className="grid gap-1" data-testid={`issue-detail-criterion-${criterion.id}`}>
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <CodeChip>{criterion.code}</CodeChip>
+                  <span className={criterion.struck ? 'text-muted-foreground line-through' : undefined}>{criterion.title}</span>
+                  {criterion.struck && <Badge variant="destructive">{t(ISSUE_DETAIL_TEXT.struck)}</Badge>}
+                </span>
+                {!criterion.struck && (
+                  <GivenWhenThen
+                    given={criterion.given}
+                    when={criterion.when}
+                    outcomes={criterion.outcomes}
+                    testId={`issue-detail-gwt-${criterion.id}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+    </>
+  )
+}
+
+function GivenWhenThen({ given, when, outcomes, testId }: { given: string; when: string; outcomes: string[]; testId: string }) {
+  const { t } = useTranslation('planning')
+  return (
+    <dl className="grid grid-cols-[56px_1fr] gap-x-3 gap-y-1 rounded-lg border border-border px-3 py-2 text-sm" data-testid={testId}>
+      <dt className="text-[11px] font-semibold text-muted-foreground uppercase">{t(ISSUE_DETAIL_TEXT.given)}</dt>
+      <dd>{given}</dd>
+      <dt className="text-[11px] font-semibold text-muted-foreground uppercase">{t(ISSUE_DETAIL_TEXT.when)}</dt>
+      <dd>{when}</dd>
+      <dt className="text-[11px] font-semibold text-muted-foreground uppercase">{t(ISSUE_DETAIL_TEXT.thenLabel)}</dt>
+      <dd>
+        <ul className="list-disc pl-4">
+          {outcomes.map((outcome) => (
+            <li key={outcome}>{outcome}</li>
+          ))}
+        </ul>
+      </dd>
+    </dl>
   )
 }

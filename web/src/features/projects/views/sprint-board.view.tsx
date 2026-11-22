@@ -176,9 +176,13 @@ export function BoardCardView({
       className={cn('grid gap-1.5 rounded-lg border border-border bg-background p-2.5')}
     >
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <CodeChip>{card.key}</CodeChip>
+        <CodeChip>{card.code}</CodeChip>
         <span>{card.typeLabel}</span>
-        {card.points !== null && <Badge variant="accent">{card.points}</Badge>}
+        {card.size !== null ? (
+          <Badge variant="accent">{card.size}</Badge>
+        ) : (
+          card.points !== null && <Badge variant="accent">{card.points}</Badge>
+        )}
       </div>
       {onOpen ? (
         <Button
@@ -192,6 +196,11 @@ export function BoardCardView({
         </Button>
       ) : (
         <p className="text-sm font-medium">{card.title}</p>
+      )}
+      {card.subtasks !== null && (
+        <p className="text-xs text-muted-foreground" data-testid={`sprint-board-subtasks-${card.id}`}>
+          {card.subtasks}
+        </p>
       )}
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-xs text-muted-foreground">{card.assignee}</span>

@@ -16,6 +16,7 @@ import { ProjectSectionNav } from '@/features/projects/views/project-section-nav
 import { ReportsView } from '@/features/projects/views/reports.view'
 import { SprintBoardView } from '@/features/projects/views/sprint-board.view'
 import { TaskBoardView } from '@/features/projects/views/task-board.view'
+import { TimelineView } from '@/features/projects/views/timeline.view'
 import { Alert, AlertDescription } from '@/shared/components/primitives/alert'
 import { Button } from '@/shared/components/primitives/button'
 import { Skeleton } from '@/shared/components/primitives/skeleton'
@@ -116,6 +117,7 @@ export function ProjectsView({ onManageTeam, ...vm }: ProjectsViewProps) {
             ) : (
               <TaskBoardView vm={vm} />
             ))}
+          {planning.section === 'timeline' && <TimelineView vm={vm.timeline} />}
           {planning.section === 'reports' && <ReportsView vm={vm.reports} />}
         </>
       )}

@@ -3,6 +3,7 @@ import {
   backlogSchema,
   burndownSchema,
   checklistItemSchema,
+  deliveredCriterionSchema,
   flowSchema,
   type IssuePriority,
   type IssueType,
@@ -12,6 +13,7 @@ import {
   projectSettingsSchema,
   sprintReportSchema,
   sprintSchema,
+  ticketSchema,
   velocitySchema,
   wipLimitsSchema,
 } from '@/features/projects/models/issue.model'
@@ -82,9 +84,25 @@ export const issuesService = {
   subtasks: (token: string, workspaceId: string, projectId: string, cursor?: string | null) =>
     issuePage(token, workspaceId, projectId, 'type=subtask', cursor),
 
+  // The tasks of the project, a page at a time. The timeline places each ticket in its sprint.
+  tasks: (token: string, workspaceId: string, projectId: string, cursor?: string | null) =>
+    issuePage(token, workspaceId, projectId, 'type=task', cursor),
+
   // What sits under an issue: the items of an epic, or the sub-tasks of an item.
   children: (token: string, workspaceId: string, projectId: string, parentId: string, cursor?: string | null) =>
     issuePage(token, workspaceId, projectId, `epic=${encodeURIComponent(parentId)}`, cursor),
+
+  // CLOUD-001: a ticket with its fields and readiness, and the acceptance criteria it delivers.
+  ticket: async (token: string, workspaceId: string, projectId: string, ref: string) =>
+    z.parse(
+      z.object({ ticket: ticketSchema }),
+      await workspaceCall(workspaceId, at(projectId, `/issues/${encodeURIComponent(ref)}/ticket`), { token }),
+    ).ticket,
+  delivered: async (token: string, workspaceId: string, projectId: string, ref: string) =>
+    z.parse(
+      z.object({ criteria: z.array(deliveredCriterionSchema) }),
+      await workspaceCall(workspaceId, at(projectId, `/issues/${encodeURIComponent(ref)}/delivers`), { token }),
+    ).criteria,
 
   issue: async (token: string, workspaceId: string, projectId: string, ref: string) =>
     z.parse(issueOf, await workspaceCall(workspaceId, at(projectId, `/issues/${encodeURIComponent(ref)}`), { token })).issue,

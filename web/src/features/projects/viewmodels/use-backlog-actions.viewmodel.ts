@@ -3,7 +3,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthSessionStore } from '@/features/auth'
 import { BACKLOG_TEXT } from '@/features/projects/constants/backlog-text.constants'
-import { ISSUE_PRIORITIES, type IssuePriority, type IssueType, POINT_VALUES } from '@/features/projects/models/issue.model'
+import {
+  ISSUE_PRIORITIES,
+  type IssuePriority,
+  type IssueType,
+  POINT_VALUES,
+  readinessFailures,
+} from '@/features/projects/models/issue.model'
 import { issuesService } from '@/features/projects/services/issues.service'
 import { issueKeys } from '@/features/projects/viewmodels/issue-keys'
 import { projectKeys } from '@/features/projects/viewmodels/project-keys'
@@ -152,6 +158,12 @@ export function useBacklogActionsViewModel({ workspaceId, projectId, access, epi
     onMutate: () => setRowError(null),
     onSuccess: refresh,
     onError: (error, input) => {
+      // A ticket that fails the Definition of Ready has no override: the failing items are shown so the tech lead fixes them.
+      const failing = error instanceof ApiError && error.code === 'SPRINT_ITEM_NOT_READY' ? readinessFailures(error.details) : []
+      if (failing.length > 0) {
+        setRowError(say(BACKLOG_TEXT.ticketNotReady, { items: failing.map((miss) => `${miss.item} (${miss.reason})`).join(', ') }))
+        return
+      }
       // The gate refused the item. The PM may add it anyway, so the PM is asked for a reason. Anyone else sees the message.
       if (error instanceof ApiError && error.code === 'SPRINT_ITEM_NOT_READY' && access.canManage) {
         const missing = (error.details as { missing?: string[] } | undefined)?.missing ?? []

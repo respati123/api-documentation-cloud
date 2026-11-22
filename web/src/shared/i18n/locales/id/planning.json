@@ -9,7 +9,8 @@
     "reports": "Laporan",
     "overview": "Ringkasan",
     "discovery": "Discovery",
-    "agileBoard": "Papan"
+    "agileBoard": "Papan",
+    "timeline": "Timeline"
   },
   "kind": {
     "brd": "BRD",
@@ -559,7 +560,8 @@
       "label": "Cara kerja",
       "scrum": "Scrum",
       "kanban": "Kanban"
-    }
+    },
+    "ticketNotReady": "Tiket ini belum Ready, jadi belum bisa masuk sprint. Poin Definition of Ready yang gagal: {{items}}."
   },
   "reports": {
     "title": "Laporan",
@@ -655,7 +657,17 @@
     "openBacklog": "Buka backlog",
     "noMatch": "Tidak ada kartu yang cocok dengan filter ini.",
     "retry": "Coba lagi",
-    "error": "Papan tidak dapat dimuat."
+    "error": "Papan tidak dapat dimuat.",
+    "groupRole": "Role",
+    "role": {
+      "ui_ux": "UI/UX",
+      "backend": "Backend",
+      "frontend": "Frontend",
+      "mobile": "Mobile",
+      "qa": "QA",
+      "none": "Tanpa role"
+    },
+    "subtasks": "Subtask {{done}}/{{total}}"
   },
   "issueDetail": {
     "description": "Deskripsi",
@@ -704,7 +716,35 @@
     "loading": "Memuat issue",
     "error": "Issue tidak dapat dimuat.",
     "retry": "Coba lagi",
-    "moreChildren": "Tampilkan lebih banyak"
+    "moreChildren": "Tampilkan lebih banyak",
+    "ticket": "Tiket",
+    "ticketField": {
+      "repo": "Repo",
+      "goal": "Tujuan",
+      "scope": "Cakupan",
+      "outOfScope": "Di luar tiket",
+      "designNotes": "Keputusan desain",
+      "codeFollow": "Ikuti pola",
+      "codeTouch": "Area kode",
+      "skills": "Skill engineering",
+      "openQuestions": "Pertanyaan yang menahan"
+    },
+    "ticketEmpty": "Belum diisi",
+    "ticketChecks": "Cek teknis",
+    "requiredTests": "Tes wajib",
+    "unhappy": "Alur gagal",
+    "readiness": "Definition of Ready",
+    "ready": "Ready",
+    "notReady": "Belum Ready",
+    "readinessItem": "Poin {{item}}: {{reason}}",
+    "delivers": "Kriteria penerimaan yang dikerjakan",
+    "noCriteria": "Belum ada kriteria penerimaan yang ditautkan.",
+    "struck": "Dicoret",
+    "given": "Given",
+    "when": "When",
+    "then": "Then",
+    "subtaskAdd": "Langkah baru untuk tiket ini",
+    "subtaskAddButton": "Tambah subtask"
   },
   "sprintOverview": {
     "title": "Sprint aktif",
@@ -738,6 +778,27 @@
       "save": "Simpan batas",
       "clear": "Hapus batas",
       "cancel": "Batal"
+    }
+  },
+  "timeline": {
+    "title": "Timeline",
+    "subtitle": "Epic di setiap baris, sprint di setiap kolom. Buka epic untuk melihat posisi tiap tiketnya.",
+    "epic": "Epic",
+    "noSprint": "Belum masuk sprint",
+    "progress": "{{done}} dari {{total}} tiket selesai",
+    "expand": "Buka {{code}}",
+    "collapse": "Tutup {{code}}",
+    "active": "Aktif",
+    "emptyTitle": "Timeline masih kosong",
+    "emptyDetail": "Buat sprint dan epic dengan tiket, lalu timeline terisi di sini.",
+    "loading": "Memuat timeline",
+    "error": "Timeline tidak dapat dimuat.",
+    "retry": "Coba lagi",
+    "loadMore": "Muat lebih banyak",
+    "category": {
+      "todo": "To do",
+      "in_progress": "Dikerjakan",
+      "done": "Selesai"
     }
   }
 }

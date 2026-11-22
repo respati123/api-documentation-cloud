@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { Issue } from '@/features/projects/models/issue.model'
-import { boardMatches, epicLanes, itemLanes, laneProgress } from '@/features/projects/utils/sprint-board'
+import { boardMatches, epicLanes, itemLanes, laneProgress, roleLanes, subtaskProgress } from '@/features/projects/utils/sprint-board'
 
 let counter = 0
 function issue(over: Partial<Issue>): Issue {
@@ -115,5 +115,31 @@ describe('boardMatches', () => {
   test('mine keeps only the cards assigned to the person', () => {
     expect(boardMatches(card, { search: '', mine: true }, 'u9')).toBe(true)
     expect(boardMatches(card, { search: '', mine: true }, 'u1')).toBe(false)
+  })
+})
+
+describe('role lanes and sub-task progress (CLOUD-001)', () => {
+  const item = (id: string, role: string | null, status = 'todo', parentId: string | null = null) =>
+    ({
+      id,
+      key: `T-${id}`,
+      title: id,
+      type: role === 'sub' ? 'subtask' : 'task',
+      role: role === 'sub' ? null : role,
+      status,
+      parentId,
+    }) as unknown as Issue
+
+  test('one lane per role in the order work flows, items without a role last', () => {
+    const lanes = roleLanes([item('q', 'qa'), item('b', 'backend', 'done'), item('x', null), item('u', 'ui_ux')])
+    expect(lanes.map((lane) => lane.id)).toEqual(['role-ui_ux', 'role-backend', 'role-qa', 'role-none'])
+    expect(lanes[1].columns.done.map((card) => card.id)).toEqual(['b'])
+    expect(lanes[3].role).toBeNull()
+  })
+
+  test('counts done and total sub-tasks per parent', () => {
+    const progress = subtaskProgress([item('s1', 'sub', 'done', 't1'), item('s2', 'sub', 'todo', 't1'), item('s3', 'sub', 'done', 't2')])
+    expect(progress.get('t1')).toEqual({ done: 1, total: 2 })
+    expect(progress.get('t2')).toEqual({ done: 1, total: 1 })
   })
 })
