@@ -19,6 +19,8 @@ export const en = {
   EMAIL_TAKEN: 'An account with this email already exists.',
   USER_ALREADY_EXISTS: 'This person already has an account. Add them from the workspace member list.',
   USER_ROLES_INVALID: 'Choose one or more roles from the user role master.',
+  APP_ADMIN_INPUT_INVALID: 'The app admin setting must be true or false.',
+  APP_ADMIN_SELF_CHANGE_FORBIDDEN: 'You cannot change your own app admin status.',
   USER_ROLE_NAME_INVALID: 'Enter a role name up to 60 characters.',
   USER_ROLE_ALREADY_EXISTS: 'A role with this name already exists.',
   USER_ROLE_IN_USE: 'This role is assigned to an account and cannot be deleted yet.',

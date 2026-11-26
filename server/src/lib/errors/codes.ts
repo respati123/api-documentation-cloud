@@ -16,6 +16,8 @@ export const errorDefinitions = {
   EMAIL_TAKEN: { status: 409 },
   USER_ALREADY_EXISTS: { status: 409 },
   USER_ROLES_INVALID: { status: 400 },
+  APP_ADMIN_INPUT_INVALID: { status: 400 },
+  APP_ADMIN_SELF_CHANGE_FORBIDDEN: { status: 403 },
   USER_ROLE_NAME_INVALID: { status: 400 },
   USER_ROLE_ALREADY_EXISTS: { status: 409 },
   USER_ROLE_IN_USE: { status: 409 },

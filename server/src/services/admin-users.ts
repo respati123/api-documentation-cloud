@@ -4,7 +4,7 @@ import type { AppContext } from '@/context'
 import { AppError } from '@/lib/errors/app-error'
 import { cursorValues, encodeCursor, pageOf, type CursorKeys } from '@/lib/pagination'
 import { countPendingUserInvites, deletePendingUserInviteForEmail, deleteUserInvite, insertUserInvite, listPendingUserInvites } from '@/repositories/user-invites.repository'
-import { countUsersMatching, deleteRoleMaster, insertRoleMaster, listRoleMaster, listUsersPage, replaceUserRoles, userEmailExists } from '@/repositories/users.repository'
+import { countUsersMatching, deleteRoleMaster, insertRoleMaster, listRoleMaster, listUsersPage, replaceUserRoles, setUserAdminFlag, userEmailExists } from '@/repositories/users.repository'
 import type { AuthUser } from '@/models/workspace'
 import { requireAdmin } from '@/services/admin'
 import { tokenHash } from '@/services/auth'
@@ -38,6 +38,13 @@ export async function assignUserRoles(db: SQL, adminId: string, userId: string, 
   const result = await replaceUserRoles(db, userId, adminId, roles)
   if (result === 'account_missing') throw new AppError('ACCOUNT_NOT_FOUND')
   if (result === 'role_missing') throw new AppError('USER_ROLES_INVALID')
+}
+
+// Gives or takes away the app admin status. An admin cannot change their own, so the app always keeps the admin who is signed in.
+export async function setAppAdminStatus(db: SQL, adminId: string, userId: string, isAdmin: boolean): Promise<void> {
+  await requireAdmin(db, adminId)
+  if (adminId === userId) throw new AppError('APP_ADMIN_SELF_CHANGE_FORBIDDEN')
+  if (!(await setUserAdminFlag(db, userId, isAdmin))) throw new AppError('ACCOUNT_NOT_FOUND')
 }
 
 export async function listUsersForAdmin(db: SQL, adminId: string, search: string, limit: number, cursor: CursorKeys | null) {

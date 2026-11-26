@@ -19,6 +19,8 @@ export const id = {
   EMAIL_TAKEN: 'Akun dengan email ini sudah ada.',
   USER_ALREADY_EXISTS: 'Orang ini sudah memiliki akun. Tambahkan dari daftar anggota workspace.',
   USER_ROLES_INVALID: 'Pilih satu atau beberapa role dari master role pengguna.',
+  APP_ADMIN_INPUT_INVALID: 'Pengaturan admin aplikasi harus true atau false.',
+  APP_ADMIN_SELF_CHANGE_FORBIDDEN: 'Anda tidak bisa mengubah status admin aplikasi milik sendiri.',
   USER_ROLE_NAME_INVALID: 'Nama role wajib diisi dan maksimal 60 karakter.',
   USER_ROLE_ALREADY_EXISTS: 'Role dengan nama ini sudah ada.',
   USER_ROLE_IN_USE: 'Role masih ditetapkan ke akun dan belum bisa dihapus.',

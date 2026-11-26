@@ -5,7 +5,7 @@ import { created, noContent, ok } from '@/lib/http'
 import { decodeCursor, readLimit } from '@/lib/pagination'
 import type { AuthUser } from '@/models/workspace'
 import { enforceLimit } from '@/services/auth'
-import { assignUserRoles, cancelUserInvite, createUserRole, inviteUser, listUserRoleMaster, listUserInvitesForAdmin, listUsersForAdmin, removeUserRole } from '@/services/admin-users'
+import { assignUserRoles, cancelUserInvite, createUserRole, inviteUser, listUserRoleMaster, listUserInvitesForAdmin, listUsersForAdmin, removeUserRole, setAppAdminStatus } from '@/services/admin-users'
 
 export async function handleAdminUserRoutes(ctx: AppContext, request: Request, url: URL, method: string, path: string, user: AuthUser): Promise<Response | undefined> {
   if (method === 'GET' && path === '/api/admin/roles') {
@@ -32,12 +32,17 @@ export async function handleAdminUserRoutes(ctx: AppContext, request: Request, u
   const userMatch = path.match(/^\/api\/admin\/users\/([\w-]+)$/)
   if (method === 'PATCH' && userMatch) {
     const body = await bodyOf(request)
-    if (!Array.isArray(body.roles) || body.roles.length > 100 || body.roles.some((role) => typeof role !== 'string' || !role.trim())) {
+    const changesAdmin = body.isAdmin !== undefined
+    const changesRoles = body.roles !== undefined
+    if (changesAdmin && typeof body.isAdmin !== 'boolean') throw new AppError('APP_ADMIN_INPUT_INVALID')
+    if (!changesAdmin && !changesRoles) throw new AppError('USER_ROLES_INVALID')
+    if (changesRoles && (!Array.isArray(body.roles) || body.roles.length > 100 || body.roles.some((role) => typeof role !== 'string' || !role.trim()))) {
       throw new AppError('USER_ROLES_INVALID')
     }
-    const roles = [...new Set(body.roles as string[])]
-    await assignUserRoles(ctx.db, user.id, userMatch[1], roles)
-    return ok({ user: { id: userMatch[1], roles } })
+    if (changesAdmin) await setAppAdminStatus(ctx.db, user.id, userMatch[1], body.isAdmin as boolean)
+    const roles = changesRoles ? [...new Set(body.roles as string[])] : undefined
+    if (roles) await assignUserRoles(ctx.db, user.id, userMatch[1], roles)
+    return ok({ user: { id: userMatch[1], ...(roles ? { roles } : {}), ...(changesAdmin ? { isAdmin: body.isAdmin } : {}) } })
   }
 
   if (method === 'GET' && path === '/api/admin/user-invites') {

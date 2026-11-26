@@ -97,6 +97,11 @@ export async function upsertAdminUser(db: SQL, user: { id: string; email: string
   return row.id
 }
 
+export async function setUserAdminFlag(db: SQL, userId: string, isAdmin: boolean): Promise<boolean> {
+  const rows = await db`UPDATE users SET is_admin = ${isAdmin} WHERE id = ${userId} RETURNING id`
+  return rows.length > 0
+}
+
 export async function isAdminUser(db: SQL, userId: string): Promise<boolean> {
   const [row] = await db`SELECT is_admin AS "isAdmin" FROM users WHERE id = ${userId}`
   return row?.isAdmin === true
