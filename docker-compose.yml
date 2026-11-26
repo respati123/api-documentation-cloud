@@ -56,7 +56,7 @@ services:
 
   web:
     build:
-      context: ./web
+      context: ./web-new-2
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${CLOUD_WEB_PORT:-3000}:80"

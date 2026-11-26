@@ -115,15 +115,11 @@ jobs:
       - name: Build the web image locally
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
-          context: web
-          file: web/Dockerfile
+          context: web-new-2
+          file: web-new-2/Dockerfile
           platforms: linux/amd64
           push: false
           load: true
-          build-args: |
-            APP_VERSION=${{ steps.ver.outputs.app }}
-            VITE_AGILE_PROJECT=true
-            VITE_ARTIFACT_STANDARD=true
           tags: |
             ${{ env.IMAGE }}:${{ github.ref_name }}
             ${{ env.IMAGE }}:sha-${{ github.sha }}
