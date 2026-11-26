@@ -1,0 +1,17 @@
+export const portalKeys = {
+  all: ['portal'] as const,
+  me: ['portal', 'me'] as const,
+  workspaces: ['portal', 'workspaces'] as const,
+  notifications: ['portal', 'notifications'] as const,
+  workspace: (id: string) => ['portal', id] as const,
+  detail: (id: string, section: string) => ['portal', id, section] as const,
+  branchHistory: (id: string, branchId: string) => ['portal', id, 'branch-history', branchId] as const,
+  myMcpKeys: ['portal', 'my-mcp-keys'] as const,
+  adminMcpKeys: (search: string) => ['portal', 'admin-mcp-keys', search] as const,
+  adminUsers: (search: string) => ['portal', 'admin-users', search] as const,
+  adminRoles: ['portal', 'admin-roles'] as const,
+  adminWorkspaces: (search: string) => ['portal', 'admin-workspaces', search] as const,
+  adminInvites: ['portal', 'admin-invites'] as const,
+  memberOptions: (id: string) => ['portal', id, 'member-options'] as const,
+  memberOptionsSearch: (id: string, search: string) => ['portal', id, 'member-options', search] as const,
+}
